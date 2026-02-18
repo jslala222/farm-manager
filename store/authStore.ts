@@ -21,13 +21,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     initialized: false,
 
     initialize: async () => {
+        set({ loading: true });
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
             await loadUserData(session.user, set);
         }
-        set({ initialized: true });
+        set({ initialized: true, loading: false });
 
-        // Auth 상태 변경 감지
         supabase.auth.onAuthStateChange(async (_event, session) => {
             if (session?.user) {
                 await loadUserData(session.user, set);
@@ -52,32 +52,44 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 }));
 
 async function loadUserData(user: User, set: any) {
-    // 프로필 조회
-    const { data: profile } = await supabase
+    console.log("[Auth] Loading user data for:", user.email);
+
+    // 프로필 조회 (타임아웃 방지를 위해 각각 예외 처리)
+    const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single();
 
-    // 농장 조회
-    // 1. 농장주(owner)인 경우 본인 농장 조회
-    // 2. 관리자(admin)인 경우 시스템 관리 및 테스트를 위해 첫 번째 농장 로드
-    let farm = null;
-    if (profile?.role === 'owner') {
-        const { data } = await supabase
-            .from('farms')
-            .select('*')
-            .eq('owner_id', user.id)
-            .single();
-        farm = data;
-    } else if (profile?.role === 'admin') {
-        const { data } = await supabase
-            .from('farms')
-            .select('*')
-            .limit(1)
-            .maybeSingle();
-        farm = data;
+    if (profileError) {
+        console.error("[Auth] Profile Load error:", profileError);
     }
 
+    // 농장 조회
+    let farm = null;
+    try {
+        if (profile?.role === 'owner') {
+            const { data, error } = await supabase
+                .from('farms')
+                .select('*')
+                .eq('owner_id', user.id)
+                .single();
+            if (error) console.error("[Auth] Farm(owner) error:", error);
+            farm = data;
+        } else if (profile?.role === 'admin') {
+            console.log("[Auth] Admin detected, fetching first farm...");
+            const { data, error } = await supabase
+                .from('farms')
+                .select('*')
+                .limit(1)
+                .maybeSingle();
+            if (error) console.error("[Auth] Farm(admin) error:", error);
+            farm = data;
+        }
+    } catch (err) {
+        console.error("[Auth] Unexpected farm fetch error:", err);
+    }
+
+    console.log("[Auth] Load complete. Farm found:", farm ? farm.farm_name : "None");
     set({ user, profile, farm });
 }
