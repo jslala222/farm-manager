@@ -276,12 +276,17 @@ export default function HarvestPage() {
                             </h2>
                             <div className="flex items-center gap-4">
                                 <button onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                                    className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center hover:bg-gray-100 active:scale-90 transition-all border border-gray-100">
+                                    className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center hover:bg-gray-100 active:scale-90 transition-all border border-gray-100 shrink-0">
                                     <Minus className="w-4 h-4 text-gray-400" />
                                 </button>
-                                <span className="text-4xl font-black text-gray-900 tracking-tighter w-14 text-center">{quantity}</span>
+                                <input
+                                    type="number"
+                                    value={quantity}
+                                    onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 0))}
+                                    className="text-4xl font-black text-gray-900 tracking-tighter w-24 text-center bg-transparent border-none outline-none p-0 focus:ring-0"
+                                />
                                 <button onClick={() => setQuantity(quantity + 1)}
-                                    className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center hover:bg-red-100 active:scale-95 transition-all border border-red-100">
+                                    className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center hover:bg-red-100 active:scale-95 transition-all border border-red-100 shrink-0">
                                     <Plus className="w-4 h-4 text-red-600" />
                                 </button>
                             </div>
