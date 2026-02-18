@@ -13,6 +13,7 @@ export default function SalesPage() {
     const [price, setPrice] = useState("");
     const [customerName, setCustomerName] = useState("");
     const [address, setAddress] = useState("");
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
 
@@ -23,6 +24,7 @@ export default function SalesPage() {
     const [editPrice, setEditPrice] = useState("");
     const [editCustomer, setEditCustomer] = useState("");
     const [editAddress, setEditAddress] = useState("");
+    const [editDate, setEditDate] = useState("");
 
     useEffect(() => {
         if (farm?.id) fetchHistory();
@@ -44,6 +46,12 @@ export default function SalesPage() {
     const handleSave = async () => {
         if (!quantity || !farm?.id) { alert("수량을 입력해주세요!"); return; }
         setSaving(true);
+
+        // Combine date with current time
+        const now = new Date();
+        const timeString = now.toTimeString().split(' ')[0];
+        const dateTime = `${selectedDate}T${timeString}`;
+
         const { error } = await supabase.from('sales_records').insert({
             farm_id: farm.id,
             sale_type: activeTab,
@@ -51,10 +59,11 @@ export default function SalesPage() {
             price: price ? parseInt(price) : null,
             customer_name: customerName || null,
             address: address || null,
+            recorded_at: new Date(dateTime).toISOString(),
         });
         if (error) { alert(`저장 실패: ${error.message}`); }
         else {
-            alert(`✅ 저장 완료!`);
+            alert(`✅ 저장 완료!\n${selectedDate}`);
             setQuantity(""); setPrice(""); setCustomerName(""); setAddress("");
             fetchHistory(); // 목록 갱신
         }
@@ -64,13 +73,22 @@ export default function SalesPage() {
     const handleUpdate = async () => {
         if (!editingId) return;
         setSaving(true);
-        const { error } = await supabase.from('sales_records').update({
+
+        let updateData: any = {
             sale_type: editType,
             quantity: parseFloat(editQuantity),
             price: editPrice ? parseInt(editPrice) : null,
             customer_name: editCustomer || null,
             address: editAddress || null,
-        }).eq('id', editingId);
+        };
+
+        if (editDate) {
+            const now = new Date();
+            const timeString = now.toTimeString().split(' ')[0];
+            updateData.recorded_at = new Date(`${editDate}T${timeString}`).toISOString();
+        }
+
+        const { error } = await supabase.from('sales_records').update(updateData).eq('id', editingId);
 
         if (error) alert("수정 실패");
         else {
@@ -94,6 +112,7 @@ export default function SalesPage() {
         setEditPrice(item.price?.toString() || "");
         setEditCustomer(item.customer_name || "");
         setEditAddress(item.address || "");
+        setEditDate(item.recorded_at.split('T')[0]);
     };
 
     const typeInfo = (type: string) => {
@@ -139,6 +158,19 @@ export default function SalesPage() {
                 </div>
 
                 <div className="bg-white rounded-3xl border border-green-100 shadow-xl p-6 space-y-5 relative overflow-hidden">
+                    {/* 날짜 선택 */}
+                    <div className="flex justify-end">
+                        <div className="relative">
+                            <input
+                                type="date"
+                                value={selectedDate}
+                                onChange={(e) => setSelectedDate(e.target.value)}
+                                className="pl-10 pr-4 py-2 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-green-100 outline-none text-gray-700 transition-all"
+                            />
+                            <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        </div>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                         <div className="col-span-1">
                             <label className="block text-[10px] font-bold text-gray-400 mb-1 ml-1 uppercase">
@@ -232,9 +264,12 @@ export default function SalesPage() {
                                 if (isEditing) {
                                     return (
                                         <div key={item.id} className="bg-white rounded-2xl border-2 border-green-200 p-5 shadow-xl animate-in zoom-in-95 space-y-4">
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <Edit2 className="w-3.5 h-3.5 text-green-500" />
-                                                <span className="text-[10px] font-bold text-green-600 uppercase">수정 모드</span>
+                                            <div className="flex items-center justify-between mb-1">
+                                                <div className="flex items-center gap-2">
+                                                    <Edit2 className="w-3.5 h-3.5 text-green-500" />
+                                                    <span className="text-[10px] font-bold text-green-600 uppercase">수정 모드</span>
+                                                </div>
+                                                <input type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)} className="p-2 bg-gray-50 border border-gray-100 rounded-lg text-xs font-bold outline-none" />
                                             </div>
                                             <div className="grid grid-cols-2 gap-3">
                                                 <div className="space-y-1">

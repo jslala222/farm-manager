@@ -17,6 +17,7 @@ export default function HarvestPage() {
     const [selectedHouse, setSelectedHouse] = useState<number | null>(null);
     const [selectedGrade, setSelectedGrade] = useState<'sang' | 'jung' | 'ha'>('sang');
     const [quantity, setQuantity] = useState(1);
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
 
@@ -25,6 +26,7 @@ export default function HarvestPage() {
     const [editHouse, setEditHouse] = useState<number>(0);
     const [editGrade, setEditGrade] = useState<'sang' | 'jung' | 'ha'>('sang');
     const [editQuantity, setEditQuantity] = useState<number>(0);
+    const [editDate, setEditDate] = useState("");
 
     // Analysis State
     const [statsPeriod, setStatsPeriod] = useState<'today' | 'week' | 'month'>('today');
@@ -110,17 +112,25 @@ export default function HarvestPage() {
             return;
         }
         setSaving(true);
+
+        // Combine date with current time to preserve order if multiple entries on same day
+        const now = new Date();
+        const timeString = now.toTimeString().split(' ')[0]; // HH:MM:SS
+        const dateTime = `${selectedDate}T${timeString}`;
+
         const { error } = await supabase.from('harvest_records').insert({
             farm_id: farm.id,
             house_number: selectedHouse,
             grade: selectedGrade,
             quantity,
+            recorded_at: new Date(dateTime).toISOString(),
         });
         if (error) {
             alert(`저장 실패: ${error.message}`);
         } else {
-            alert(`✅ 저장 완료!\n${selectedHouse}동 / ${gradeLabel(selectedGrade)} / ${quantity}박스`);
+            alert(`✅ 저장 완료!\n${selectedDate}\n${selectedHouse}동 / ${gradeLabel(selectedGrade)} / ${quantity}박스`);
             setQuantity(1);
+            // Don't reset date for convenience of bulk entry
             fetchHistory();
         }
         setSaving(false);
@@ -129,11 +139,25 @@ export default function HarvestPage() {
     const handleUpdate = async () => {
         if (!editingId) return;
         setSaving(true);
-        const { error } = await supabase.from('harvest_records').update({
+
+        // For update, we might want to keep original time or update date. 
+        // Simple approach: if date changed, use that date + current time or 12:00.
+        // But for now, let's keep it simple and just update fields. 
+        // If editDate is implemented, we use it.
+
+        let updateData: any = {
             house_number: editHouse,
             grade: editGrade,
             quantity: editQuantity
-        }).eq('id', editingId);
+        };
+
+        if (editDate) {
+            const now = new Date();
+            const timeString = now.toTimeString().split(' ')[0];
+            updateData.recorded_at = new Date(`${editDate}T${timeString}`).toISOString();
+        }
+
+        const { error } = await supabase.from('harvest_records').update(updateData).eq('id', editingId);
 
         if (error) alert("수정 실패");
         else {
@@ -155,6 +179,7 @@ export default function HarvestPage() {
         setEditHouse(item.house_number);
         setEditGrade(item.grade);
         setEditQuantity(item.quantity);
+        setEditDate(item.recorded_at.split('T')[0]); // YYYY-MM-DD
     };
 
     const gradeLabel = (g: string) => ({ sang: '특/상', jung: '중/보통', ha: '하/주스' }[g] ?? g);
@@ -189,6 +214,19 @@ export default function HarvestPage() {
             {activeTab === 'record' ? (
                 /* === 기록 뷰 === */
                 <div className="space-y-6 animate-in slide-in-from-left-4 duration-300">
+                    {/* 날짜 선택 */}
+                    <div className="flex justify-end">
+                        <div className="relative">
+                            <input
+                                type="date"
+                                value={selectedDate}
+                                onChange={(e) => setSelectedDate(e.target.value)}
+                                className="pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold shadow-sm focus:ring-2 focus:ring-red-100 outline-none text-gray-700"
+                            />
+                            <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        </div>
+                    </div>
+
                     {/* 1. 하우스 선택 */}
                     <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
                         <h2 className="text-xs font-bold text-gray-400 mb-3 flex items-center gap-2 uppercase">
@@ -275,8 +313,9 @@ export default function HarvestPage() {
                                     if (isEditing) {
                                         return (
                                             <div key={item.id} className="bg-white rounded-2xl border-2 border-red-200 p-4 shadow-lg space-y-3 animate-in fade-in">
-                                                <div className="flex items-center justify-between gap-2">
-                                                    <div className="flex items-center gap-2">
+                                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        <input type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)} className="p-2 bg-gray-50 border border-gray-100 rounded-lg text-xs font-bold outline-none" />
                                                         <select value={editHouse} onChange={(e) => setEditHouse(Number(e.target.value))} className="p-2 bg-gray-50 border border-gray-100 rounded-lg text-xs font-bold outline-none">{houses.map(h => <option key={h.id} value={h.house_number}>{h.house_number}동</option>)}</select>
                                                         <select value={editGrade} onChange={(e) => setEditGrade(e.target.value as any)} className="p-2 bg-gray-50 border border-gray-100 rounded-lg text-xs font-bold outline-none"><option value="sang">특/상</option><option value="jung">중/보통</option><option value="ha">하/주스</option></select>
                                                     </div>
