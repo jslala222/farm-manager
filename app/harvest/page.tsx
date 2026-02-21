@@ -1,25 +1,34 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Save, Plus, Minus, Trash2, Sprout, Clock, History, Edit2, X, Check, BarChart3, CalendarDays, RefreshCcw } from "lucide-react";
+import { Save, Plus, Minus, Trash2, Sprout, Clock, History, Edit2, X, Check, BarChart3, CalendarDays, RefreshCcw, NotebookPen, LayoutGrid, ChevronRight } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { supabase, FarmHouse, HarvestRecord } from "@/lib/supabase";
 
 export default function HarvestPage() {
-    const { farm } = useAuthStore();
+    const { farm, initialized } = useAuthStore();
     const [activeTab, setActiveTab] = useState<'record' | 'analysis'>('record');
 
     // Data State
     const [houses, setHouses] = useState<FarmHouse[]>([]);
     const [history, setHistory] = useState<HarvestRecord[]>([]);
+    const [pageError, setPageError] = useState<string | null>(null);
 
     // Record State
     const [selectedHouse, setSelectedHouse] = useState<number | null>(null);
     const [selectedGrade, setSelectedGrade] = useState<'sang' | 'jung' | 'ha'>('sang');
     const [quantity, setQuantity] = useState(1);
+    const [houseNotes, setHouseNotes] = useState<Record<number, string>>({}); // 동별 메모 저장 객체
+    const harvestNote = selectedHouse ? (houseNotes[selectedHouse] || "") : ""; // 현재 선택된 동의 메모
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [isDiaryModalOpen, setIsDiaryModalOpen] = useState(false); // 일지 작성 모달 상태
+    const [isArchiveOpen, setIsArchiveOpen] = useState(false); // 아카이브 모달 상태
+    const [allDiaries, setAllDiaries] = useState<any[]>([]); // 전체 일지 데이터
+    const [isHouseHistoryOpen, setIsHouseHistoryOpen] = useState(false); // 동별 히스토리 모달 상태
+    const [houseHistory, setHouseHistory] = useState<any[]>([]); // 특정 동의 기록 데이터
+    const [archiveHouseFilter, setArchiveHouseFilter] = useState<number | null>(null); // 아카이브 내 동별 필터
 
     // Editing State
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -32,15 +41,29 @@ export default function HarvestPage() {
     const [statsPeriod, setStatsPeriod] = useState<'today' | 'week' | 'month'>('today');
     const [houseStats, setHouseStats] = useState<Record<number, number>>({});
     const [dateStats, setDateStats] = useState<Record<string, number>>({});
+    const [gradeStats, setGradeStats] = useState<Record<string, number>>({ sang: 0, jung: 0, ha: 0 });
+    const [dateGradeStats, setDateGradeStats] = useState<Record<string, Record<string, number>>>({});
+    const [houseGradeStats, setHouseGradeStats] = useState<Record<number, Record<string, number>>>({});
     const [totalHarvest, setTotalHarvest] = useState(0);
 
     useEffect(() => {
-        if (farm?.id) {
-            fetchHouses();
-            fetchHistory();
-            if (activeTab === 'analysis') fetchStats();
+        if (initialized && farm?.id) {
+            fetchDiaries(); // 날짜 변경 시 일지 불러오기
         }
-    }, [farm, activeTab, statsPeriod]);
+    }, [selectedDate, farm, initialized]);
+
+    useEffect(() => {
+        if (initialized) {
+            if (farm?.id) {
+                setPageError(null);
+                fetchHouses();
+                fetchHistory();
+                if (activeTab === 'analysis') fetchStats();
+            } else {
+                setPageError("농장 정보를 불러올 수 없습니다. 권한 승인 대기 또는 로그인 상태를 확인해주세요.");
+            }
+        }
+    }, [farm, initialized, activeTab, statsPeriod]);
 
     const fetchHouses = async () => {
         const { data } = await supabase
@@ -62,6 +85,52 @@ export default function HarvestPage() {
             .order('recorded_at', { ascending: false })
             .limit(10);
         setHistory(data ?? []);
+        setLoading(false);
+    };
+
+    const fetchDiaries = async () => {
+        if (!farm?.id) return;
+        // 선택된 날짜의 모든 하우스 일지를 가져옴
+        const { data } = await supabase
+            .from('house_diaries')
+            .select('*')
+            .eq('farm_id', farm.id)
+            .eq('date', selectedDate);
+
+        const diaryMap: Record<number, string> = {};
+        data?.forEach(d => {
+            diaryMap[d.house_number] = d.note;
+        });
+        setHouseNotes(diaryMap);
+    };
+
+    const fetchAllDiaries = async () => {
+        if (!farm?.id) return;
+        setLoading(true);
+        // 모든 하우스 일지를 날짜 역순으로 가져옴
+        const { data } = await supabase
+            .from('house_diaries')
+            .select('*')
+            .eq('farm_id', farm.id)
+            .order('date', { ascending: false })
+            .order('house_number', { ascending: true });
+
+        setAllDiaries(data ?? []);
+        setLoading(false);
+    };
+
+    const fetchHouseDiaries = async (houseNum: number) => {
+        if (!farm?.id) return;
+        setLoading(true);
+        // 특정 동의 모든 기록을 역순으로 가져옴
+        const { data } = await supabase
+            .from('house_diaries')
+            .select('*')
+            .eq('farm_id', farm.id)
+            .eq('house_number', houseNum)
+            .order('date', { ascending: false });
+
+        setHouseHistory(data ?? []);
         setLoading(false);
     };
 
@@ -87,22 +156,41 @@ export default function HarvestPage() {
         const { data } = await query;
         if (!data) return;
 
-        // Aggregate House Stats
+        // Aggregate Stats
         const hStats: Record<number, number> = {};
         const dStats: Record<string, number> = {};
+        const gStats: Record<string, number> = { sang: 0, jung: 0, ha: 0 };
+        const dgStats: Record<string, Record<string, number>> = {};
+        const hgStats: Record<number, Record<string, number>> = {};
         let total = 0;
 
         data.forEach(item => {
+            // House Stats
             hStats[item.house_number] = (hStats[item.house_number] || 0) + item.quantity;
 
+            // Date Stats
             const date = new Date(item.recorded_at).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' });
             dStats[date] = (dStats[date] || 0) + item.quantity;
+
+            // Grade Stats
+            gStats[item.grade] = (gStats[item.grade] || 0) + item.quantity;
+
+            // Date + Grade Stats
+            if (!dgStats[date]) dgStats[date] = { sang: 0, jung: 0, ha: 0 };
+            dgStats[date][item.grade] += item.quantity;
+
+            // House + Grade Stats
+            if (!hgStats[item.house_number]) hgStats[item.house_number] = { sang: 0, jung: 0, ha: 0 };
+            hgStats[item.house_number][item.grade] += item.quantity;
 
             total += item.quantity;
         });
 
         setHouseStats(hStats);
         setDateStats(dStats);
+        setGradeStats(gStats);
+        setDateGradeStats(dgStats);
+        setHouseGradeStats(hgStats);
         setTotalHarvest(total);
     };
 
@@ -123,14 +211,14 @@ export default function HarvestPage() {
             house_number: selectedHouse,
             grade: selectedGrade,
             quantity,
-            recorded_at: new Date(dateTime).toISOString(),
+            recorded_at: new Date(dateTime).toISOString()
         });
         if (error) {
             alert(`저장 실패: ${error.message}`);
         } else {
             alert(`✅ 저장 완료!\n${selectedDate}\n${selectedHouse}동 / ${gradeLabel(selectedGrade)} / ${quantity}박스`);
             setQuantity(1);
-            // Don't reset date for convenience of bulk entry
+            // 메모 초기화하지 않고 유지 (사용자 피드백 반영: 하루는 유지되어야 함)
             fetchHistory();
         }
         setSaving(false);
@@ -162,9 +250,44 @@ export default function HarvestPage() {
         if (error) alert("수정 실패");
         else {
             setEditingId(null);
+            // 수정 후 통계 및 메모 다시 불러오기 (정합성 유지)
             fetchHistory();
+            fetchStats();
         }
         setSaving(false);
+    };
+
+    const handleUpdateNote = async () => {
+        if (!selectedHouse || !farm?.id) {
+            alert("농장 정보 또는 하우스가 선택되지 않았습니다.");
+            return;
+        }
+        setSaving(true);
+
+        try {
+            // house_diaries 테이블에 Upsert (동별/날짜별 유일한 일지 유지 및 수시 수정)
+            const { error } = await supabase
+                .from('house_diaries')
+                .upsert({
+                    farm_id: farm.id,
+                    house_number: selectedHouse,
+                    date: selectedDate,
+                    note: harvestNote
+                }, { onConflict: 'farm_id,house_number,date' });
+
+            if (error) {
+                console.error("[Diary] Save error:", error);
+                alert(`일지 저장 실패: ${error.message} (날짜: ${selectedDate})`);
+            } else {
+                alert(`✅ ${selectedDate} 현장 리포트가 저장되었습니다.`);
+                fetchDiaries(); // 최신 데이터 다시 불러오기
+            }
+        } catch (err: any) {
+            console.error("[Diary] Unexpected error:", err);
+            alert(`일지 저장 중 예기치 못한 오류 발생: ${err.message || err.toString()}`);
+        } finally {
+            setSaving(false);
+        }
     };
 
     const handleDelete = async (id: string) => {
@@ -189,8 +312,8 @@ export default function HarvestPage() {
         <div className="p-4 md:p-6 pb-24 max-w-2xl mx-auto space-y-6 animate-in fade-in duration-500">
             <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-3">
-                    <div className="p-3 bg-red-100 rounded-xl shadow-lg shadow-red-100">
-                        <Sprout className="w-6 h-6 text-red-600" />
+                    <div className="p-3 bg-green-100 rounded-xl shadow-lg shadow-green-100">
+                        <Sprout className="w-6 h-6 text-green-600" />
                     </div>
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900 tracking-tight">수확 관리</h1>
@@ -211,94 +334,399 @@ export default function HarvestPage() {
                 </div>
             </div>
 
+            {pageError && (
+                <div className="bg-red-50 border border-red-100 p-4 rounded-2xl flex items-center gap-3 animate-in slide-in-from-top-4">
+                    <div className="bg-red-100 p-2 rounded-xl shrink-0"><BarChart3 className="w-5 h-5 text-red-600" /></div>
+                    <div>
+                        <p className="text-red-800 font-bold text-sm leading-tight">{pageError}</p>
+                        <p className="text-red-600 text-[10px] mt-1">관리자 승인이 필요할 수 있습니다.</p>
+                    </div>
+                </div>
+            )}
+
             {activeTab === 'record' ? (
-                /* === 기록 뷰 === */
+                /* === 기록 뷰 (전문가 대안: 클린 UI) === */
                 <div className="space-y-6 animate-in slide-in-from-left-4 duration-300">
-                    {/* 날짜 선택 */}
-                    <div className="flex justify-end">
-                        <div className="relative">
-                            <input
-                                type="date"
-                                value={selectedDate}
-                                onChange={(e) => setSelectedDate(e.target.value)}
-                                className="pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold shadow-sm focus:ring-2 focus:ring-red-100 outline-none text-gray-700"
-                            />
-                            <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    {/* 상단: 오늘의 하우스 컨디션 요약 (사장님 요청 대안) */}
+                    {Object.keys(houseNotes).length > 0 && (
+                        <div className="bg-blue-50/50 rounded-3xl border border-blue-100 p-5 space-y-4">
+                            <div className="flex items-center justify-between">
+                                <h2 className="text-sm font-bold text-blue-700 flex items-center gap-2">
+                                    <NotebookPen className="w-4 h-4" /> 오늘의 하우스 컨디션 리포트
+                                </h2>
+                                <button
+                                    onClick={() => {
+                                        fetchAllDiaries();
+                                        setIsArchiveOpen(true);
+                                    }}
+                                    className="text-[10px] font-black text-blue-500 bg-white px-2.5 py-1 rounded-lg shadow-sm border border-blue-100 hover:bg-blue-50 transition-colors uppercase tracking-tighter"
+                                >
+                                    전체 기록 보기
+                                </button>
+                            </div>
+                            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+                                {Object.entries(houseNotes).sort((a, b) => Number(a[0]) - Number(b[0])).map(([house, note]) => (
+                                    <button
+                                        key={house}
+                                        onClick={() => {
+                                            setSelectedHouse(Number(house));
+                                            setIsDiaryModalOpen(true);
+                                        }}
+                                        className="bg-white p-3 rounded-2xl border border-blue-50 shadow-sm min-w-[140px] text-left group hover:border-blue-300 transition-all shrink-0"
+                                    >
+                                        <div className="flex items-center justify-between mb-1.5">
+                                            <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-lg">{house}동</span>
+                                            <Edit2 className="w-2.5 h-2.5 text-gray-300 group-hover:text-blue-400" />
+                                        </div>
+                                        <p className="text-[11px] text-gray-600 line-clamp-2 font-medium leading-relaxed">{note}</p>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 날짜 선택 및 수기 기록 폼 통합 카드 */}
+                    <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden">
+                        <div className="p-6 space-y-8">
+                            {/* 섹션 1: 날짜 및 하우스 선택 */}
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between px-1">
+                                    <h2 className="text-sm font-black text-gray-900 flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                                        하우스 및 날짜 선택
+                                    </h2>
+                                    <div className="relative">
+                                        <input
+                                            type="date"
+                                            value={selectedDate}
+                                            onChange={(e) => setSelectedDate(e.target.value)}
+                                            className="pl-9 pr-3 py-1.5 bg-gray-50 border-none rounded-xl text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-green-100"
+                                        />
+                                        <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-5 gap-2">
+                                    {houses.length === 0 ? (
+                                        <p className="text-[10px] text-gray-400 text-center py-2 col-span-5">하우스 정보가 없습니다.</p>
+                                    ) : (
+                                        houses.map((h) => (
+                                            <button
+                                                key={h.id}
+                                                onClick={() => setSelectedHouse(h.house_number)}
+                                                className={`h-12 rounded-2xl text-sm font-black transition-all flex items-center justify-center border ${selectedHouse === h.house_number
+                                                    ? 'bg-green-600 text-white border-green-700 shadow-lg shadow-green-100 scale-105'
+                                                    : 'bg-white border-gray-100 text-gray-400 hover:border-green-200'
+                                                    }`}
+                                            >
+                                                {h.house_number}
+                                            </button>
+                                        ))
+                                    )}
+                                </div>
+
+                                {selectedHouse && (
+                                    <div className="flex items-center justify-between bg-gray-50/50 p-3 rounded-2xl border border-dashed border-gray-200 animate-in fade-in zoom-in-95">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 bg-white rounded-xl shadow-sm flex items-center justify-center text-xs font-black text-green-600">{selectedHouse}동</div>
+                                            <button
+                                                onClick={() => {
+                                                    fetchHouseDiaries(selectedHouse);
+                                                    setIsHouseHistoryOpen(true);
+                                                }}
+                                                className="text-[10px] font-black text-gray-500 hover:text-blue-600 flex items-center gap-1 transition-colors"
+                                            >
+                                                <History className="w-3 h-3" /> 과거 기록 추적
+                                            </button>
+                                        </div>
+                                        <button
+                                            onClick={() => setIsDiaryModalOpen(true)}
+                                            className="bg-white px-3 py-1.5 rounded-xl shadow-sm text-[10px] font-black text-blue-600 hover:bg-blue-50 transition-colors"
+                                        >
+                                            기록하기
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* 섹션 2: 등급 및 수량 */}
+                            <div className="grid grid-cols-2 gap-6">
+                                <div className="space-y-4">
+                                    <h2 className="text-sm font-black text-gray-900 flex items-center gap-2 px-1">
+                                        <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
+                                        등급 선택
+                                    </h2>
+                                    <div className="space-y-2">
+                                        {(['sang', 'jung', 'ha'] as const).map((g) => (
+                                            <button
+                                                key={g}
+                                                onClick={() => setSelectedGrade(g)}
+                                                className={`w-full py-3.5 px-4 rounded-2xl text-[11px] font-black flex items-center justify-between transition-all border ${selectedGrade === g
+                                                    ? 'bg-orange-50 border-orange-200 text-orange-700 shadow-sm ring-1 ring-orange-200'
+                                                    : 'bg-white border-gray-50 text-gray-400 hover:bg-gray-50'
+                                                    }`}
+                                            >
+                                                {gradeLabel(g)}
+                                                {selectedGrade === g && <Check className="w-3.5 h-3.5" />}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4 flex flex-col items-center">
+                                    <h2 className="text-sm font-black text-gray-900 flex items-center gap-2 self-start px-1">
+                                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                                        수량 (BOX)
+                                    </h2>
+                                    <div className="flex-1 flex flex-col items-center justify-center gap-4">
+                                        <div className="flex items-center gap-6">
+                                            <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-10 h-10 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-300 hover:bg-gray-100 active:scale-90 transition-all">
+                                                <Minus className="w-5 h-5" />
+                                            </button>
+                                            <span className="text-4xl font-black text-gray-900 tracking-tighter w-12 text-center">{quantity}</span>
+                                            <button onClick={() => setQuantity(quantity + 1)} className="w-10 h-10 rounded-full bg-green-50 border border-green-100 flex items-center justify-center text-green-600 hover:bg-green-100 active:scale-95 transition-all">
+                                                <Plus className="w-5 h-5" />
+                                            </button>
+                                        </div>
+                                        <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Quantity</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* 저장 버튼 */}
+                            <button
+                                onClick={handleSave}
+                                disabled={saving}
+                                className="w-full bg-green-600 text-white h-16 rounded-[24px] text-lg font-black shadow-xl shadow-green-100 hover:bg-green-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                            >
+                                <Save className="w-5 h-5" />
+                                {saving ? '저장 중...' : '기록 저장하기'}
+                            </button>
                         </div>
                     </div>
 
-                    {/* 1. 하우스 선택 */}
-                    <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                        <h2 className="text-xs font-bold text-gray-400 mb-3 flex items-center gap-2 uppercase">
-                            <span className="w-1 h-3 bg-red-500 rounded-full"></span> 1. 하우스 동
-                        </h2>
-                        {houses.length === 0 ? (
-                            <p className="text-xs text-gray-400 text-center py-4">하우스 정보가 없습니다.</p>
-                        ) : (
-                            <div className="grid grid-cols-5 gap-2">
-                                {houses.map((h) => (
-                                    <button key={h.id} onClick={() => setSelectedHouse(h.house_number)}
-                                        className={`h-11 rounded-xl font-bold text-sm border transition-all
-                                            ${selectedHouse === h.house_number
-                                                ? 'bg-red-600 text-white border-red-700 shadow-md transform scale-105'
-                                                : 'bg-white text-gray-500 border-gray-100 hover:bg-gray-50'}`}>
-                                        {h.house_number}
+                    {/* 일지 작성 모달 (사장님 요청 대안) */}
+                    {isDiaryModalOpen && (
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
+                            <div className="bg-white w-full max-w-sm rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-10 duration-500">
+                                <div className="p-8 pb-4 flex items-center justify-between">
+                                    <div>
+                                        <h3 className="text-xl font-black text-gray-900 flex items-center gap-2">
+                                            <NotebookPen className="w-6 h-6 text-blue-500" />
+                                            {selectedHouse}동 현장 리포트
+                                        </h3>
+                                        <p className="text-[10px] text-blue-400 font-bold mt-1 uppercase tracking-widest leading-none">Field Management Diary</p>
+                                    </div>
+                                    <button onClick={() => setIsDiaryModalOpen(false)} className="p-2 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
+                                        <X className="w-5 h-5 text-gray-400" />
                                     </button>
-                                ))}
+                                </div>
+                                <div className="p-8 space-y-6">
+                                    <div className="space-y-3">
+                                        <label className="text-[11px] font-black text-gray-400 uppercase tracking-tighter ml-1">오늘의 하우스 컨실션 및 특이사항</label>
+                                        <textarea
+                                            value={houseNotes[selectedHouse!] || ""}
+                                            onChange={(e) => {
+                                                if (selectedHouse) {
+                                                    setHouseNotes(prev => ({
+                                                        ...prev,
+                                                        [selectedHouse]: e.target.value
+                                                    }));
+                                                }
+                                            }}
+                                            placeholder="하우스 온도, 과실 발육 상태, 알박기 작업 등 사장님께 필요한 중요 내용을 기록하세요..."
+                                            className="w-full p-6 bg-gray-50 border-none rounded-[32px] text-lg font-bold h-48 outline-none focus:ring-4 focus:ring-blue-50 transition-all resize-none shadow-inner"
+                                        />
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <button
+                                            onClick={() => setIsDiaryModalOpen(false)}
+                                            className="flex-1 py-4.5 bg-gray-50 text-gray-400 text-xs font-black rounded-3xl hover:bg-gray-100 transition-colors"
+                                        >
+                                            취소
+                                        </button>
+                                        <button
+                                            onClick={async () => {
+                                                await handleUpdateNote();
+                                                setIsDiaryModalOpen(false);
+                                            }}
+                                            disabled={saving}
+                                            className="flex-[2] py-4.5 bg-blue-600 text-white text-xs font-black rounded-3xl shadow-lg shadow-blue-100 hover:bg-blue-700 active:scale-95 transition-all flex items-center justify-center gap-2"
+                                        >
+                                            <Check className="w-4 h-4" />
+                                            리포트 저장
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
-                        )}
-                    </section>
+                        </div>
+                    )}
 
-                    <div className="grid grid-cols-2 gap-4">
-                        {/* 2. 등급 선택 */}
-                        <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                            <h2 className="text-xs font-bold text-gray-400 mb-3 flex items-center gap-2 uppercase">
-                                <span className="w-1 h-3 bg-orange-500 rounded-full"></span> 2. 등급
-                            </h2>
-                            <div className="flex flex-col gap-2">
-                                {[{ id: 'sang', label: '특/상' }, { id: 'jung', label: '중/보통' }, { id: 'ha', label: '하/주스' }].map((g) => (
-                                    <button key={g.id} onClick={() => setSelectedGrade(g.id as any)}
-                                        className={`py-2.5 rounded-xl font-bold text-xs border transition-all flex items-center justify-between px-3
-                                            ${selectedGrade === g.id
-                                                ? 'bg-orange-50 text-orange-700 border-orange-200 ring-1 ring-orange-200'
-                                                : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'}`}>
-                                        <span>{g.label}</span>
-                                        {selectedGrade === g.id && <Check className="w-3 h-3" />}
+                    {/* 일지 아카이브 모달 (사장님 요청: 날짜별 모아보기) */}
+                    {isArchiveOpen && (
+                        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
+                            <div className="bg-gray-50 w-full max-w-md h-[80vh] rounded-[40px] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
+                                <div className="p-8 bg-white border-b border-gray-100 flex items-center justify-between shrink-0">
+                                    <div>
+                                        <h3 className="text-xl font-black text-gray-900 flex items-center gap-2">
+                                            <History className="w-6 h-6 text-blue-600" />
+                                            현장 리포트 아카이브
+                                        </h3>
+                                        <p className="text-[10px] text-gray-400 font-bold mt-1 uppercase tracking-widest leading-none">Field Report History</p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <select
+                                            value={archiveHouseFilter || ""}
+                                            onChange={(e) => setArchiveHouseFilter(e.target.value ? Number(e.target.value) : null)}
+                                            className="text-xs font-black bg-gray-50 border-none rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-100 transition-all cursor-pointer"
+                                        >
+                                            <option value="">전체</option>
+                                            {houses.map(h => (
+                                                <option key={h.id} value={h.house_number}>{h.house_number}동</option>
+                                            ))}
+                                        </select>
+                                        <button onClick={() => {
+                                            setIsArchiveOpen(false);
+                                            setArchiveHouseFilter(null);
+                                        }} className="p-2 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
+                                            <X className="w-5 h-5 text-gray-400" />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                                    {loading ? (
+                                        <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
+                                            <RefreshCcw className="w-8 h-8 animate-spin opacity-20" />
+                                            <span className="text-xs font-bold">기록을 불러오는 중...</span>
+                                        </div>
+                                    ) : allDiaries.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center h-full text-gray-300 gap-2">
+                                            <NotebookPen className="w-12 h-12 opacity-10" />
+                                            <span className="text-xs font-bold">기록된 일지가 없습니다.</span>
+                                        </div>
+                                    ) : (
+                                        /* 날짜별로 그룹화하여 표시 (필터 적용) */
+                                        Object.entries(
+                                            allDiaries
+                                                .filter(d => !archiveHouseFilter || d.house_number === archiveHouseFilter)
+                                                .reduce((acc: Record<string, any[]>, curr: any) => {
+                                                    if (!acc[curr.date]) acc[curr.date] = [];
+                                                    acc[curr.date].push(curr);
+                                                    return acc;
+                                                }, {} as Record<string, any[]>)
+                                        ).sort((a: [string, any[]], b: [string, any[]]) => b[0].localeCompare(a[0])).map(([date, diaries]: [string, any[]]) => (
+                                            <div key={date} className="space-y-3">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="h-px bg-gray-200 flex-1"></div>
+                                                    <span className="text-[11px] font-black text-gray-400 bg-gray-100 px-3 py-1 rounded-full">{date}</span>
+                                                    <div className="h-px bg-gray-200 flex-1"></div>
+                                                </div>
+                                                <div className="grid gap-2">
+                                                    {(diaries as any[]).sort((a: any, b: any) => a.house_number - b.house_number).map((d: any) => (
+                                                        <div key={d.id} className="bg-white p-4 rounded-3xl border border-gray-100 shadow-sm space-y-2 group">
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg">{d.house_number}동 리포트</span>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setSelectedDate(d.date);
+                                                                        setSelectedHouse(d.house_number);
+                                                                        setIsArchiveOpen(false);
+                                                                        setIsDiaryModalOpen(true);
+                                                                    }}
+                                                                    className="p-1.5 opacity-0 group-hover:opacity-100 bg-gray-50 rounded-lg text-gray-400 hover:text-blue-500 transition-all"
+                                                                >
+                                                                    <Edit2 className="w-3 h-3" />
+                                                                </button>
+                                                            </div>
+                                                            <p className="text-base text-gray-700 leading-relaxed font-bold">
+                                                                {d.note}
+                                                            </p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                                <div className="p-6 bg-white border-t border-gray-100 shrink-0">
+                                    <button
+                                        onClick={() => setIsArchiveOpen(false)}
+                                        className="w-full py-4 bg-gray-900 text-white text-sm font-black rounded-[24px] shadow-xl shadow-gray-100"
+                                    >
+                                        확인 완료
                                     </button>
-                                ))}
+                                </div>
                             </div>
-                        </section>
+                        </div>
+                    )}
 
-                        {/* 3. 수량 선택 */}
-                        <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col items-center justify-center">
-                            <h2 className="text-xs font-bold text-gray-400 mb-4 flex self-start items-center gap-2 uppercase">
-                                <span className="w-1 h-3 bg-green-500 rounded-full"></span> 3. 수량
-                            </h2>
-                            <div className="flex items-center gap-4">
-                                <button onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                                    className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center hover:bg-gray-100 active:scale-90 transition-all border border-gray-100 shrink-0">
-                                    <Minus className="w-4 h-4 text-gray-400" />
-                                </button>
-                                <input
-                                    type="number"
-                                    value={quantity}
-                                    onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 0))}
-                                    className="text-4xl font-black text-gray-900 tracking-tighter w-24 text-center bg-transparent border-none outline-none p-0 focus:ring-0"
-                                />
-                                <button onClick={() => setQuantity(quantity + 1)}
-                                    className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center hover:bg-red-100 active:scale-95 transition-all border border-red-100 shrink-0">
-                                    <Plus className="w-4 h-4 text-red-600" />
-                                </button>
+                    {/* 동별 히스토리 모달 (사장님 요청: 특정 동 집중 보기) */}
+                    {isHouseHistoryOpen && (
+                        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
+                            <div className="bg-white w-full max-w-sm h-[70vh] rounded-[48px] shadow-2xl overflow-hidden flex flex-col animate-in slide-in-from-bottom-20 duration-500">
+                                <div className="p-8 pb-4 flex items-center justify-between shrink-0">
+                                    <div>
+                                        <h3 className="text-xl font-black text-gray-900 flex items-center gap-2">
+                                            <History className="w-6 h-6 text-green-600" />
+                                            {selectedHouse}동 히스토리
+                                        </h3>
+                                        <p className="text-[10px] text-green-500 font-bold mt-1 uppercase tracking-widest leading-none">House Management History</p>
+                                    </div>
+                                    <button onClick={() => setIsHouseHistoryOpen(false)} className="p-2 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
+                                        <X className="w-5 h-5 text-gray-400" />
+                                    </button>
+                                </div>
+
+                                <div className="flex-1 overflow-y-auto p-8 space-y-6">
+                                    {loading ? (
+                                        <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
+                                            <RefreshCcw className="w-8 h-8 animate-spin opacity-20" />
+                                            <span className="text-xs font-bold">기록을 불러오는 중...</span>
+                                        </div>
+                                    ) : houseHistory.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center h-full text-gray-300 gap-2">
+                                            <NotebookPen className="w-12 h-12 opacity-10" />
+                                            <span className="text-xs font-bold text-center">해당 동의 기록이 없습니다.</span>
+                                        </div>
+                                    ) : (
+                                        houseHistory.map((h: any) => (
+                                            <div key={h.id} className="relative pl-6 pb-6 border-l-2 border-gray-50 last:pb-0">
+                                                <div className="absolute left-[-5px] top-0 w-2 h-2 rounded-full bg-green-500 shadow-sm shadow-green-200"></div>
+                                                <div className="space-y-2">
+                                                    <span className="text-[11px] font-black text-gray-400 font-mono tracking-tighter">{h.date}</span>
+                                                    <div className="bg-gray-50/50 p-4 rounded-3xl border border-gray-100/50 group hover:border-green-200 transition-all">
+                                                        <div className="flex justify-between items-start mb-2">
+                                                            <div className="w-1.5 h-1.5 bg-green-200 rounded-full"></div>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setSelectedDate(h.date);
+                                                                    setIsHouseHistoryOpen(false);
+                                                                    setIsDiaryModalOpen(true);
+                                                                }}
+                                                                className="opacity-0 group-hover:opacity-100 p-1 bg-white rounded-lg shadow-sm text-gray-400 hover:text-green-600 transition-all"
+                                                            >
+                                                                <Edit2 className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        </div>
+                                                        <p className="text-base text-gray-600 leading-relaxed font-black">{h.note}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                                <div className="p-8 pt-0 shrink-0">
+                                    <button
+                                        onClick={() => setIsHouseHistoryOpen(false)}
+                                        className="w-full py-5 bg-gray-900 text-white text-xs font-black rounded-3xl shadow-xl shadow-gray-200"
+                                    >
+                                        기록 확인 완료
+                                    </button>
+                                </div>
                             </div>
-                            <p className="text-[10px] text-gray-400 font-bold mt-2">BOX</p>
-                        </section>
-                    </div>
-
-                    <button onClick={handleSave} disabled={saving}
-                        className="w-full bg-red-600 text-white h-16 rounded-2xl text-lg font-bold shadow-xl shadow-red-200 hover:bg-red-700 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50">
-                        <Save className="w-5 h-5" />
-                        {saving ? '저장 중...' : '기록 저장'}
-                    </button>
+                        </div>
+                    )}
 
                     {/* 최근 내역 */}
                     <section className="pt-4">
@@ -317,7 +745,7 @@ export default function HarvestPage() {
                                     const isEditing = editingId === item.id;
                                     if (isEditing) {
                                         return (
-                                            <div key={item.id} className="bg-white rounded-2xl border-2 border-red-200 p-4 shadow-lg space-y-3 animate-in fade-in">
+                                            <div key={item.id} className="bg-white rounded-2xl border-2 border-green-200 p-4 shadow-lg space-y-3 animate-in fade-in">
                                                 <div className="flex flex-wrap items-center justify-between gap-2">
                                                     <div className="flex flex-wrap items-center gap-2">
                                                         <input type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)} className="p-2 bg-gray-50 border border-gray-100 rounded-lg text-xs font-bold outline-none" />
@@ -327,7 +755,7 @@ export default function HarvestPage() {
                                                     <div className="flex items-center gap-1">
                                                         <button onClick={() => setEditQuantity(Math.max(1, editQuantity - 1))} className="p-1 bg-gray-100 rounded-lg"><Minus className="w-3 h-3" /></button>
                                                         <span className="text-sm font-black w-6 text-center">{editQuantity}</span>
-                                                        <button onClick={() => setEditQuantity(editQuantity + 1)} className="p-1 bg-red-100 rounded-lg"><Plus className="w-3 h-3 text-red-600" /></button>
+                                                        <button onClick={() => setEditQuantity(editQuantity + 1)} className="p-1 bg-green-100 rounded-lg"><Plus className="w-3 h-3 text-green-600" /></button>
                                                     </div>
                                                 </div>
                                                 <div className="flex gap-2">
@@ -338,23 +766,29 @@ export default function HarvestPage() {
                                         );
                                     }
                                     return (
-                                        <div key={item.id} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm flex items-center justify-between group animate-in slide-in-from-bottom-2 duration-300">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-xl bg-gray-50 flex flex-col items-center justify-center border border-gray-50">
-                                                    <span className="text-[9px] font-bold text-gray-400 leading-none mb-0.5">DONG</span>
-                                                    <span className="text-sm font-black text-gray-800 leading-none">{item.house_number}</span>
+                                        <div key={item.id} className="bg-white rounded-2xl border border-gray-50 p-2.5 px-4 shadow-sm flex items-center justify-between group animate-in slide-in-from-bottom-2 duration-300">
+                                            <div className="flex items-center gap-4 flex-1">
+                                                <div className="flex items-center gap-2 min-w-[60px]">
+                                                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">House</span>
+                                                    <span className="text-sm font-black text-gray-900">{item.house_number}</span>
                                                 </div>
-                                                <div>
-                                                    <div className="flex items-center gap-2 mb-0.5">
-                                                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${gradeColor(item.grade)}`}>{gradeLabel(item.grade)}</span>
-                                                        <span className="text-[10px] text-gray-400 font-medium flex items-center gap-1"><Clock className="w-3 h-3" />{new Date(item.recorded_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</span>
+                                                <div className="flex items-center gap-3 flex-1">
+                                                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-md border whitespace-nowrap ${gradeColor(item.grade)}`}>
+                                                        {gradeLabel(item.grade)}
+                                                    </span>
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="text-base font-black text-gray-900 tracking-tighter">{item.quantity}</span>
+                                                        <span className="text-[9px] text-gray-400 font-black uppercase">Box</span>
                                                     </div>
-                                                    <div className="text-sm font-black text-gray-900">{item.quantity} <span className="text-xs text-gray-400 font-medium">박스</span></div>
+                                                </div>
+                                                <div className="flex items-center gap-1 text-[9px] text-gray-300 font-bold bg-gray-50/50 px-2 py-1 rounded-md">
+                                                    <Clock className="w-2.5 h-2.5" />
+                                                    {new Date(item.recorded_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button onClick={() => startEdit(item)} className="p-2 text-gray-300 hover:text-blue-500 hover:bg-blue-50 rounded-lg"><Edit2 className="w-4 h-4" /></button>
-                                                <button onClick={() => handleDelete(item.id)} className="p-2 text-gray-200 hover:text-red-500 hover:bg-red-50 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                                            <div className="flex items-center gap-1 ml-4">
+                                                <button onClick={() => startEdit(item)} className="p-1.5 text-gray-300 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all"><Edit2 className="w-3.5 h-3.5" /></button>
+                                                <button onClick={() => handleDelete(item.id)} className="p-1.5 text-gray-200 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
                                             </div>
                                         </div>
                                     );
@@ -369,16 +803,28 @@ export default function HarvestPage() {
                     <div className="grid grid-cols-3 gap-2 bg-gray-100 p-1 rounded-xl">
                         {(['today', 'week', 'month'] as const).map((p) => (
                             <button key={p} onClick={() => setStatsPeriod(p)}
-                                className={`py-2 rounded-lg text-xs font-bold transition-all ${statsPeriod === p ? 'bg-white shadow-sm text-red-600' : 'text-gray-400'}`}>
+                                className={`py-2 rounded-lg text-xs font-bold transition-all ${statsPeriod === p ? 'bg-white shadow-sm text-green-600' : 'text-gray-400'}`}>
                                 {p === 'today' ? '오늘' : p === 'week' ? '이번 주' : '이번 달'}
                             </button>
                         ))}
                     </div>
 
-                    <div className="bg-red-600 rounded-3xl p-6 text-white shadow-xl shadow-red-200 relative overflow-hidden">
+                    <div className="bg-green-600 rounded-3xl p-6 text-white shadow-xl shadow-green-200 relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
-                        <p className="text-red-100 text-xs font-bold uppercase tracking-widest mb-1">Total Harvest</p>
-                        <h2 className="text-4xl font-black tracking-tighter">{totalHarvest.toLocaleString()} <span className="text-lg font-medium opacity-70">Box</span></h2>
+                        <div className="flex justify-between items-start mb-4">
+                            <div>
+                                <p className="text-green-100 text-xs font-bold uppercase tracking-widest mb-1">Total Harvest</p>
+                                <h2 className="text-4xl font-black tracking-tighter">{totalHarvest.toLocaleString()} <span className="text-lg font-medium opacity-70">Box</span></h2>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-xs text-green-100 font-bold uppercase opacity-60">Grade Breakdown</p>
+                                <div className="space-y-1 mt-1">
+                                    <p className="text-lg font-black">특/상: {gradeStats.sang}박스</p>
+                                    <p className="text-lg font-black">중/보통: {gradeStats.jung}박스</p>
+                                    <p className="text-lg font-black text-green-200">하/주스: {gradeStats.ha}박스</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     {/* 동별 통계 */}
@@ -389,10 +835,31 @@ export default function HarvestPage() {
                         <div className="grid grid-cols-3 gap-3">
                             {houses.map(h => {
                                 const count = houseStats[h.house_number] || 0;
+                                const gBreakdown = houseGradeStats[h.house_number] || { sang: 0, jung: 0, ha: 0 };
                                 return (
-                                    <div key={h.id} className={`p-4 rounded-2xl border ${count > 0 ? 'bg-white border-red-100 shadow-sm' : 'bg-gray-50 border-gray-100 opacity-50'}`}>
-                                        <div className="text-xs font-bold text-gray-400 mb-1">{h.house_number}동</div>
-                                        <div className={`text-xl font-black ${count > 0 ? 'text-gray-900' : 'text-gray-300'}`}>{count}</div>
+                                    <div key={h.id} className={`p-5 rounded-[32px] border transition-all ${count > 0 ? 'bg-white border-green-100 shadow-sm' : 'bg-gray-50 border-gray-100 opacity-50'}`}>
+                                        <div className="flex justify-between items-start mb-3">
+                                            <div className="text-xs font-black text-gray-400 uppercase tracking-tighter">{h.house_number}동</div>
+                                            <div className="text-[10px] font-black text-green-600 bg-green-50 px-2 py-0.5 rounded-lg">TOTAL</div>
+                                        </div>
+                                        <div className={`text-4xl font-black mb-4 tracking-tighter ${count > 0 ? 'text-gray-900' : 'text-gray-300'}`}>
+                                            {count.toLocaleString()}
+                                            <span className="text-xs font-medium ml-1 opacity-40">Box</span>
+                                        </div>
+                                        <div className="space-y-2 pt-3 border-t border-gray-50">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-xs font-bold text-gray-400">특/상</span>
+                                                <span className="text-base font-black text-orange-600">{gBreakdown.sang}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-xs font-bold text-gray-400">중/보통</span>
+                                                <span className="text-base font-black text-blue-600">{gBreakdown.jung}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-xs font-bold text-gray-400">하/주스</span>
+                                                <span className="text-base font-black text-gray-500">{gBreakdown.ha}</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 );
                             })}
@@ -409,12 +876,20 @@ export default function HarvestPage() {
                                 {Object.keys(dateStats).length === 0 ? (
                                     <div className="text-center py-6 text-xs text-gray-400">데이터가 없습니다.</div>
                                 ) : (
-                                    Object.entries(dateStats).sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime()).map(([date, count]) => (
-                                        <div key={date} className="flex items-center justify-between p-3 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors rounded-lg">
-                                            <span className="text-xs font-bold text-gray-500">{date}</span>
-                                            <span className="text-sm font-black text-gray-900">{count} <span className="text-[10px] text-gray-400 font-normal">Box</span></span>
-                                        </div>
-                                    ))
+                                    Object.entries(dateStats).sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime()).map(([date, count]) => {
+                                        const dg = dateGradeStats[date] || { sang: 0, jung: 0, ha: 0 };
+                                        return (
+                                            <div key={date} className="flex items-center justify-between p-3 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors rounded-lg">
+                                                <div className="flex flex-col">
+                                                    <span className="text-sm font-bold text-gray-500">{date}</span>
+                                                    <span className="text-sm text-gray-400 font-bold mt-0.5">
+                                                        특 {dg.sang} / 중 {dg.jung} / 하 {dg.ha}
+                                                    </span>
+                                                </div>
+                                                <span className="text-base font-black text-gray-900">{count.toLocaleString()} <span className="text-xs text-gray-400 font-normal">Box</span></span>
+                                            </div>
+                                        );
+                                    })
                                 )}
                             </div>
                         </section>

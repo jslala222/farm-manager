@@ -14,16 +14,37 @@ export default function AdminPage() {
 
     const fetchFarms = async () => {
         setLoading(true);
-        const { data } = await supabase
+        // 복합 조인으로 인한 오류를 방지하기 위해 단순 쿼리로 복구합니다.
+        const { data, error } = await supabase
             .from('farms')
             .select('*')
             .order('created_at', { ascending: false });
-        setFarms(data ?? []);
+
+        if (error) {
+            console.error("농장 로드 실패:", error);
+            alert("농장 정보를 불러오는데 실패했습니다.");
+        } else {
+            setFarms(data ?? []);
+        }
         setLoading(false);
     };
 
-    const toggleActive = async (id: string, current: boolean) => {
-        await supabase.from('farms').update({ is_active: !current }).eq('id', id);
+    const toggleActive = async (id: string, current: boolean, email?: string) => {
+        const newStatus = !current;
+
+        // 1. 농장 활성화 상태 업데이트
+        const { error: farmError } = await supabase.from('farms').update({ is_active: newStatus }).eq('id', id);
+
+        if (farmError) {
+            alert("상태 변경 실패: " + farmError.message);
+            return;
+        }
+
+        // 2. [핵심] 승인 시 이메일 미인증 상태라면 즉시 강제 인증 처리 (One-Click 통합)
+        if (newStatus && email) {
+            await supabase.rpc('force_confirm_user', { target_email: email });
+        }
+
         fetchFarms();
     };
 
@@ -53,12 +74,15 @@ export default function AdminPage() {
                     </div>
                     <p className="text-3xl font-bold text-gray-900">{activeFarms.length}</p>
                 </div>
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                        <XCircle className="w-5 h-5 text-yellow-600" />
-                        <span className="text-sm text-gray-500">승인 대기</span>
+                <div className="bg-white rounded-2xl border-2 border-yellow-200 shadow-lg p-5 animate-pulse-subtle bg-yellow-50/30">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="bg-yellow-100 p-2 rounded-xl">
+                            <XCircle className="w-5 h-5 text-yellow-600" />
+                        </div>
+                        <span className="text-sm font-black text-yellow-700 uppercase tracking-tighter">신규 승인 대기</span>
                     </div>
-                    <p className="text-3xl font-bold text-gray-900">{pendingFarms.length}</p>
+                    <p className="text-4xl font-black text-yellow-900">{pendingFarms.length}</p>
+                    <p className="text-[10px] text-yellow-600 font-bold mt-1">사장님의 확인이 필요한 새로운 농장 신청입니다.</p>
                 </div>
             </div>
 
@@ -100,6 +124,7 @@ function FarmCard({ farm, onToggle }: { farm: Farm; onToggle: (id: string, curre
                 <div className="flex-1 min-w-0">
                     <h3 className="font-bold text-gray-900">{farm.farm_name}</h3>
                     <div className="text-sm text-gray-500 mt-1 space-y-0.5">
+                        <p className="font-medium text-blue-600">👤 소유자 ID: {farm.owner_id.substring(0, 8)}...</p>
                         {farm.phone && <p>📞 {farm.phone}</p>}
                         {farm.address && <p>📍 {farm.address}</p>}
                         {farm.business_number && <p>🏢 {farm.business_number}</p>}
@@ -109,14 +134,19 @@ function FarmCard({ farm, onToggle }: { farm: Farm; onToggle: (id: string, curre
                         등록일: {new Date(farm.created_at).toLocaleDateString('ko-KR')}
                     </p>
                 </div>
-                <button
-                    onClick={() => onToggle(farm.id, farm.is_active)}
-                    className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-bold transition-all
-            ${farm.is_active
-                            ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                            : 'bg-green-500 text-white hover:bg-green-600'}`}>
-                    {farm.is_active ? '승인 취소' : '승인'}
-                </button>
+                <div className="flex flex-col gap-2">
+                    <button
+                        onClick={() => onToggle(farm.id, farm.is_active, (farm as any).profiles?.email || farm.owner_id)}
+                        className={`px-6 py-2.5 rounded-2xl text-sm font-black transition-all shadow-lg active:scale-95
+                ${farm.is_active
+                                ? 'bg-red-50 text-red-600 border border-red-100'
+                                : 'bg-green-600 text-white hover:bg-green-700 hover:shadow-green-200'}`}>
+                        {farm.is_active ? '승인 취소' : '즉시 승인'}
+                    </button>
+                    {!farm.is_active && (
+                        <p className="text-[10px] text-gray-400 text-center font-bold">승인 시 이메일도 함께 인증됩니다</p>
+                    )}
+                </div>
             </div>
         </div>
     );

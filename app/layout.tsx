@@ -7,7 +7,7 @@ import AuthProvider from "@/components/AuthProvider";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "딸기농장 관리",
+  title: "농장관리",
   description: "딸기농장 수확·판매·출근 관리 시스템",
   manifest: "/manifest.json",
 };

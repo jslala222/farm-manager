@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Sprout, Users, TrendingUp, Package, AlertCircle } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
+import { formatCurrency } from "@/lib/utils";
 
 export default function Home() {
   const { farm, profile, initialized } = useAuthStore();
@@ -27,6 +28,25 @@ export default function Home() {
       }
     }
   }, [farm, initialized]);
+
+  // 농장이 없는 경우 (신규 유저)
+  if (initialized && !farm && !loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[70vh] p-6 text-center">
+        <div className="bg-red-50 p-6 rounded-[2.5rem] mb-6 shadow-inner">
+          <Sprout className="w-12 h-12 text-red-600 animate-bounce-slow" />
+        </div>
+        <h2 className="text-2xl font-black text-gray-900 mb-3">농장 정보가 없습니다</h2>
+        <p className="text-gray-500 mb-8 max-w-xs mx-auto leading-relaxed">
+          시스템을 사용하려면 먼저 농장을 등록해야 합니다.<br />
+          아래 버튼을 눌러 첫 농장을 설정해 주세요.
+        </p>
+        <a href="/settings" className="bg-gray-900 text-white px-10 py-5 rounded-2xl font-black text-lg shadow-xl hover:scale-105 active:scale-95 transition-all">
+          첫 농장 등록하기
+        </a>
+      </div>
+    );
+  }
 
   const fetchTodayData = async () => {
     if (!farm?.id) return;
@@ -61,20 +81,6 @@ export default function Home() {
     }
   };
 
-  // 미승인 농장주 (관리자는 예외)
-  if (farm && !farm.is_active && profile?.role !== 'admin') {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh] p-6">
-        <div className="text-center max-w-sm">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-yellow-100 rounded-2xl mb-4">
-            <AlertCircle className="w-8 h-8 text-yellow-600" />
-          </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">승인 대기 중</h2>
-          <p className="text-gray-500 text-sm">관리자 승인 후 사용 가능합니다.<br />잠시만 기다려 주세요.</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="p-4 md:p-6 pb-24 md:pb-6">
@@ -97,7 +103,7 @@ export default function Home() {
               <span className="text-sm font-medium text-gray-500">{item.label}</span>
             </div>
             <p className="text-3xl font-bold text-gray-900">
-              {loading ? "—" : item.val}
+              {loading ? "—" : item.val.toLocaleString()}
               <span className="text-base font-normal text-gray-400 ml-1">{item.unit}</span>
             </p>
           </div>

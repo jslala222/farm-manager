@@ -59,5 +59,14 @@ BEGIN
     END IF;
 END $$;
 
+-- [5] 출근부(attendance_records) 역할 제약 조건 수정 (staff 추가)
+DO $$ 
+BEGIN
+    ALTER TABLE IF EXISTS attendance_records DROP CONSTRAINT IF EXISTS attendance_records_role_check;
+    ALTER TABLE attendance_records ADD CONSTRAINT attendance_records_role_check 
+        CHECK (role IN ('family', 'foreign', 'part_time', 'staff'));
+    RAISE NOTICE '성공: 출근부 역할 구분에 "staff"가 추가되었습니다.';
+END $$;
+
 -- [4] 권한부여 (최종 확인)
 GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;

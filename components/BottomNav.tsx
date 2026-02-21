@@ -2,17 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Sprout, Truck, Users, Settings } from "lucide-react";
+import { Home, Sprout, ShoppingCart, Users, Calculator } from "lucide-react";
 
 export default function BottomNav() {
     const pathname = usePathname();
 
     const navItems = [
         { href: "/", label: "홈", icon: Home },
+        { href: "/finance", label: "결산", icon: Calculator },
         { href: "/harvest", label: "수확", icon: Sprout },
-        { href: "/sales", label: "판매", icon: Truck },
-        { href: "/attendance", label: "출근", icon: Users },
-        { href: "/settings", label: "설정", icon: Settings }, // Settings Icon added
+        { href: "/sales", label: "판매", icon: ShoppingCart },
+        { href: "/workers", label: "인력", icon: Users },
     ];
 
     return (

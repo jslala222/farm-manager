@@ -13,31 +13,61 @@ import {
     X,
     UserCheck,
     Receipt,
-    ShieldCheck
+    ShieldCheck,
+    Building2,
+    Calculator,
+    RefreshCcw,
+    AlignLeft
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { useEffect, useState } from "react";
+import { supabase, Farm } from "@/lib/supabase";
 
 const navItems = [
     { href: "/", label: "대시보드", icon: LayoutDashboard },
-    { href: "/harvest", label: "수확 기록", icon: Sprout },
-    { href: "/sales", label: "판매 기록", icon: ShoppingCart },
-    { href: "/expenses", label: "지출 기록", icon: Receipt },
-    { href: "/attendance", label: "출근 체크", icon: UserCheck },
-    { href: "/workers", label: "근로자 관리", icon: Users },
+    { href: "/finance", label: "통합 결산", icon: Calculator },
+    { href: "/harvest", label: "수확 관리", icon: Sprout },
+    { href: "/sales", label: "판매/출하", icon: ShoppingCart },
+    { href: "/expenses", label: "지출 관리", icon: Receipt },
+    { href: "/workers", label: "인력 관리", icon: Users },
+    { href: "/clients", label: "거래처/고객", icon: Building2 },
     { href: "/settings", label: "설정", icon: Settings },
 ];
 
 export default function NavBar() {
     const pathname = usePathname();
     const router = useRouter();
-    const { user, profile, farm, initialize, signOut } = useAuthStore();
+    const { user, profile, farm, initialize, signOut, setFarm } = useAuthStore();
+    const [showFarmSwitcher, setShowFarmSwitcher] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
+    const [farms, setFarms] = useState<Farm[]>([]);
 
-    useEffect(() => { initialize(); }, []);
+    // [bkit] 긴급 연결 복구 로직
+    const handleEmergencyReset = async () => {
+        if (!confirm("DB 연결 세션과 로컬 캐시를 모두 초기화하고 다시 로그인하시겠습니까?")) return;
+        localStorage.clear(); // 모든 로컬 데이터 삭제
+        sessionStorage.clear();
+        await signOut();
+        window.location.href = '/login';
+    };
 
-    if (pathname === "/login" || pathname === "/register") return null;
+    useEffect(() => {
+        initialize();
+        if (profile?.role === 'admin') {
+            fetchFarms();
+        }
+    }, [profile?.role]);
+
+    const fetchFarms = async () => {
+        const { data } = await supabase.from('farms').select('*').order('farm_name');
+        setFarms(data ?? []);
+    };
+
+    if (pathname === "/login" || pathname === "/register" || pathname === "/pending") return null;
     if (!user) return null;
+
+    // 추가 보안: 농장 비활성이고 관리자 아닐 때 숨김
+    if (profile?.role !== 'admin' && farm && !farm.is_active) return null;
 
     const handleSignOut = async () => {
         await signOut();
@@ -57,12 +87,40 @@ export default function NavBar() {
                         <div className="bg-red-100 p-2 rounded-xl">
                             <Sprout className="w-5 h-5 text-red-600" />
                         </div>
-                        <div>
-                            <p className="font-bold text-gray-900 text-sm leading-tight">딸기농장 관리</p>
-                            <p className="text-xs text-gray-400 truncate max-w-[120px]">{farm?.farm_name || profile?.full_name}</p>
+                        <div className="flex-1 min-w-0">
+                            <p className="font-bold text-gray-900 text-sm leading-tight truncate">농장관리</p>
+                            <p className="text-[10px] text-gray-400 truncate mt-0.5">{farm?.farm_name || profile?.full_name}</p>
                         </div>
+                        {profile?.role === 'admin' && (
+                            <button
+                                onClick={() => setShowFarmSwitcher(!showFarmSwitcher)}
+                                className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+                            >
+                                <Settings className="w-4 h-4 text-gray-400" />
+                            </button>
+                        )}
                     </div>
                 </div>
+
+                {/* 농장 전환 메뉴 (관리자용) */}
+                {showFarmSwitcher && profile?.role === 'admin' && (
+                    <div className="mx-3 mt-3 p-2 bg-gray-50 rounded-xl space-y-1 max-h-48 overflow-y-auto border border-gray-100 animate-in fade-in slide-in-from-top-2">
+                        <p className="text-[10px] font-black text-gray-400 px-2 py-1 uppercase">농장 전환</p>
+                        {farms.map(f => (
+                            <button
+                                key={f.id}
+                                onClick={() => {
+                                    setFarm(f);
+                                    setShowFarmSwitcher(false);
+                                }}
+                                className={`w-full text-left px-2 py-1.5 rounded-lg text-xs font-bold transition-all
+                                    ${farm?.id === f.id ? 'bg-red-500 text-white' : 'text-gray-600 hover:bg-gray-200'}`}
+                            >
+                                {f.farm_name}
+                            </button>
+                        ))}
+                    </div>
+                )}
 
                 <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
                     {allNavItems.map(({ href, label, icon: Icon }) => (
@@ -89,17 +147,31 @@ export default function NavBar() {
             <div className="hidden md:block w-56 flex-shrink-0" />
 
             {/* 모바일 상단 헤더 */}
-            <header className="md:hidden fixed top-0 left-0 right-0 bg-white border-b border-gray-100 z-40 px-4 py-3 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <div className="bg-red-100 p-1.5 rounded-lg">
-                        <Sprout className="w-4 h-4 text-red-600" />
+            <nav className="md:hidden bg-white border-b border-gray-100 sticky top-0 z-50">
+                <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+                    <div className="flex items-center gap-2" onClick={() => window.location.href = '/'}>
+                        <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center shadow-lg shadow-red-100 text-white font-black text-xl">
+                            H
+                        </div>
+                        <h1 className="text-lg font-black text-gray-900 tracking-tight">행복한 희라딸기</h1>
                     </div>
-                    <span className="font-bold text-gray-900 text-sm">{farm?.farm_name || "딸기농장 관리"}</span>
+
+                    <div className="flex items-center gap-2">
+                        {/* [bkit] 긴급 연결 복구 버튼 */}
+                        <button
+                            onClick={handleEmergencyReset}
+                            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all"
+                            title="연결 복구"
+                        >
+                            <RefreshCcw size={18} />
+                        </button>
+
+                        <button onClick={() => setMobileOpen(!mobileOpen)} className="p-2 text-gray-500 hover:bg-gray-50 rounded-full">
+                            {mobileOpen ? <X size={20} /> : <AlignLeft size={20} />}
+                        </button>
+                    </div>
                 </div>
-                <button onClick={() => setMobileOpen(!mobileOpen)} className="p-2 rounded-lg hover:bg-gray-100">
-                    {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-                </button>
-            </header>
+            </nav>
 
             {/* 모바일 드로어 메뉴 */}
             {mobileOpen && (
@@ -131,9 +203,9 @@ export default function NavBar() {
                 </div>
             )}
 
-            {/* 모바일 하단 탭바 (주요 메뉴 4개) */}
+            {/* 모바일 하단 탭바 (주요 메뉴 5개로 확장) */}
             <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-40 flex">
-                {navItems.slice(0, 4).map(({ href, label, icon: Icon }) => (
+                {navItems.slice(0, 5).map(({ href, label, icon: Icon }) => (
                     <Link key={href} href={href}
                         className={`flex-1 flex flex-col items-center py-2 gap-0.5 text-xs font-medium transition-colors
               ${pathname === href ? 'text-red-600' : 'text-gray-400 hover:text-gray-600'}`}>

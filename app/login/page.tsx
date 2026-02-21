@@ -31,7 +31,23 @@ export default function LoginPage() {
                 alert("로그인 실패: " + error.message);
                 setMsg("에러: " + error.message);
             } else if (data.user) {
-                alert("로그인 성공! 이동합니다.");
+                // [신규] 사장님(관리자) 승인 여부 체크 게이트
+                const { data: profile } = await supabase.from('profiles').select('role').eq('id', data.user.id).single();
+
+                if (profile?.role !== 'admin') {
+                    const { data: farm } = await supabase.from('farms').select('is_active').eq('owner_id', data.user.id).maybeSingle();
+
+                    if (!farm || !farm.is_active) {
+                        // 승인되지 않은 유저는 즉시 로그아웃 및 차단
+                        await supabase.auth.signOut();
+                        alert("🔒 승인 대기 중입니다.\n\n사장님(관리자)의 승인이 완료된 후 로그인이 가능합니다. 잠시만 기다려 주세요.");
+                        setMsg("사장님 승인 대기 중 (미승인 계정)");
+                        setLoading(false);
+                        return;
+                    }
+                }
+
+                alert("로그인 성공! 대시보드로 이동합니다.");
                 window.location.href = "/";
             }
         } catch (err: any) {
@@ -45,7 +61,8 @@ export default function LoginPage() {
     const testSupabase = async () => {
         setMsg("Supabase 연결 확인 중...");
         try {
-            const { data, error } = await supabase.from('profiles').select('count');
+            // count: 'exact', head: true 를 사용하여 실제 컬럼 데이터 로드 없이 연결만 확인
+            const { error } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
             if (error) {
                 alert("Supabase 연결 실패 (키 확인 필요): " + error.message);
             } else {
@@ -64,7 +81,7 @@ export default function LoginPage() {
                     <div className="inline-flex items-center justify-center w-12 h-12 bg-red-100 rounded-xl mb-3">
                         <Sprout className="w-6 h-6 text-red-600" />
                     </div>
-                    <h1 className="text-2xl font-bold">딸기농장 관리</h1>
+                    <h1 className="text-2xl font-bold">농장관리</h1>
                     <p className="text-gray-500 text-sm">로그인 후 사용 가능합니다</p>
                 </div>
 

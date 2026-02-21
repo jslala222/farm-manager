@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Sprout, CheckCircle } from "lucide-react";
+import AddressSearch from "@/components/AddressSearch";
+import { formatPhone, formatBusinessNumber } from "@/lib/utils";
 
 export default function RegisterPage() {
     const [step, setStep] = useState<'form' | 'done'>('form');
@@ -17,6 +19,7 @@ export default function RegisterPage() {
         farm_name: "",
         phone: "",
         address: "",
+        postal_code: "",
         business_number: "",
         notes: "",
     });
@@ -60,9 +63,10 @@ export default function RegisterPage() {
                 farm_name: form.farm_name,
                 phone: form.phone || null,
                 address: form.address || null,
+                postal_code: form.postal_code || null,
                 business_number: form.business_number || null,
                 notes: form.notes || null,
-                is_active: false,
+                is_active: false, // 무조건 비활성 상태로 시작
             });
         }
 
@@ -150,29 +154,44 @@ export default function RegisterPage() {
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">연락처</label>
-                                        <input name="phone" type="tel" value={form.phone} onChange={handleChange}
+                                        <input name="phone" type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })}
                                             placeholder="010-0000-0000"
                                             className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none transition-all" />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">사업자번호</label>
-                                        <input name="business_number" type="text" value={form.business_number} onChange={handleChange}
+                                        <input name="business_number" type="text" value={form.business_number} onChange={(e) => setForm({ ...form, business_number: formatBusinessNumber(e.target.value) })}
                                             placeholder="000-00-00000"
                                             className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none transition-all" />
                                     </div>
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">농장 주소</label>
-                                    <input name="address" type="text" value={form.address} onChange={handleChange}
-                                        placeholder="예: 경남 진주시 ..."
-                                        className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none transition-all" />
+                                <div className="grid grid-cols-12 gap-3 items-end">
+                                    <div className="col-span-9">
+                                        <AddressSearch
+                                            label="농장 주소"
+                                            value={form.address}
+                                            onChange={(val) => setForm({ ...form, address: val })}
+                                            onAddressSelect={(res) => setForm({
+                                                ...form,
+                                                address: res.address,
+                                                postal_code: res.zonecode
+                                            })}
+                                            placeholder="농장 위치를 검색하거나 입력하세요"
+                                        />
+                                    </div>
+                                    <div className="col-span-3 space-y-2">
+                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-tight ml-1">우편번호</label>
+                                        <input type="text" value={form.postal_code}
+                                            onChange={(e) => setForm({ ...form, postal_code: e.target.value })}
+                                            className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none text-center font-bold text-sm" placeholder="00000" />
+                                    </div>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">특이사항</label>
                                     <textarea name="notes" value={form.notes} onChange={handleChange}
                                         placeholder="기타 전달 사항"
-                                        rows={3}
-                                        className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none transition-all resize-none" />
+                                        rows={2}
+                                        className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none transition-all resize-none font-medium" />
                                 </div>
                             </div>
                         </div>
@@ -196,7 +215,7 @@ export default function RegisterPage() {
                         </p>
                     </div>
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 }

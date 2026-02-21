@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Plus, Trash2, Receipt, Calendar, CreditCard, Tag } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { supabase, Expenditure } from "@/lib/supabase";
+import { formatCurrency, stripNonDigits } from "@/lib/utils";
 
 export default function ExpensesPage() {
     const { farm } = useAuthStore();
@@ -37,7 +38,7 @@ export default function ExpensesPage() {
         const { error } = await supabase.from('expenditures').insert({
             farm_id: farm.id,
             category,
-            amount: parseInt(amount),
+            amount: parseInt(stripNonDigits(amount)),
             notes,
             expense_date: expenseDate
         });
@@ -92,10 +93,9 @@ export default function ExpensesPage() {
                         <label className="block text-sm font-medium text-gray-600 mb-1">금액</label>
                         <div className="relative">
                             <CreditCard className="absolute left-3 top-3 w-5 h-5 text-gray-400 pointer-events-none" />
-                            <input type="text" value={amount ? `${Number(amount).toLocaleString()}원` : ""}
+                            <input type="text" value={amount ? formatCurrency(amount) : ""}
                                 onChange={(e) => {
-                                    const val = e.target.value.replace(/[^\d]/g, '');
-                                    setAmount(val);
+                                    setAmount(stripNonDigits(e.target.value));
                                 }}
                                 placeholder="0원"
                                 className="w-full p-3 pl-10 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none font-bold" />
@@ -124,7 +124,7 @@ export default function ExpensesPage() {
                                 </div>
                                 <div>
                                     <div className="flex items-center gap-2">
-                                        <p className="font-bold text-gray-900">{exp.amount.toLocaleString()}원</p>
+                                        <p className="font-bold text-gray-900">{formatCurrency(exp.amount)}</p>
                                         <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 rounded text-gray-500 font-bold">{exp.category}</span>
                                     </div>
                                     <p className="text-sm text-gray-500">{exp.notes || '메모 없음'}</p>

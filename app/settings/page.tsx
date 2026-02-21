@@ -4,6 +4,9 @@ import { useState, useEffect } from "react";
 import { Save, Plus, Trash2, Home, LayoutGrid, AlertCircle, Building2, CheckCircle2 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { supabase, Farm, FarmHouse } from "@/lib/supabase";
+import { formatPhone, formatBusinessNumber } from "@/lib/utils";
+import AddressSearch from "@/components/AddressSearch";
+import { Search } from "lucide-react";
 
 export default function SettingsPage() {
     const { user, farm: storeFarm, profile, initialize, initialized } = useAuthStore();
@@ -74,6 +77,9 @@ export default function SettingsPage() {
                     fax: farm.fax,
                     email: farm.email,
                     address: farm.address,
+                    postal_code: farm.postal_code,
+                    latitude: farm.latitude,
+                    longitude: farm.longitude,
                     business_number: farm.business_number,
                     notes: farm.notes,
                 }).eq('id', storeFarm.id);
@@ -91,6 +97,9 @@ export default function SettingsPage() {
                     fax: farm.fax,
                     email: farm.email,
                     address: farm.address,
+                    postal_code: farm.postal_code,
+                    latitude: farm.latitude,
+                    longitude: farm.longitude,
                     business_number: farm.business_number,
                     notes: farm.notes,
                     is_active: true
@@ -129,16 +138,60 @@ export default function SettingsPage() {
     };
 
     const addHouse = async () => {
-        const num = parseInt(newHouseNum);
-        if (!num || isNaN(num)) { alert("추가할 동 번호를 입력해주세요."); return; }
+        if (!newHouseNum.trim()) { alert("추가할 동 정보를 입력해주세요."); return; }
         if (!storeFarm?.id) return;
 
-        const { error } = await supabase.from('farm_houses').insert({
+        let nums: number[] = [];
+        const trimmed = newHouseNum.trim();
+
+        // 1. 범위 처리 (예: 1-6)
+        if (trimmed.includes('-')) {
+            const parts = trimmed.split('-');
+            const start = parseInt(parts[0]);
+            const end = parseInt(parts[1]);
+            if (!isNaN(start) && !isNaN(end) && start <= end) {
+                for (let i = start; i <= end; i++) nums.push(i);
+            }
+        }
+        // 2. 단일 숫자 (스마트 처리)
+        else {
+            const n = parseInt(trimmed);
+            if (!isNaN(n)) {
+                // 현재 하우스가 0개인데 큰 숫자를 입력한 경우, 1~N까지 일괄 생성을 제안
+                if (houses.length === 0 && n > 1) {
+                    if (confirm(`${n}을 입력하셨습니다. 1동부터 ${n}동까지 총 ${n}개의 하우스를 한 번에 생성하시겠습니까?`)) {
+                        for (let i = 1; i <= n; i++) nums.push(i);
+                    } else {
+                        nums = [n];
+                    }
+                } else {
+                    nums = [n];
+                }
+            }
+        }
+
+        if (nums.length === 0) {
+            alert("입력 형식이 올바르지 않습니다. (숫자 또는 1-6 형식을 사용하세요)");
+            return;
+        }
+
+        // 중복 체크
+        const existingNums = houses.map(h => h.house_number);
+        const uniqueNewNums = nums.filter(num => !existingNums.includes(num));
+
+        if (uniqueNewNums.length === 0) {
+            alert("이미 등록된 하우스 번호입니다.");
+            return;
+        }
+
+        const newHouses = uniqueNewNums.map(num => ({
             farm_id: storeFarm.id,
             house_number: num,
             house_name: `${num}동`,
             is_active: true
-        });
+        }));
+
+        const { error } = await supabase.from('farm_houses').insert(newHouses);
 
         if (error) {
             alert(`동 추가 실패: ${error.message}`);
@@ -159,13 +212,6 @@ export default function SettingsPage() {
         fetchHouses();
     };
 
-    // 전화번호/팩스 자동 포맷팅 함수
-    const formatPhoneNumber = (value: string) => {
-        const numbers = value.replace(/[^\d]/g, '');
-        if (numbers.length <= 3) return numbers;
-        if (numbers.length <= 7) return `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
-        return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7, 11)}`;
-    };
 
     const field = (label: string, key: keyof Farm, type = "text", placeholder = "") => (
         <div className="space-y-1">
@@ -174,7 +220,10 @@ export default function SettingsPage() {
                 onChange={(e) => {
                     let val = e.target.value;
                     if (key === 'phone' || key === 'fax') {
-                        val = formatPhoneNumber(val);
+                        val = formatPhone(val);
+                    }
+                    if (key === 'business_number') {
+                        val = formatBusinessNumber(val);
                     }
                     setFarm({ ...farm, [key]: val });
                 }}
@@ -265,7 +314,27 @@ export default function SettingsPage() {
                         {field("사업자 등록 번호", "business_number", "text", "000-00-00000")}
                     </div>
 
-                    {field("배송/농장 주소", "address", "text", "도로명 주소를 입력하세요")}
+                    <div className="grid grid-cols-12 gap-3 items-end">
+                        <div className="col-span-9">
+                            <AddressSearch
+                                label="배송/농장 주소"
+                                value={farm.address || ""}
+                                onChange={(val) => setFarm({ ...farm, address: val })}
+                                onAddressSelect={(res) => setFarm({
+                                    ...farm,
+                                    address: res.address,
+                                    postal_code: res.zonecode
+                                })}
+                                placeholder="도로명 주소를 입력하세요"
+                            />
+                        </div>
+                        <div className="col-span-3 space-y-2">
+                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-tight ml-1">우편번호</label>
+                            <input value={farm.postal_code || ""}
+                                onChange={(e) => setFarm({ ...farm, postal_code: e.target.value })}
+                                className="w-full py-5 px-1 bg-gray-50 border-2 border-transparent rounded-[1.25rem] focus:bg-white focus:border-red-200 outline-none text-center font-bold text-sm" placeholder="00000" />
+                        </div>
+                    </div>
 
                     <div className="space-y-1">
                         <label className="block text-sm font-semibold text-gray-500 ml-1">농장 운영 메모</label>
@@ -297,8 +366,8 @@ export default function SettingsPage() {
                     <div className="flex gap-3">
                         <div className="relative flex-1 group">
                             <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-300 group-focus-within:text-red-400 transition-colors" />
-                            <input type="number" value={newHouseNum} onChange={(e) => setNewHouseNum(e.target.value)}
-                                placeholder="추가할 동 번호 (예: 13)"
+                            <input type="text" value={newHouseNum} onChange={(e) => setNewHouseNum(e.target.value)}
+                                placeholder="예: 6 (또는 1-12 범위)"
                                 className="w-full p-4 pl-12 bg-gray-50 border border-transparent rounded-2xl focus:bg-white focus:border-red-200 focus:ring-4 focus:ring-red-50/50 outline-none transition-all shadow-inner" />
                         </div>
                         <button onClick={addHouse}
