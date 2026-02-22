@@ -5,9 +5,20 @@ import { Save, Plus, Minus, Trash2, Sprout, Clock, History, Edit2, X, Check, Bar
 import { useAuthStore } from "@/store/authStore";
 import { supabase, FarmHouse, HarvestRecord } from "@/lib/supabase";
 
+// [bkit] 기록 필터링 및 그룹화 헬퍼 함수
+function bkit_filtered_diaries(diaries: any[], houseFilter: number | null) {
+    return diaries
+        .filter(d => !houseFilter || d.house_number === houseFilter)
+        .reduce((acc: Record<string, any[]>, curr: any) => {
+            if (!acc[curr.date]) acc[curr.date] = [];
+            acc[curr.date].push(curr);
+            return acc;
+        }, {});
+}
+
 export default function HarvestPage() {
     const { farm, initialized } = useAuthStore();
-    const [activeTab, setActiveTab] = useState<'record' | 'analysis'>('record');
+    const [activeTab, setActiveTab] = useState<'record' | 'analysis' | 'history'>('record');
 
     // Data State
     const [houses, setHouses] = useState<FarmHouse[]>([]);
@@ -70,7 +81,7 @@ export default function HarvestPage() {
             .from('farm_houses')
             .select('*')
             .eq('farm_id', farm!.id)
-            .eq('is_active', true)
+            // .eq('is_active', true) // 사장님 요청: 휴작동도 일지 작성을 위해 표시하도록 필터 제거
             .order('house_number');
         setHouses(data ?? []);
     };
@@ -199,7 +210,16 @@ export default function HarvestPage() {
             alert("하우스 동을 선택해주세요!");
             return;
         }
+
+        // 선택된 하우스의 정보 확인 (휴작 여부 체크 및 작물 정보 획득)
+        const selectedHouseData = houses.find(h => h.house_number === selectedHouse);
+        if (selectedHouseData && !selectedHouseData.is_active) {
+            const confirmHarvest = confirm(`⚠️ 현재 이 동은 '휴작' 상태입니다. 그래도 수확 기록을 남기시겠습니까?`);
+            if (!confirmHarvest) return;
+        }
+
         setSaving(true);
+        const currentCrop = selectedHouseData?.current_crop || '딸기';
 
         // Combine date with current time to preserve order if multiple entries on same day
         const now = new Date();
@@ -211,6 +231,7 @@ export default function HarvestPage() {
             house_number: selectedHouse,
             grade: selectedGrade,
             quantity,
+            crop_name: currentCrop, // 작물 이름 스냅샷 저장
             recorded_at: new Date(dateTime).toISOString()
         });
         if (error) {
@@ -305,7 +326,7 @@ export default function HarvestPage() {
         setEditDate(item.recorded_at.split('T')[0]); // YYYY-MM-DD
     };
 
-    const gradeLabel = (g: string) => ({ sang: '특/상', jung: '중/보통', ha: '하/주스' }[g] ?? g);
+    const gradeLabel = (g: string) => ({ sang: '특/상', jung: '중', ha: '하' }[g] ?? g);
     const gradeColor = (g: string) => ({ sang: 'text-red-600 bg-red-50', jung: 'text-orange-600 bg-orange-50', ha: 'text-yellow-600 bg-yellow-50' }[g] ?? 'text-gray-600 bg-gray-50');
 
     return (
@@ -325,7 +346,14 @@ export default function HarvestPage() {
                 <div className="flex bg-gray-100 p-1 rounded-xl">
                     <button onClick={() => setActiveTab('record')}
                         className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'record' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-400'}`}>
-                        기록하기
+                        수확하기
+                    </button>
+                    <button onClick={() => {
+                        setActiveTab('history');
+                        fetchAllDiaries();
+                    }}
+                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'history' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-400'}`}>
+                        영농일지
                     </button>
                     <button onClick={() => setActiveTab('analysis')}
                         className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'analysis' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-400'}`}>
@@ -355,13 +383,10 @@ export default function HarvestPage() {
                                     <NotebookPen className="w-4 h-4" /> 오늘의 하우스 컨디션 리포트
                                 </h2>
                                 <button
-                                    onClick={() => {
-                                        fetchAllDiaries();
-                                        setIsArchiveOpen(true);
-                                    }}
+                                    onClick={() => setActiveTab('history')}
                                     className="text-[10px] font-black text-blue-500 bg-white px-2.5 py-1 rounded-lg shadow-sm border border-blue-100 hover:bg-blue-50 transition-colors uppercase tracking-tighter"
                                 >
-                                    전체 기록 보기
+                                    더 보기
                                 </button>
                             </div>
                             <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
@@ -406,29 +431,58 @@ export default function HarvestPage() {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-5 gap-2">
+                                <div className="grid grid-cols-4 gap-3">
                                     {houses.length === 0 ? (
-                                        <p className="text-[10px] text-gray-400 text-center py-2 col-span-5">하우스 정보가 없습니다.</p>
+                                        <p className="text-[10px] text-gray-400 text-center py-2 col-span-4">하우스 정보가 없습니다.</p>
                                     ) : (
-                                        houses.map((h) => (
-                                            <button
-                                                key={h.id}
-                                                onClick={() => setSelectedHouse(h.house_number)}
-                                                className={`h-12 rounded-2xl text-sm font-black transition-all flex items-center justify-center border ${selectedHouse === h.house_number
-                                                    ? 'bg-green-600 text-white border-green-700 shadow-lg shadow-green-100 scale-105'
-                                                    : 'bg-white border-gray-100 text-gray-400 hover:border-green-200'
-                                                    }`}
-                                            >
-                                                {h.house_number}
-                                            </button>
-                                        ))
+                                        houses.map((h) => {
+                                            const isSelected = selectedHouse === h.house_number;
+                                            const isStrawberry = [1, 2, 3].includes(h.house_number);
+                                            const isFallow = !h.is_active;
+
+                                            let colorClass = "";
+                                            if (isSelected) {
+                                                if (isStrawberry) {
+                                                    colorClass = "bg-red-600 text-white border-red-700 shadow-lg shadow-red-100 scale-105";
+                                                } else if (h.house_number === 6) {
+                                                    colorClass = "bg-orange-500 text-white border-orange-600 shadow-lg shadow-orange-100 scale-105";
+                                                } else if (h.house_number === 7) {
+                                                    colorClass = "bg-sky-500 text-white border-sky-600 shadow-lg shadow-sky-100 scale-105";
+                                                } else if (h.house_number === 8) {
+                                                    colorClass = "bg-indigo-500 text-white border-indigo-600 shadow-lg shadow-indigo-100 scale-105";
+                                                } else if (isFallow) {
+                                                    colorClass = "bg-gray-600 text-white border-gray-700 shadow-lg shadow-gray-100 scale-105";
+                                                } else {
+                                                    colorClass = "bg-green-600 text-white border-green-700 shadow-lg shadow-green-100 scale-105";
+                                                }
+                                            } else {
+                                                if (isFallow) colorClass = "bg-gray-50 border-gray-100 text-gray-300 opacity-60";
+                                                else colorClass = "bg-white border-gray-100 text-gray-400 hover:border-gray-200";
+                                            }
+
+                                            return (
+                                                <button
+                                                    key={h.id}
+                                                    onClick={() => setSelectedHouse(h.house_number)}
+                                                    className={`h-16 rounded-2xl transition-all flex flex-col items-center justify-center border leading-none gap-1 ${colorClass}`}
+                                                >
+                                                    <span className="text-xl font-black">{h.house_number}</span>
+                                                    <span className={`text-[10px] font-black uppercase tracking-tighter ${isSelected ? 'opacity-90' : 'opacity-60'}`}>
+                                                        {h.current_crop || (h.is_active ? '딸기' : '휴작')}
+                                                    </span>
+                                                </button>
+                                            );
+                                        })
                                     )}
                                 </div>
 
                                 {selectedHouse && (
                                     <div className="flex items-center justify-between bg-gray-50/50 p-3 rounded-2xl border border-dashed border-gray-200 animate-in fade-in zoom-in-95">
                                         <div className="flex items-center gap-2">
-                                            <div className="w-8 h-8 bg-white rounded-xl shadow-sm flex items-center justify-center text-xs font-black text-green-600">{selectedHouse}동</div>
+                                            <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex flex-col items-center justify-center border border-green-50">
+                                                <span className="text-[10px] font-black text-green-600 leading-none">{selectedHouse}동</span>
+                                                <span className="text-[7px] font-bold text-gray-400 tracking-tighter mt-0.5">{houses.find(h => h.house_number === selectedHouse)?.current_crop || '딸기'}</span>
+                                            </div>
                                             <button
                                                 onClick={() => {
                                                     fetchHouseDiaries(selectedHouse);
@@ -750,7 +804,7 @@ export default function HarvestPage() {
                                                     <div className="flex flex-wrap items-center gap-2">
                                                         <input type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)} className="p-2 bg-gray-50 border border-gray-100 rounded-lg text-xs font-bold outline-none" />
                                                         <select value={editHouse} onChange={(e) => setEditHouse(Number(e.target.value))} className="p-2 bg-gray-50 border border-gray-100 rounded-lg text-xs font-bold outline-none">{houses.map(h => <option key={h.id} value={h.house_number}>{h.house_number}동</option>)}</select>
-                                                        <select value={editGrade} onChange={(e) => setEditGrade(e.target.value as any)} className="p-2 bg-gray-50 border border-gray-100 rounded-lg text-xs font-bold outline-none"><option value="sang">특/상</option><option value="jung">중/보통</option><option value="ha">하/주스</option></select>
+                                                        <select value={editGrade} onChange={(e) => setEditGrade(e.target.value as any)} className="p-2 bg-gray-50 border border-gray-100 rounded-lg text-xs font-bold outline-none"><option value="sang">특/상</option><option value="jung">중</option><option value="ha">하</option></select>
                                                     </div>
                                                     <div className="flex items-center gap-1">
                                                         <button onClick={() => setEditQuantity(Math.max(1, editQuantity - 1))} className="p-1 bg-gray-100 rounded-lg"><Minus className="w-3 h-3" /></button>
@@ -797,6 +851,77 @@ export default function HarvestPage() {
                         </div>
                     </section>
                 </div>
+            ) : activeTab === 'history' ? (
+                /* === 전체 기록 뷰 (아카이브 통합) === */
+                <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+                    <div className="bg-white border-b border-gray-100 flex items-center justify-between p-2 rounded-2xl shadow-sm">
+                        <div>
+                            <h3 className="text-sm font-black text-gray-900 flex items-center gap-2 px-2 py-1">
+                                <History className="w-4 h-4 text-blue-600" />
+                                영농일지 아카이브
+                            </h3>
+                        </div>
+                        <select
+                            value={archiveHouseFilter || ""}
+                            onChange={(e) => setArchiveHouseFilter(e.target.value ? Number(e.target.value) : null)}
+                            className="text-[10px] font-black bg-gray-50 border-none rounded-lg px-2 py-1.5 outline-none focus:ring-2 focus:ring-blue-100 transition-all cursor-pointer"
+                        >
+                            <option value="">전체 하우스</option>
+                            {houses.map(h => (
+                                <option key={h.id} value={h.house_number}>{h.house_number}동</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="space-y-6">
+                        {loading ? (
+                            <div className="flex flex-col items-center justify-center py-12 text-gray-400 gap-2">
+                                <RefreshCcw className="w-8 h-8 animate-spin opacity-20" />
+                                <span className="text-xs font-bold">기록을 불러오는 중...</span>
+                            </div>
+                        ) : allDiaries.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-12 text-gray-300 gap-2 bg-white rounded-3xl border-2 border-dashed border-gray-50">
+                                <NotebookPen className="w-12 h-12 opacity-10" />
+                                <span className="text-xs font-bold">기록된 일지가 없습니다.</span>
+                            </div>
+                        ) : (
+                            Object.entries(
+                                bkit_filtered_diaries(allDiaries, archiveHouseFilter) as Record<string, any[]>
+                            ).sort((a, b) => b[0].localeCompare(a[0])).map(([date, diaries]) => (
+                                <div key={date} className="space-y-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-px bg-gray-200 flex-1"></div>
+                                        <span className="text-[11px] font-black text-gray-400 bg-gray-100 px-3 py-1 rounded-full">{date}</span>
+                                        <div className="h-px bg-gray-200 flex-1"></div>
+                                    </div>
+                                    <div className="grid gap-2">
+                                        {(diaries as any[]).sort((a: any, b: any) => a.house_number - b.house_number).map((d: any) => (
+                                            <div key={d.id} className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm space-y-2 group hover:border-blue-200 transition-all">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg">{d.house_number}동 리포트</span>
+                                                    <button
+                                                        onClick={() => {
+                                                            setSelectedDate(d.date);
+                                                            setSelectedHouse(d.house_number);
+                                                            setActiveTab('record');
+                                                            setIsDiaryModalOpen(true);
+                                                        }}
+                                                        className="p-1.5 opacity-0 group-hover:opacity-100 bg-gray-50 rounded-lg text-gray-400 hover:text-blue-500 transition-all"
+                                                    >
+                                                        <Edit2 className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </div>
+                                                <p className="text-base text-gray-900 leading-relaxed font-black">
+                                                    {d.note}
+                                                </p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
             ) : (
                 /* === 통계 뷰 === */
                 <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
@@ -820,8 +945,8 @@ export default function HarvestPage() {
                                 <p className="text-xs text-green-100 font-bold uppercase opacity-60">Grade Breakdown</p>
                                 <div className="space-y-1 mt-1">
                                     <p className="text-lg font-black">특/상: {gradeStats.sang}박스</p>
-                                    <p className="text-lg font-black">중/보통: {gradeStats.jung}박스</p>
-                                    <p className="text-lg font-black text-green-200">하/주스: {gradeStats.ha}박스</p>
+                                    <p className="text-lg font-black">중: {gradeStats.jung}박스</p>
+                                    <p className="text-lg font-black text-green-200">하: {gradeStats.ha}박스</p>
                                 </div>
                             </div>
                         </div>
@@ -852,11 +977,11 @@ export default function HarvestPage() {
                                                 <span className="text-base font-black text-orange-600">{gBreakdown.sang}</span>
                                             </div>
                                             <div className="flex justify-between items-center">
-                                                <span className="text-xs font-bold text-gray-400">중/보통</span>
+                                                <span className="text-xs font-bold text-gray-400">중</span>
                                                 <span className="text-base font-black text-blue-600">{gBreakdown.jung}</span>
                                             </div>
                                             <div className="flex justify-between items-center">
-                                                <span className="text-xs font-bold text-gray-400">하/주스</span>
+                                                <span className="text-xs font-bold text-gray-400">하</span>
                                                 <span className="text-base font-black text-gray-500">{gBreakdown.ha}</span>
                                             </div>
                                         </div>

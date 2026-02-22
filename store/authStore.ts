@@ -10,7 +10,7 @@ interface AuthState {
     initialized: boolean;
     signIn: (email: string, password: string) => Promise<{ error: string | null }>;
     signOut: () => Promise<void>;
-    initialize: () => Promise<void>;
+    initialize: (force?: boolean) => Promise<void>;
     setFarm: (farm: Farm) => void;
 }
 
@@ -28,8 +28,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({ farm });
     },
 
-    initialize: async () => {
-        if (get().initialized) return;
+    initialize: async (force = false) => {
+        if (get().initialized && !force) return;
         set({ loading: true });
 
         // 1. 세션 확인
@@ -75,8 +75,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     },
 
     signOut: async () => {
-        await supabase.auth.signOut();
-        if (typeof window !== 'undefined') localStorage.removeItem('sfm_last_farm');
+        try {
+            await supabase.auth.signOut();
+        } catch (e) {
+            console.error("SignOut error, forcing local clear:", e);
+        }
+        if (typeof window !== 'undefined') {
+            localStorage.clear();
+            sessionStorage.clear();
+            // 모든 쿠키 만료 처리 시도 (문자열 기반)
+            document.cookie.split(";").forEach((c) => {
+                document.cookie = c
+                    .replace(/^ +/, "")
+                    .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+            });
+        }
         set({ user: null, profile: null, farm: null });
     },
 }));
@@ -99,27 +112,32 @@ async function loadUserData(user: User, set: any) {
     // 농장 조회
     let farm = null;
     try {
-        // [수정] 1순위: 내가 직접 소유한 농장이 있는지 먼저 확인 (admin/owner 공통)
-        const { data: myOwnedFarm, error: ownedError } = await supabase
-            .from('farms')
-            .select('*')
-            .eq('owner_id', user.id)
-            .maybeSingle();
+        // [수정] 관리자이고 이미 선택된 농장이 있다면 유지 시도
+        const cachedFarm = typeof window !== 'undefined' ? localStorage.getItem('sfm_last_farm') : null;
+        let lastFarmId = null;
+        if (cachedFarm) {
+            try { lastFarmId = JSON.parse(cachedFarm).id; } catch (e) { }
+        }
 
-        if (myOwnedFarm) {
-            farm = myOwnedFarm;
-        } else if (profile?.role === 'admin') {
-            // 2순위: 관리자인데 내 농장이 없다면 첫 번째 승인된 농장 로드
-            console.log("[Auth] Admin detected with no owned farm, fetching first one...");
-            const { data, error } = await supabase
+        if (lastFarmId) {
+            const { data } = await supabase.from('farms').select('*').eq('id', lastFarmId).maybeSingle();
+            if (data) farm = data;
+        }
+
+        // 선택된 농장이 없거나 정보를 가져오지 못한 경우에만 소유 농장 확인
+        if (!farm) {
+            const { data: myOwnedFarm } = await supabase
                 .from('farms')
                 .select('*')
-                .limit(1)
+                .eq('owner_id', user.id)
                 .maybeSingle();
-            if (error) console.error("[Auth] Farm(admin) error:", error);
-            farm = data;
-        } else {
-            console.warn("[Auth] No farm or role for user:", profile?.role);
+
+            if (myOwnedFarm) {
+                farm = myOwnedFarm;
+            } else if (profile?.role === 'admin') {
+                const { data } = await supabase.from('farms').select('*').limit(1).maybeSingle();
+                farm = data;
+            }
         }
     } catch (err) {
         console.error("[Auth] Unexpected farm fetch error:", err);

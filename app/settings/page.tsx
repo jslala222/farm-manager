@@ -71,7 +71,7 @@ export default function SettingsPage() {
             if (storeFarm?.id) {
                 // 기존 농장 정보 수정
                 console.log("기존 농장 수정 프로세스 시작...");
-                const { error } = await supabase.from('farms').update({
+                const { data: updatedData, error } = await supabase.from('farms').update({
                     farm_name: farm.farm_name,
                     phone: farm.phone,
                     fax: farm.fax,
@@ -82,11 +82,18 @@ export default function SettingsPage() {
                     longitude: farm.longitude,
                     business_number: farm.business_number,
                     notes: farm.notes,
-                }).eq('id', storeFarm.id);
+                }).eq('id', storeFarm.id).select(); // .select() 추가하여 결과 확인
 
                 if (error) throw error;
+
+                if (!updatedData || updatedData.length === 0) {
+                    alert("⚠️ 저장에 실패했습니다. 농장주 본인이나 관리자 권한이 있는지 확인해 주세요. (RLS 정책 위반)");
+                    setSaving(false);
+                    return;
+                }
+
                 alert("✅ 농장 정보가 성공적으로 수정되었습니다!");
-                await initialize();
+                await initialize(true); // 강제 갱신 호출
             } else {
                 // 신규 농장 등록
                 console.log("신규 농장 등록 프로세스 시작...");
@@ -188,6 +195,7 @@ export default function SettingsPage() {
             farm_id: storeFarm.id,
             house_number: num,
             house_name: `${num}동`,
+            current_crop: '딸기', // 기본값 설정
             is_active: true
         }));
 
@@ -396,7 +404,26 @@ export default function SettingsPage() {
                                             <Building2 className="w-5 h-5" />
                                         </div>
                                         <span className={`text-xl font-black ${h.is_active ? 'text-gray-900' : 'text-gray-400'}`}>{h.house_number}동</span>
-                                        <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-tighter ${h.is_active ? 'bg-red-500 text-white shadow-sm shadow-red-200' : 'bg-gray-300 text-gray-500'}`}>
+
+                                        {/* 작물 이름 입력 필드 (동 번호 아래) */}
+                                        <div className="w-full px-2 mt-1">
+                                            <input
+                                                type="text"
+                                                value={h.current_crop || ""}
+                                                placeholder="작물 직접입력"
+                                                onClick={(e) => e.stopPropagation()}
+                                                onChange={async (e) => {
+                                                    const val = e.target.value;
+                                                    const updated = houses.map(item => item.id === h.id ? { ...item, current_crop: val } : item);
+                                                    setHouses(updated);
+                                                    // 실시간 저장 처리
+                                                    await supabase.from('farm_houses').update({ current_crop: val }).eq('id', h.id);
+                                                }}
+                                                className="w-full text-center bg-red-50 border-b-2 border-transparent text-[10px] font-black text-red-600 focus:border-red-400 focus:bg-white transition-all outline-none py-1.5 rounded-lg placeholder:text-red-200"
+                                            />
+                                        </div>
+
+                                        <span className={`mt-1 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-tighter ${h.is_active ? 'bg-red-500 text-white shadow-sm shadow-red-200' : 'bg-gray-300 text-gray-500'}`}>
                                             {h.is_active ? 'Active' : 'Hidden'}
                                         </span>
                                     </div>

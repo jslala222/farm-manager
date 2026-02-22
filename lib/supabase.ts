@@ -42,6 +42,7 @@ export interface FarmHouse {
     farm_id: string;
     house_number: number;
     house_name: string | null;
+    current_crop: string | null; // 현재 재배 작물
     is_active: boolean;
     created_at: string;
 }
@@ -52,6 +53,7 @@ export interface HarvestRecord {
     house_number: number;
     grade: 'sang' | 'jung' | 'ha';
     quantity: number;
+    crop_name: string | null; // 수확 시점 작물 이름 (스냅샷)
     recorded_at: string;
     harvest_note?: string | null; // 수확 당시 특이사항
 }

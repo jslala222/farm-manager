@@ -71,7 +71,7 @@ export default function NavBar() {
 
     const handleSignOut = async () => {
         await signOut();
-        router.push("/login");
+        window.location.href = "/login"; // 확실한 페이지 새로고침과 리다이렉트
     };
 
     const allNavItems = profile?.role === 'admin'
@@ -135,7 +135,12 @@ export default function NavBar() {
                     ))}
                 </nav>
 
-                <div className="p-3 border-t border-gray-100">
+                <div className="p-3 border-t border-gray-100 space-y-1">
+                    <button onClick={handleEmergencyReset}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium text-gray-400 hover:bg-orange-50 hover:text-orange-600 transition-all w-full">
+                        <RefreshCcw size={14} />
+                        연결 세션 초기화
+                    </button>
                     <button onClick={handleSignOut}
                         className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-500 hover:bg-red-50 hover:text-red-600 transition-all w-full">
                         <LogOut className="w-4 h-4" />
@@ -151,9 +156,11 @@ export default function NavBar() {
                 <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-2" onClick={() => window.location.href = '/'}>
                         <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center shadow-lg shadow-red-100 text-white font-black text-xl">
-                            H
+                            {farm?.farm_name?.[0] || 'N'}
                         </div>
-                        <h1 className="text-lg font-black text-gray-900 tracking-tight">행복한 희라딸기</h1>
+                        <h1 className="text-lg font-black text-gray-900 tracking-tight">
+                            {farm?.farm_name || "농장관리"}
+                        </h1>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -182,6 +189,29 @@ export default function NavBar() {
                             <span className="font-bold text-gray-900">전체 메뉴</span>
                             <button onClick={() => setMobileOpen(false)}><X className="w-5 h-5 text-gray-400" /></button>
                         </div>
+
+                        {/* 모바일 농장 전환 (관리자용) */}
+                        {profile?.role === 'admin' && (
+                            <div className="p-4 bg-gray-50 border-b border-gray-100 space-y-2">
+                                <p className="text-[10px] font-black text-gray-400 uppercase ml-1">농장 전환</p>
+                                <div className="grid grid-cols-1 gap-1.5">
+                                    {farms.map(f => (
+                                        <button
+                                            key={f.id}
+                                            onClick={() => {
+                                                setFarm(f);
+                                                setMobileOpen(false);
+                                            }}
+                                            className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold transition-all
+                                                ${farm?.id === f.id ? 'bg-red-500 text-white shadow-md' : 'bg-white text-gray-600 border border-gray-100'}`}
+                                        >
+                                            {f.farm_name}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
                             {allNavItems.map(({ href, label, icon: Icon }) => (
                                 <Link key={href} href={href} onClick={() => setMobileOpen(false)}
