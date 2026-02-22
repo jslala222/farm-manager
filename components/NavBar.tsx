@@ -22,6 +22,7 @@ import {
 import { useAuthStore } from "@/store/authStore";
 import { useEffect, useState } from "react";
 import { supabase, Farm } from "@/lib/supabase";
+import DbStatus from "./DbStatus";
 
 const navItems = [
     { href: "/", label: "대시보드", icon: LayoutDashboard },
@@ -90,6 +91,9 @@ export default function NavBar() {
                         <div className="flex-1 min-w-0">
                             <p className="font-bold text-gray-900 text-sm leading-tight truncate">농장관리</p>
                             <p className="text-[10px] text-gray-400 truncate mt-0.5">{farm?.farm_name || profile?.full_name}</p>
+                            <div className="mt-2">
+                                <DbStatus />
+                            </div>
                         </div>
                         {profile?.role === 'admin' && (
                             <button
@@ -161,6 +165,9 @@ export default function NavBar() {
                         <h1 className="text-lg font-black text-gray-900 tracking-tight">
                             {farm?.farm_name || "농장관리"}
                         </h1>
+                        <div className="ml-1 scale-75 origin-left">
+                            <DbStatus />
+                        </div>
                     </div>
 
                     <div className="flex items-center gap-2">

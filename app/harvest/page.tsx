@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Save, Plus, Minus, Trash2, Sprout, Clock, History, Edit2, X, Check, BarChart3, CalendarDays, RefreshCcw, NotebookPen, LayoutGrid, ChevronRight } from "lucide-react";
+import { Save, Plus, Minus, Trash2, Sprout, Clock, History, Edit2, X, Check, BarChart3, CalendarDays, RefreshCcw, NotebookPen, LayoutGrid, ChevronRight, ChevronLeft } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { supabase, FarmHouse, HarvestRecord } from "@/lib/supabase";
+import Calendar from "@/components/Calendar";
 
 // [bkit] 기록 필터링 및 그룹화 헬퍼 함수
 function bkit_filtered_diaries(diaries: any[], houseFilter: number | null) {
@@ -15,6 +16,12 @@ function bkit_filtered_diaries(diaries: any[], houseFilter: number | null) {
             return acc;
         }, {});
 }
+
+const getLocalISOString = (date: Date) => {
+    const offset = 9 * 60 * 60 * 1000;
+    const kstDate = new Date(date.getTime() + offset);
+    return kstDate.toISOString().split('T')[0];
+};
 
 export default function HarvestPage() {
     const { farm, initialized } = useAuthStore();
@@ -31,7 +38,7 @@ export default function HarvestPage() {
     const [quantity, setQuantity] = useState(1);
     const [houseNotes, setHouseNotes] = useState<Record<number, string>>({}); // 동별 메모 저장 객체
     const harvestNote = selectedHouse ? (houseNotes[selectedHouse] || "") : ""; // 현재 선택된 동의 메모
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    const [selectedDate, setSelectedDate] = useState(() => getLocalISOString(new Date()));
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [isDiaryModalOpen, setIsDiaryModalOpen] = useState(false); // 일지 작성 모달 상태
@@ -40,6 +47,7 @@ export default function HarvestPage() {
     const [isHouseHistoryOpen, setIsHouseHistoryOpen] = useState(false); // 동별 히스토리 모달 상태
     const [houseHistory, setHouseHistory] = useState<any[]>([]); // 특정 동의 기록 데이터
     const [archiveHouseFilter, setArchiveHouseFilter] = useState<number | null>(null); // 아카이브 내 동별 필터
+    const [harvestedDates, setHarvestedDates] = useState<Record<string, number[]>>({}); // 수확 활동이 있는 날짜들
 
     // Editing State
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -49,13 +57,25 @@ export default function HarvestPage() {
     const [editDate, setEditDate] = useState("");
 
     // Analysis State
-    const [statsPeriod, setStatsPeriod] = useState<'today' | 'week' | 'month'>('today');
+    const [statsPeriod, setStatsPeriod] = useState<'today' | 'week' | 'month' | 'custom'>('today');
+    const [statsDate, setStatsDate] = useState(new Date().toISOString().split('T')[0]); // 지정일 통계용 날짜
+    const [statsWeekStart, setStatsWeekStart] = useState<string>(""); // 주간 통계 시작일
+    const [statsMonth, setStatsMonth] = useState<{ year: number, month: number }>({
+        year: new Date().getFullYear(),
+        month: new Date().getMonth() + 1
+    }); // 월간 통계용 연/월
     const [houseStats, setHouseStats] = useState<Record<number, number>>({});
     const [dateStats, setDateStats] = useState<Record<string, number>>({});
     const [gradeStats, setGradeStats] = useState<Record<string, number>>({ sang: 0, jung: 0, ha: 0 });
     const [dateGradeStats, setDateGradeStats] = useState<Record<string, Record<string, number>>>({});
     const [houseGradeStats, setHouseGradeStats] = useState<Record<number, Record<string, number>>>({});
     const [totalHarvest, setTotalHarvest] = useState(0);
+
+    useEffect(() => {
+        if (activeTab === 'analysis') {
+            fetchStats();
+        }
+    }, [statsPeriod, statsDate, statsWeekStart, statsMonth, activeTab]);
 
     useEffect(() => {
         if (initialized && farm?.id) {
@@ -69,12 +89,13 @@ export default function HarvestPage() {
                 setPageError(null);
                 fetchHouses();
                 fetchHistory();
-                if (activeTab === 'analysis') fetchStats();
+                fetchHarvestedDates();
+                // fetchStats(); // 탭 전환 시에도 호출되도록 변경 필요 시 대응 -> 이제는 analysis 탭의 useEffect에서 처리
             } else {
                 setPageError("농장 정보를 불러올 수 없습니다. 권한 승인 대기 또는 로그인 상태를 확인해주세요.");
             }
         }
-    }, [farm, initialized, activeTab, statsPeriod]);
+    }, [farm, initialized]); // activeTab, statsPeriod 제거
 
     const fetchHouses = async () => {
         const { data } = await supabase
@@ -145,23 +166,62 @@ export default function HarvestPage() {
         setLoading(false);
     };
 
+    const fetchHarvestedDates = async () => {
+        if (!farm?.id) return;
+        // 모든 수확 기록을 가져와서 날짜와 동 번호를 매핑 (성능 최적화를 위해 특정 범위만 가져올 수도 있음)
+        const { data } = await supabase
+            .from('harvest_records')
+            .select('recorded_at, house_number')
+            .eq('farm_id', farm.id);
+
+        if (!data) return;
+
+        const dateMap: Record<string, number[]> = {};
+        data.forEach(item => {
+            const date = item.recorded_at.split('T')[0];
+            if (!dateMap[date]) dateMap[date] = [];
+            if (!dateMap[date].includes(item.house_number)) {
+                dateMap[date].push(item.house_number);
+            }
+        });
+        setHarvestedDates(dateMap);
+    };
+
     const fetchStats = async () => {
         if (!farm?.id) return;
 
-        let query = supabase.from('harvest_records').select('*').eq('farm_id', farm.id);
+        let query = supabase
+            .from('harvest_records')
+            .select('quantity, grade, house_number, recorded_at')
+            .eq('farm_id', farm.id);
 
         const now = new Date();
-        const kstOffset = 9 * 60 * 60 * 1000;
-        const today = new Date(now.getTime() + kstOffset).toISOString().split('T')[0];
-
         if (statsPeriod === 'today') {
-            query = query.gte('recorded_at', `${today}T00:00:00`);
+            const today = getLocalISOString(new Date());
+            query = query.gte('recorded_at', `${today}T00:00:00+09:00`).lte('recorded_at', `${today}T23:59:59+09:00`);
         } else if (statsPeriod === 'week') {
-            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
-            query = query.gte('recorded_at', weekAgo);
-        } else {
-            const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
-            query = query.gte('recorded_at', monthAgo);
+            // 주간 통계 로직 (일요일부터 토요일까지)
+            let start = statsWeekStart;
+            if (!start) {
+                const d = new Date();
+                const day = d.getDay();
+                const diff = d.getDate() - day; // 이번 주 일요일로 이동
+                const sunday = new Date(d.setDate(diff));
+                start = getLocalISOString(sunday);
+            }
+            const startDate = new Date(start);
+            const endDate = new Date(startDate);
+            endDate.setDate(startDate.getDate() + 6);
+            const end = getLocalISOString(endDate);
+            query = query.gte('recorded_at', `${start}T00:00:00+09:00`).lte('recorded_at', `${end}T23:59:59+09:00`);
+        } else if (statsPeriod === 'month') {
+            // 월간 통계 로직
+            const start = `${statsMonth.year}-${String(statsMonth.month).padStart(2, '0')}-01`;
+            const lastDay = new Date(statsMonth.year, statsMonth.month, 0).getDate();
+            const end = `${statsMonth.year}-${String(statsMonth.month).padStart(2, '0')}-${lastDay}`;
+            query = query.gte('recorded_at', `${start}T00:00:00+09:00`).lte('recorded_at', `${end}T23:59:59+09:00`);
+        } else if (statsPeriod === 'custom') {
+            query = query.gte('recorded_at', `${statsDate}T00:00:00+09:00`).lte('recorded_at', `${statsDate}T23:59:59+09:00`);
         }
 
         const { data } = await query;
@@ -241,6 +301,7 @@ export default function HarvestPage() {
             setQuantity(1);
             // 메모 초기화하지 않고 유지 (사용자 피드백 반영: 하루는 유지되어야 함)
             fetchHistory();
+            fetchHarvestedDates(); // 수확 후 달력 업데이트
         }
         setSaving(false);
     };
@@ -315,7 +376,10 @@ export default function HarvestPage() {
         if (!confirm("이 기록을 삭제하시겠습니까?")) return;
         const { error } = await supabase.from('harvest_records').delete().eq('id', id);
         if (error) alert("삭제 실패");
-        else fetchHistory();
+        else {
+            fetchHistory();
+            fetchHarvestedDates(); // 삭제 후 달력 업데이트
+        }
     };
 
     const startEdit = (item: HarvestRecord) => {
@@ -413,27 +477,34 @@ export default function HarvestPage() {
                     {/* 날짜 선택 및 수기 기록 폼 통합 카드 */}
                     <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden">
                         <div className="p-6 space-y-8">
-                            {/* 섹션 1: 날짜 및 하우스 선택 */}
+                            {/* 섹션 1: 날짜 및 하우스 */}
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between px-1">
                                     <h2 className="text-sm font-black text-gray-900 flex items-center gap-2">
                                         <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
                                         하우스 및 날짜 선택
                                     </h2>
-                                    <div className="relative">
-                                        <input
-                                            type="date"
-                                            value={selectedDate}
-                                            onChange={(e) => setSelectedDate(e.target.value)}
-                                            className="pl-9 pr-3 py-1.5 bg-gray-50 border-none rounded-xl text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-green-100"
-                                        />
-                                        <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                                    </div>
+                                </div>
+
+                                <div className="animate-in fade-in slide-in-from-top-2 duration-500">
+                                    <Calendar
+                                        selectedDate={selectedDate}
+                                        onChange={(date) => setSelectedDate(date)}
+                                        harvestedDates={harvestedDates}
+                                    />
                                 </div>
 
                                 <div className="grid grid-cols-4 gap-3">
                                     {houses.length === 0 ? (
-                                        <p className="text-[10px] text-gray-400 text-center py-2 col-span-4">하우스 정보가 없습니다.</p>
+                                        <div className="col-span-4 py-8 flex flex-col items-center gap-3">
+                                            <p className="text-xs text-slate-400 font-bold">하우스 정보가 로드되지 않았습니다.</p>
+                                            <button
+                                                onClick={() => fetchHouses()}
+                                                className="px-6 py-2.5 bg-blue-50 text-blue-600 text-xs font-black rounded-2xl border border-blue-100 flex items-center gap-2 hover:bg-blue-100 transition-all active:scale-95"
+                                            >
+                                                <RefreshCcw className="w-4 h-4" /> 정보 다시 불러오기
+                                            </button>
+                                        </div>
                                     ) : (
                                         houses.map((h) => {
                                             const isSelected = selectedHouse === h.house_number;
@@ -457,7 +528,7 @@ export default function HarvestPage() {
                                                 }
                                             } else {
                                                 if (isFallow) colorClass = "bg-gray-50 border-gray-100 text-gray-300 opacity-60";
-                                                else colorClass = "bg-white border-gray-100 text-gray-400 hover:border-gray-200";
+                                                else colorClass = "bg-white border-gray-100 text-gray-900 hover:border-gray-200";
                                             }
 
                                             return (
@@ -532,17 +603,22 @@ export default function HarvestPage() {
                                         <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
                                         수량 (BOX)
                                     </h2>
-                                    <div className="flex-1 flex flex-col items-center justify-center gap-4">
-                                        <div className="flex items-center gap-6">
-                                            <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-10 h-10 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-300 hover:bg-gray-100 active:scale-90 transition-all">
-                                                <Minus className="w-5 h-5" />
-                                            </button>
-                                            <span className="text-4xl font-black text-gray-900 tracking-tighter w-12 text-center">{quantity}</span>
-                                            <button onClick={() => setQuantity(quantity + 1)} className="w-10 h-10 rounded-full bg-green-50 border border-green-100 flex items-center justify-center text-green-600 hover:bg-green-100 active:scale-95 transition-all">
-                                                <Plus className="w-5 h-5" />
-                                            </button>
+                                    <div className="flex-1 flex flex-col items-center justify-center gap-4 w-full">
+                                        <div className="relative w-full max-w-[200px]">
+                                            <input
+                                                type="text"
+                                                inputMode="numeric"
+                                                pattern="[0-9]*"
+                                                value={quantity}
+                                                onChange={(e) => {
+                                                    const val = e.target.value.replace(/[^0-9]/g, '');
+                                                    setQuantity(val === '' ? 0 : parseInt(val));
+                                                }}
+                                                className="w-full p-6 bg-white border-2 border-green-100 rounded-[2rem] text-4xl font-black text-center text-green-600 outline-none focus:border-green-500 transition-all shadow-sm"
+                                            />
+                                            <span className="absolute right-6 top-1/2 -translate-y-1/2 text-sm font-black text-green-200">BOX</span>
                                         </div>
-                                        <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Quantity</span>
+                                        <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Enter Quantity</span>
                                     </div>
                                 </div>
                             </div>
@@ -835,9 +911,15 @@ export default function HarvestPage() {
                                                         <span className="text-[9px] text-gray-400 font-black uppercase">Box</span>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-1 text-[9px] text-gray-300 font-bold bg-gray-50/50 px-2 py-1 rounded-md">
-                                                    <Clock className="w-2.5 h-2.5" />
-                                                    {new Date(item.recorded_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                                                <div className="flex flex-col items-end gap-0.5 bg-gray-50/50 px-2.5 py-1.5 rounded-xl border border-gray-100/50">
+                                                    <div className="flex items-center gap-1 text-[9px] text-gray-400 font-bold">
+                                                        <CalendarDays className="w-2.5 h-2.5" />
+                                                        {new Date(item.recorded_at).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })}
+                                                    </div>
+                                                    <div className="flex items-center gap-1 text-[10px] text-gray-900 font-black">
+                                                        <Clock className="w-2.5 h-2.5 text-green-500" />
+                                                        {new Date(item.recorded_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-1 ml-4">
@@ -925,14 +1007,154 @@ export default function HarvestPage() {
             ) : (
                 /* === 통계 뷰 === */
                 <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                    <div className="grid grid-cols-3 gap-2 bg-gray-100 p-1 rounded-xl">
-                        {(['today', 'week', 'month'] as const).map((p) => (
-                            <button key={p} onClick={() => setStatsPeriod(p)}
-                                className={`py-2 rounded-lg text-xs font-bold transition-all ${statsPeriod === p ? 'bg-white shadow-sm text-green-600' : 'text-gray-400'}`}>
-                                {p === 'today' ? '오늘' : p === 'week' ? '이번 주' : '이번 달'}
+                    <div className="flex bg-gray-100 p-1 rounded-xl overflow-x-auto scrollbar-hide gap-1">
+                        {(['today', 'custom', 'week', 'month'] as const).map((p) => (
+                            <button key={p}
+                                onClick={() => {
+                                    setStatsPeriod(p);
+                                    if (p === 'week') {
+                                        const d = new Date();
+                                        const day = d.getDay();
+                                        const diff = d.getDate() - day;
+                                        const sunday = new Date(d.setDate(diff));
+                                        setStatsWeekStart(getLocalISOString(sunday));
+                                    }
+                                }}
+                                className={`flex-1 py-2 px-3 rounded-lg text-[11px] font-black transition-all whitespace-nowrap ${statsPeriod === p ? 'bg-white shadow-sm text-green-600' : 'text-gray-400'}`}>
+                                {p === 'today' ? '오늘' : p === 'custom' ? '지정일' : p === 'week' ? '이번 주' : '이번 달'}
                             </button>
                         ))}
                     </div>
+
+                    {statsPeriod === 'custom' && (
+                        <div className="animate-in fade-in slide-in-from-top-2 duration-500">
+                            <Calendar
+                                selectedDate={statsDate}
+                                onChange={(date) => setStatsDate(date)}
+                                harvestedDates={harvestedDates}
+                            />
+                        </div>
+                    )}
+
+                    {statsPeriod === 'week' && (
+                        <div className="bg-white p-4 rounded-3xl border border-gray-100 shadow-sm overflow-x-auto scrollbar-hide">
+                            <div className="flex justify-between items-center mb-3">
+                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-2">Weekly Navigation</span>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => {
+                                            const d = new Date(statsWeekStart || new Date());
+                                            d.setDate(d.getDate() - 7);
+                                            setStatsWeekStart(d.toISOString().split('T')[0]);
+                                        }}
+                                        className="p-1.5 bg-gray-50 rounded-lg text-gray-400 hover:text-gray-900"
+                                    >
+                                        <ChevronLeft className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            const d = new Date();
+                                            const day = d.getDay();
+                                            const diff = d.getDate() - day;
+                                            const sunday = new Date(d.setDate(diff));
+                                            setStatsWeekStart(sunday.toISOString().split('T')[0]);
+                                        }}
+                                        className="px-2 text-[9px] font-black bg-gray-50 rounded-lg text-gray-500"
+                                    >
+                                        이번 주
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            const d = new Date(statsWeekStart || new Date());
+                                            d.setDate(d.getDate() + 7);
+                                            setStatsWeekStart(d.toISOString().split('T')[0]);
+                                        }}
+                                        className="p-1.5 bg-gray-50 rounded-lg text-gray-400 hover:text-gray-900"
+                                    >
+                                        <ChevronRight className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="flex gap-2 min-w-max pb-1">
+                                {Array.from({ length: 7 }).map((_, i) => {
+                                    const d = new Date(statsWeekStart || (() => {
+                                        const now = new Date();
+                                        const day = now.getDay();
+                                        const diff = now.getDate() - day;
+                                        return new Date(now.setDate(diff));
+                                    })());
+                                    d.setDate(d.getDate() + i);
+                                    const dateStr = d.toISOString().split('T')[0];
+                                    const hasHarvest = (harvestedDates[dateStr] || []).length > 0;
+                                    const hList = harvestedDates[dateStr] || [];
+                                    const isToday = dateStr === new Date().toISOString().split('T')[0];
+
+                                    return (
+                                        <div key={i} className={`flex flex-col items-center gap-2 p-3 rounded-2xl border-2 min-w-[56px] ${isToday ? 'border-red-400 bg-orange-50/30' : 'border-gray-50 bg-white'}`}>
+                                            <span className="text-[10px] font-black text-gray-300 uppercase">
+                                                {['일', '월', '화', '수', '목', '금', '토'][i]}
+                                            </span>
+                                            <span className={`text-base font-black ${isToday ? 'text-red-600' : 'text-gray-900'}`}>
+                                                {d.getDate()}
+                                            </span>
+                                            <div className="flex gap-0.5 mt-1 h-1.5 flex-wrap justify-center">
+                                                {hList.slice(0, 6).map(hNum => {
+                                                    const hColors: Record<number, string> = {
+                                                        1: "bg-red-400", 2: "bg-red-400", 3: "bg-red-400",
+                                                        6: "bg-orange-400", 7: "bg-sky-400", 8: "bg-indigo-400"
+                                                    };
+                                                    return <div key={hNum} className={`w-1.5 h-1.5 rounded-full ${hColors[hNum] || "bg-green-400"} shadow-sm`} />;
+                                                })}
+                                                {hList.length > 6 && <div className="text-[6px] font-bold text-gray-400 leading-none">+</div>}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {statsPeriod === 'month' && (
+                        <div className="bg-white p-4 rounded-3xl border border-gray-100 shadow-sm overflow-x-auto scrollbar-hide">
+                            <div className="flex items-center gap-3 mb-4">
+                                <button
+                                    onClick={() => setStatsMonth({ ...statsMonth, year: statsMonth.year - 1 })}
+                                    className="p-2 hover:bg-gray-50 rounded-xl"
+                                >
+                                    <ChevronLeft className="w-4 h-4 text-gray-400" />
+                                </button>
+                                <span className="text-sm font-black text-gray-900">{statsMonth.year}년</span>
+                                <button
+                                    onClick={() => setStatsMonth({ ...statsMonth, year: statsMonth.year + 1 })}
+                                    className="p-2 hover:bg-gray-50 rounded-xl"
+                                >
+                                    <ChevronRight className="w-4 h-4 text-gray-400" />
+                                </button>
+                            </div>
+                            <div className="grid grid-cols-4 gap-2">
+                                {Array.from({ length: 12 }).map((_, i) => {
+                                    const m = i + 1;
+                                    const isSelected = statsMonth.month === m;
+                                    const isCurrentMonth = new Date().getFullYear() === statsMonth.year && new Date().getMonth() + 1 === m;
+
+                                    return (
+                                        <button
+                                            key={m}
+                                            onClick={() => setStatsMonth({ ...statsMonth, month: m })}
+                                            className={`py-3 rounded-2xl text-xs font-black transition-all border-2 ${isSelected
+                                                ? 'bg-green-600 border-green-700 text-white shadow-lg'
+                                                : isCurrentMonth
+                                                    ? 'bg-white border-red-500 text-red-600'
+                                                    : 'bg-white border-gray-50 text-gray-500 hover:border-green-100'
+                                                }`}
+                                        >
+                                            {m}월
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
 
                     <div className="bg-green-600 rounded-3xl p-6 text-white shadow-xl shadow-green-200 relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -mr-16 -mt-16 blur-2xl"></div>

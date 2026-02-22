@@ -32,10 +32,12 @@ export default function ClientsPage() {
         manager_email: "",
         fax_number: "",
         hq_address: "",
+        hq_detail_address: "",
         hq_postal_code: "",
         hq_latitude: null,
         hq_longitude: null,
         delivery_address: "",
+        delivery_detail_address: "",
         delivery_postal_code: "",
         delivery_latitude: null,
         delivery_longitude: null,
@@ -50,7 +52,9 @@ export default function ClientsPage() {
         name: "",
         contact: "",
         address: "",
+        detail_address: "",
         postal_code: "",
+        gender: "미지정",
         latitude: null,
         longitude: null,
         is_vip: false,
@@ -131,10 +135,12 @@ export default function ClientsPage() {
                     manager_email: partnerFormData.manager_email || null,
                     fax_number: partnerFormData.fax_number || null,
                     hq_address: partnerFormData.hq_address || null,
+                    hq_detail_address: partnerFormData.hq_detail_address || null,
                     hq_postal_code: partnerFormData.hq_postal_code || null,
                     hq_latitude: partnerFormData.hq_latitude || null,
                     hq_longitude: partnerFormData.hq_longitude || null,
                     delivery_address: partnerFormData.delivery_address || null,
+                    delivery_detail_address: partnerFormData.delivery_detail_address || null,
                     delivery_postal_code: partnerFormData.delivery_postal_code || null,
                     delivery_latitude: partnerFormData.delivery_latitude || null,
                     delivery_longitude: partnerFormData.delivery_longitude || null,
@@ -163,7 +169,9 @@ export default function ClientsPage() {
                     name: customerFormData.name,
                     contact: customerFormData.contact || null,
                     address: customerFormData.address || null,
+                    detail_address: customerFormData.detail_address || null,
                     postal_code: customerFormData.postal_code || null,
+                    gender: customerFormData.gender || '미지정',
                     latitude: customerFormData.latitude || null,
                     longitude: customerFormData.longitude || null,
                     is_vip: customerFormData.is_vip || false,
@@ -371,7 +379,7 @@ export default function ClientsPage() {
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-xs font-black text-gray-400 uppercase tracking-tight ml-1">사업자번호</label>
-                                            <input type="text" value={partnerFormData.business_number || ""} onChange={(e) => setPartnerFormData({ ...partnerFormData, business_number: e.target.value })}
+                                            <input type="text" value={partnerFormData.business_number || ""} onChange={(e) => setPartnerFormData({ ...partnerFormData, business_number: formatBusinessNumber(e.target.value) })}
                                                 placeholder="000-00-00000" className="w-full p-5 bg-white border-2 border-gray-200 rounded-[1.25rem] text-base font-black focus:bg-white focus:border-indigo-600 outline-none transition-all placeholder:text-gray-300 shadow-sm" />
                                         </div>
                                     </div>
@@ -427,61 +435,72 @@ export default function ClientsPage() {
                                             className="w-full p-5 bg-white border-2 border-gray-200 shadow-sm rounded-[1.25rem] text-base font-black focus:bg-white focus:border-indigo-600 outline-none transition-all" />
                                     </div>
 
-                                    <div className="grid grid-cols-12 gap-3 items-end">
-                                        <div className="col-span-9">
-                                            <AddressSearch
-                                                label="본사 주소"
-                                                value={partnerFormData.hq_address || ""}
-                                                onChange={(val) => setPartnerFormData({ ...partnerFormData, hq_address: val })}
-                                                onAddressSelect={(res) => setPartnerFormData({
-                                                    ...partnerFormData,
-                                                    hq_address: res.address,
-                                                    hq_postal_code: res.zonecode
-                                                })}
-                                                placeholder="본사 사무실 주소 검색"
-                                            />
-                                        </div>
-                                        <div className="col-span-3 space-y-2">
-                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-tight ml-1">우편번호</label>
-                                            <input type="text" value={partnerFormData.hq_postal_code || ""}
-                                                onChange={(e) => setPartnerFormData({ ...partnerFormData, hq_postal_code: e.target.value })}
-                                                className="w-full py-5 px-1 bg-gray-50 border-2 border-transparent rounded-[1.25rem] text-base font-black focus:bg-white focus:border-indigo-200 outline-none text-center" placeholder="00000" />
+                                    <div className="space-y-4">
+                                        <AddressSearch
+                                            label="본사 주소"
+                                            value={partnerFormData.hq_address || ""}
+                                            onChange={(val) => setPartnerFormData({ ...partnerFormData, hq_address: val })}
+                                            onAddressSelect={(res) => setPartnerFormData({
+                                                ...partnerFormData,
+                                                hq_address: res.address,
+                                                hq_postal_code: res.zonecode
+                                            })}
+                                            placeholder="본사 사무실 주소 검색"
+                                        />
+                                        <div className="grid grid-cols-12 gap-3">
+                                            <div className="col-span-8 space-y-2">
+                                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-tight ml-1">나머지 주소 (상세 정보)</label>
+                                                <input type="text" value={partnerFormData.hq_detail_address || ""}
+                                                    onChange={(e) => setPartnerFormData({ ...partnerFormData, hq_detail_address: e.target.value })}
+                                                    className="w-full p-4.5 bg-white border-2 border-gray-100 rounded-[1.25rem] text-sm font-black focus:border-indigo-600 outline-none shadow-sm" placeholder="동, 호수, 사무실 번호 등" />
+                                            </div>
+                                            <div className="col-span-4 space-y-2">
+                                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-tight ml-1">우편번호</label>
+                                                <input type="text" value={partnerFormData.hq_postal_code || ""} readOnly
+                                                    className="w-full p-4.5 bg-gray-50 border-2 border-transparent rounded-[1.25rem] text-sm font-black text-center text-gray-400" placeholder="-" />
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-12 gap-3 items-end">
-                                        <div className="col-span-9">
-                                            <div className="flex justify-between items-center mb-1">
-                                                <label className="text-xs font-black text-gray-400 uppercase tracking-tight ml-1">납품 주소</label>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setPartnerFormData({
-                                                        ...partnerFormData,
-                                                        delivery_address: partnerFormData.hq_address,
-                                                        delivery_postal_code: partnerFormData.hq_postal_code
-                                                    })}
-                                                    className="text-[10px] font-black text-indigo-600 hover:text-indigo-800 flex items-center gap-1 bg-indigo-50 px-2 py-1 rounded-lg border border-indigo-100 transition-all"
-                                                >
-                                                    <Copy className="w-3 h-3" /> 본사 동일
-                                                </button>
-                                            </div>
-                                            <AddressSearch
-                                                label=""
-                                                value={partnerFormData.delivery_address || ""}
-                                                onChange={(val) => setPartnerFormData({ ...partnerFormData, delivery_address: val })}
-                                                onAddressSelect={(res) => setPartnerFormData({
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center px-1">
+                                            <label className="text-xs font-black text-gray-400 uppercase tracking-tight ml-1">납품 주소</label>
+                                            <button
+                                                type="button"
+                                                onClick={() => setPartnerFormData({
                                                     ...partnerFormData,
-                                                    delivery_address: res.address,
-                                                    delivery_postal_code: res.zonecode
+                                                    delivery_address: partnerFormData.hq_address,
+                                                    delivery_detail_address: partnerFormData.hq_detail_address,
+                                                    delivery_postal_code: partnerFormData.hq_postal_code
                                                 })}
-                                                placeholder="딸기 납품 하차지 주소 검색"
-                                            />
+                                                className="text-[10px] font-black text-indigo-600 hover:text-indigo-800 flex items-center gap-1 bg-indigo-50 px-2.5 py-1.5 rounded-lg border border-indigo-100 transition-all shadow-sm"
+                                            >
+                                                <Copy className="w-3 h-3" /> 본사 동일
+                                            </button>
                                         </div>
-                                        <div className="col-span-3 space-y-2">
-                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-tight ml-1">우편번호</label>
-                                            <input type="text" value={partnerFormData.delivery_postal_code || ""}
-                                                onChange={(e) => setPartnerFormData({ ...partnerFormData, delivery_postal_code: e.target.value })}
-                                                className="w-full py-5 px-1 bg-gray-50 border-2 border-transparent rounded-[1.25rem] text-base font-black focus:bg-white focus:border-indigo-200 outline-none text-center" placeholder="00000" />
+                                        <AddressSearch
+                                            label=""
+                                            value={partnerFormData.delivery_address || ""}
+                                            onChange={(val) => setPartnerFormData({ ...partnerFormData, delivery_address: val })}
+                                            onAddressSelect={(res) => setPartnerFormData({
+                                                ...partnerFormData,
+                                                delivery_address: res.address,
+                                                delivery_postal_code: res.zonecode
+                                            })}
+                                            placeholder="딸기 납품 하차지 주소 검색"
+                                        />
+                                        <div className="grid grid-cols-12 gap-3">
+                                            <div className="col-span-8 space-y-2">
+                                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-tight ml-1">나머지 주소 (상세 정보)</label>
+                                                <input type="text" value={partnerFormData.delivery_detail_address || ""}
+                                                    onChange={(e) => setPartnerFormData({ ...partnerFormData, delivery_detail_address: e.target.value })}
+                                                    className="w-full p-4.5 bg-white border-2 border-gray-100 rounded-[1.25rem] text-sm font-black focus:border-indigo-600 outline-none shadow-sm" placeholder="창고 번호, 진입로 상세 설명 등" />
+                                            </div>
+                                            <div className="col-span-4 space-y-2">
+                                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-tight ml-1">우편번호</label>
+                                                <input type="text" value={partnerFormData.delivery_postal_code || ""} readOnly
+                                                    className="w-full p-4.5 bg-gray-50 border-2 border-transparent rounded-[1.25rem] text-sm font-black text-center text-gray-400" placeholder="-" />
+                                            </div>
                                         </div>
                                     </div>
 
@@ -499,30 +518,62 @@ export default function ClientsPage() {
                                         <input type="text" value={customerFormData.name} onChange={(e) => setCustomerFormData({ ...customerFormData, name: e.target.value })}
                                             placeholder="예: 김철수" className="w-full p-5 bg-white border-2 border-gray-200 shadow-sm rounded-[1.25rem] text-base font-black focus:bg-white focus:border-green-600 outline-none transition-all" />
                                     </div>
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-black text-gray-400 uppercase tracking-tight ml-1">연락처</label>
-                                        <input type="text" value={customerFormData.contact || ""} onChange={(e) => setCustomerFormData({ ...customerFormData, contact: formatPhone(e.target.value) })}
-                                            placeholder="010-0000-0000" className="w-full p-5 bg-white border-2 border-gray-200 shadow-sm rounded-[1.25rem] text-base font-black focus:bg-white focus:border-green-600 outline-none transition-all" />
-                                    </div>
-                                    <div className="grid grid-cols-12 gap-3 items-end">
-                                        <div className="col-span-9">
-                                            <AddressSearch
-                                                label="배송지 주소"
-                                                value={customerFormData.address || ""}
-                                                onChange={(val) => setCustomerFormData({ ...customerFormData, address: val })}
-                                                onAddressSelect={(res) => setCustomerFormData({
-                                                    ...customerFormData,
-                                                    address: res.address,
-                                                    postal_code: res.zonecode
-                                                })}
-                                                placeholder="상세 배송지 주소 검색"
-                                            />
+                                    <div className="flex flex-col sm:grid sm:grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-black text-gray-400 uppercase tracking-tight ml-1">연락처</label>
+                                            <input type="text" value={customerFormData.contact || ""} onChange={(e) => setCustomerFormData({ ...customerFormData, contact: formatPhone(e.target.value) })}
+                                                placeholder="010-0000-0000" className="w-full p-5 bg-white border-2 border-gray-200 shadow-sm rounded-[1.25rem] text-base font-black focus:bg-white focus:border-green-600 outline-none transition-all" />
                                         </div>
-                                        <div className="col-span-3 space-y-2">
-                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-tight ml-1">우편번호</label>
-                                            <input type="text" value={customerFormData.postal_code || ""}
-                                                onChange={(e) => setCustomerFormData({ ...customerFormData, postal_code: e.target.value })}
-                                                className="w-full py-5 px-1 bg-gray-50 border-2 border-transparent rounded-[1.25rem] text-base font-black focus:bg-white focus:border-green-200 outline-none text-center" placeholder="00000" />
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-black text-gray-400 uppercase tracking-tight ml-1">성별 구분</label>
+                                            <div className="grid grid-cols-2 gap-2 h-[66px]">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setCustomerFormData({ ...customerFormData, gender: '남' })}
+                                                    className={`rounded-[1.25rem] font-black text-lg transition-all border-2 flex items-center justify-center gap-2 ${customerFormData.gender === '남'
+                                                        ? 'bg-blue-500 border-blue-600 text-white shadow-lg scale-[1.02]'
+                                                        : 'bg-white border-gray-100 text-gray-400 hover:border-blue-200'
+                                                        }`}
+                                                >
+                                                    <span className={customerFormData.gender === '남' ? 'animate-bounce' : ''}>♂</span> 남성
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setCustomerFormData({ ...customerFormData, gender: '여' })}
+                                                    className={`rounded-[1.25rem] font-black text-lg transition-all border-2 flex items-center justify-center gap-2 ${customerFormData.gender === '여'
+                                                        ? 'bg-pink-500 border-pink-600 text-white shadow-lg scale-[1.02]'
+                                                        : 'bg-white border-gray-100 text-gray-400 hover:border-pink-200'
+                                                        }`}
+                                                >
+                                                    <span className={customerFormData.gender === '여' ? 'animate-bounce' : ''}>♀</span> 여성
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-4">
+                                        <AddressSearch
+                                            label="배송지 주소"
+                                            value={customerFormData.address || ""}
+                                            onChange={(val) => setCustomerFormData({ ...customerFormData, address: val })}
+                                            onAddressSelect={(res) => setCustomerFormData({
+                                                ...customerFormData,
+                                                address: res.address,
+                                                postal_code: res.zonecode
+                                            })}
+                                            placeholder="상세 배송지 주소 검색"
+                                        />
+                                        <div className="grid grid-cols-12 gap-3">
+                                            <div className="col-span-8 space-y-2">
+                                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-tight ml-1">나머지 주소 (동, 호수 등)</label>
+                                                <input type="text" value={customerFormData.detail_address || ""}
+                                                    onChange={(e) => setCustomerFormData({ ...customerFormData, detail_address: e.target.value })}
+                                                    className="w-full p-4.5 bg-white border-2 border-gray-100 rounded-[1.25rem] text-sm font-black focus:border-green-600 outline-none shadow-sm" placeholder="예: 101동 202호" />
+                                            </div>
+                                            <div className="col-span-4 space-y-2">
+                                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-tight ml-1">우편번호</label>
+                                                <input type="text" value={customerFormData.postal_code || ""} readOnly
+                                                    className="w-full p-4.5 bg-gray-50 border-2 border-transparent rounded-[1.25rem] text-sm font-black text-center text-gray-400" placeholder="-" />
+                                            </div>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-4 p-5 bg-gray-50 rounded-[1.25rem] group cursor-pointer" onClick={() => setCustomerFormData({ ...customerFormData, is_vip: !customerFormData.is_vip })}>
@@ -533,7 +584,7 @@ export default function ClientsPage() {
                                     <div className="space-y-2">
                                         <label className="text-xs font-black text-gray-400 uppercase tracking-tight ml-1">고객 특이사항 (메모)</label>
                                         <textarea value={customerFormData.special_notes || ""} onChange={(e) => setCustomerFormData({ ...customerFormData, special_notes: e.target.value })}
-                                            placeholder="선호하는 딸기 크기, 배송 요청 등..."
+                                            placeholder="주요 구매 품목, 배송 요청 사항, 고객 특징 등..."
                                             className="w-full p-5 bg-gray-100/50 border-2 border-transparent rounded-[2.5rem] text-sm font-medium focus:bg-white focus:border-green-600 outline-none transition-all h-36 resize-none shadow-inner" />
                                     </div>
                                 </div>

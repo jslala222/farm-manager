@@ -678,203 +678,214 @@ export default function SalesPage() {
         return true;
     });
     return (
-        <div className="min-h-screen pb-24 md:pb-10 bg-gray-50">
-            <div className="max-w-2xl mx-auto p-4 space-y-6 animate-in slide-in-from-bottom-2 duration-500">
+        <div className="min-h-screen pb-24 md:pb-10 bg-slate-50/50">
+            <div className="max-w-2xl mx-auto p-4 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
 
                 {/* DB 오류 알림 및 복구 통합 가이드 (사장님 최우선 처리 영역) */}
                 {dbError && (
-                    <div className="mb-8 bg-white border-4 border-red-500 p-8 rounded-[2.5rem] shadow-2xl shadow-red-100 animate-in zoom-in-95 duration-500 relative overflow-hidden">
+                    <div className="mb-8 bg-white border border-red-200 p-8 rounded-3xl shadow-2xl shadow-red-50 animate-in zoom-in-95 duration-500 relative overflow-hidden">
                         <div className="absolute top-0 right-0 p-4 bg-red-500 text-white font-black text-[10px] rounded-bl-2xl">URGENT</div>
                         <div className="space-y-6">
                             <div className="flex items-start gap-4">
-                                <div className="p-4 bg-red-100 rounded-2xl text-red-600 animate-pulse">
+                                <div className="p-4 bg-red-50 rounded-2xl text-red-600 animate-pulse">
                                     <AlertTriangle className="w-8 h-8" />
                                 </div>
-                                <div className="space-y-2">
-                                    <h3 className="font-black text-red-900 text-xl tracking-tighter">데이터베이스 긴급 복구가 필요합니다! 🚨</h3>
-                                    <p className="text-sm font-bold text-gray-500 leading-relaxed">
-                                        새 기능(배송 특이사항, 상세 주소) 도입으로 인해 장부의 구조를 정비해야 합니다.
-                                        아래 버튼을 눌러보시고, 혹시 안 된다면 수파베이스에서 실행해 주세요.
+                                <div className="space-y-1">
+                                    <h3 className="font-black text-gray-900 text-lg tracking-tight">데이터베이스 구조 정비 필요 🚨</h3>
+                                    <p className="text-sm font-medium text-gray-500 leading-relaxed">
+                                        새로운 기능을 위해 장부 구조를 한 번만 업데이트해 주세요.
                                     </p>
                                 </div>
                             </div>
 
                             <button onClick={handleAutoFix}
-                                className="w-full py-5 bg-red-600 text-white rounded-3xl font-black text-lg shadow-xl shadow-red-200 hover:bg-red-700 active:scale-95 transition-all flex items-center justify-center gap-3 group">
-                                <RefreshCcw className="w-6 h-6 group-hover:rotate-180 transition-all duration-500" />
-                                🛠️ 자동 복구 시도하기
+                                className="w-full py-4 bg-red-600 text-white rounded-2xl font-black text-base shadow-xl shadow-red-100 hover:bg-red-700 active:scale-95 transition-all flex items-center justify-center gap-3 group">
+                                <RefreshCcw className="w-5 h-5 group-hover:rotate-180 transition-all duration-500" />
+                                자동 복구 시도하기
                             </button>
-
-                            <div className="bg-gray-900 rounded-3xl p-6 space-y-3 shadow-inner">
-                                <div className="flex justify-between items-center">
-                                    <p className="text-xs font-black text-pink-400 uppercase tracking-widest">직합 해결용 SQL 스크립트</p>
-                                    <span className="text-[10px] text-gray-500 font-bold">Supabase SQL Editor용</span>
-                                </div>
-                                <pre className="text-[11px] text-gray-300 font-mono leading-relaxed bg-black/30 p-4 rounded-xl border border-white/5 overflow-x-auto select-all">
-                                    {`ALTER TABLE public.sales_records 
-ADD COLUMN IF NOT EXISTS detail_address TEXT,
-    ADD COLUMN IF NOT EXISTS delivery_note TEXT;
-
-ALTER TABLE public.customers 
-ADD COLUMN IF NOT EXISTS detail_address TEXT; `}
-                                </pre>
-                                <p className="text-[10px] text-white/40 text-center font-bold italic">* 위 코드를 복사해서 수파베이스 SQL Editor에 넣고 [Run] 하시면 100% 해결됩니다.</p>
-                            </div>
                         </div>
                     </div>
                 )}
 
-                {/* 헤더 */}
-                <div className="flex items-center gap-3">
-                    <div className="p-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-200">
-                        <ShoppingCart className="w-6 h-6 text-white" />
+                {/* 헤더 섹션: 프리미엄 에메랄드 디자인 */}
+                <div className="flex items-center gap-4 bg-white/40 backdrop-blur-sm p-4 rounded-[2.5rem] border border-white/60 shadow-sm">
+                    <div className="p-4 bg-emerald-600 rounded-[2rem] shadow-xl shadow-emerald-100/50 relative overflow-hidden group">
+                        <ShoppingCart className="w-6 h-6 text-white relative z-10" />
+                        <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
                     </div>
                     <div>
-                        <h1 className="text-2xl font-black text-gray-900 tracking-tight">판매/출하</h1>
-                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Sales Manager</p>
+                        <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-none mb-1">판매 / 출하</h1>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] opacity-60">Sales Management System</p>
                     </div>
-                    <div className="ml-auto">
-                        <input
-                            type="date"
-                            value={selectedDate}
-                            onChange={(e) => setSelectedDate(e.target.value)}
-                            className={`bg-white border rounded-xl px-3 py-2 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm
-                            ${editingRecordId ? 'border-yellow-400 text-yellow-700 bg-yellow-50' : 'border-gray-200'}`}
-                        />
+                    <div className="ml-auto relative group">
+                        <div className="absolute inset-0 bg-emerald-100 blur-xl opacity-0 group-hover:opacity-30 transition-opacity"></div>
+                        <div className="relative flex items-center bg-white border border-slate-100 rounded-2xl px-4 py-2.5 shadow-sm group-hover:border-emerald-200 transition-all">
+                            <Calendar className="w-3.5 h-3.5 text-emerald-500 mr-2" />
+                            <input
+                                type="date"
+                                value={selectedDate}
+                                onChange={(e) => setSelectedDate(e.target.value)}
+                                className={`bg-transparent text-sm font-black outline-none cursor-pointer
+                                ${editingRecordId ? 'text-amber-600' : 'text-slate-700'}`}
+                            />
+                        </div>
                     </div>
                 </div>
 
-                {/* 수정 모드 알림 */}
+                {/* 수정 모드 알림: 세련된 엠버 칩 */}
                 {editingRecordId && (
-                    <div className="bg-yellow-100 text-yellow-800 px-4 py-3 rounded-xl border border-yellow-200 flex justify-between items-center text-sm font-bold animate-pulse">
-                        <span className="flex items-center gap-2"><Edit2 className="w-4 h-4" /> 판매 기록 수정 중...</span>
-                        <button onClick={handleCancelEdit} className="bg-white px-3 py-1 rounded-lg border border-yellow-300 text-xs hover:bg-yellow-50">취소</button>
+                    <div className="bg-amber-50 text-amber-700 px-6 py-4 rounded-3xl border border-amber-100 flex justify-between items-center shadow-sm animate-in zoom-in-95">
+                        <div className="flex items-center gap-3">
+                            <div className="w-2 h-2 bg-amber-500 rounded-full animate-ping"></div>
+                            <span className="text-sm font-black flex items-center gap-2">판매 기록 수정 모드 활성화</span>
+                        </div>
+                        <button onClick={handleCancelEdit} className="bg-white px-4 py-2 rounded-xl text-xs font-black text-amber-600 border border-amber-200 hover:bg-amber-100 transition-all shadow-sm">
+                            변경 취소
+                        </button>
                     </div>
                 )}
 
-                {/* 탭 */}
-                <div className="flex bg-white p-1.5 rounded-2xl shadow-sm border border-gray-100">
+                {/* 탭 내비게이션: 모던 에메랄드 스타일 */}
+                <div className="flex bg-white/80 backdrop-blur-md p-1.5 rounded-[2rem] shadow-sm border border-slate-100/50">
                     <button onClick={() => setActiveTab('bulk')}
                         disabled={!!editingRecordId && activeTab !== 'bulk'}
-                        className={`flex-1 py-3 rounded-xl text-sm font-black transition-all flex items-center justify-center gap-2
-                        ${activeTab === 'bulk' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:bg-gray-50'}
+                        className={`flex-1 py-4 rounded-[1.75rem] text-sm font-black transition-all flex items-center justify-center gap-2.5
+                        ${activeTab === 'bulk'
+                                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100 scale-[1.02]'
+                                : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}
                         ${editingRecordId && activeTab !== 'bulk' ? 'opacity-30 cursor-not-allowed' : ''}`}>
-                        <Truck className="w-4 h-4" /> 대량 납품 (B2B)
+                        <Building2 className={`w-4 h-4 ${activeTab === 'bulk' ? 'animate-bounce' : ''}`} />
+                        대량 납품 <span className="text-[10px] opacity-60 font-medium">(B2B)</span>
                     </button>
                     <button onClick={() => setActiveTab('courier')}
                         disabled={!!editingRecordId && activeTab !== 'courier'}
-                        className={`flex-1 py-3 rounded-xl text-sm font-black transition-all flex items-center justify-center gap-2
-                        ${activeTab === 'courier' ? 'bg-pink-600 text-white shadow-md' : 'text-gray-400 hover:bg-gray-50'}
+                        className={`flex-1 py-4 rounded-[1.75rem] text-sm font-black transition-all flex items-center justify-center gap-2.5
+                        ${activeTab === 'courier'
+                                ? 'bg-rose-500 text-white shadow-lg shadow-rose-100 scale-[1.02]'
+                                : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}
                         ${editingRecordId && activeTab !== 'courier' ? 'opacity-30 cursor-not-allowed' : ''}`}>
-                        <Package className="w-4 h-4" /> 개별 택배 (B2C)
+                        <Truck className={`w-4 h-4 ${activeTab === 'courier' ? 'animate-bounce' : ''}`} />
+                        개별 택배 <span className="text-[10px] opacity-60 font-medium">(B2C)</span>
                     </button>
                 </div>
 
                 {/* 입력 폼 */}
-                <div className="bg-white rounded-[2rem] border border-gray-100 shadow-xl overflow-hidden relative">
-                    <div className={`h-2 w-full ${activeTab === 'bulk' ? 'bg-indigo-600' : 'bg-pink-600'}`} />
+                {/* 입력 폼 컨테이너 */}
+                <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden relative">
+                    <div className={`h-1.5 w-full ${activeTab === 'bulk' ? 'bg-indigo-600' : 'bg-rose-500'}`} />
 
-                    <div className="p-6 space-y-6">
+                    <div className="p-8 space-y-8">
 
                         {activeTab === 'bulk' ? (
                             // B2B 폼 (카드형 개편)
-                            <div className="space-y-6 animate-in fade-in">
+                            <div className="space-y-8 animate-in fade-in duration-500">
                                 {/* [카드 1] 거래처 선택 */}
-                                <div className="bg-gray-50 rounded-[2rem] p-6 border border-gray-100 shadow-inner">
-                                    <label className="block text-sm font-black text-indigo-600 mb-4 uppercase tracking-tighter flex items-center gap-1.5">
-                                        <Building2 className="w-4 h-4" /> 1. 거래처 선택
+                                <div className="space-y-4">
+                                    <label className="block text-xs font-black text-indigo-600 mb-2 uppercase tracking-[0.2em] flex items-center gap-2 px-1">
+                                        <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse"></div>
+                                        1. 거래처 선택
                                     </label>
-                                    <div className="grid grid-cols-2 gap-2">
+                                    <div className="grid grid-cols-2 gap-4">
                                         {partners.map(partner => (
                                             <button key={partner.id}
                                                 onClick={() => setSelectedClientId(partner.id)}
-                                                className={`p-4 rounded-2xl text-xs font-bold border transition-all text-left truncate flex items-center gap-2 shadow-sm
+                                                className={`p-5 rounded-[1.5rem] text-sm font-bold border-2 transition-all text-left flex items-center gap-3
                                                 ${selectedClientId === partner.id
-                                                        ? 'bg-indigo-600 border-indigo-700 text-white shadow-indigo-100'
-                                                        : 'bg-white border-gray-100 text-gray-600 hover:bg-gray-50'}`}>
-                                                <Building2 className={`w-4 h-4 shrink-0 ${selectedClientId === partner.id ? 'opacity-100' : 'opacity-30'}`} />
-                                                {partner.company_name}
+                                                        ? 'bg-indigo-50 border-indigo-500 text-indigo-700 shadow-lg shadow-indigo-50 animate-in zoom-in-95 duration-200'
+                                                        : 'bg-white border-slate-100 text-slate-500 hover:border-slate-200'}`}>
+                                                <div className={`p-2.5 rounded-xl transition-colors ${selectedClientId === partner.id ? 'bg-indigo-500 text-white' : 'bg-slate-50 text-slate-300'}`}>
+                                                    <Building2 className="w-4.5 h-4.5" />
+                                                </div>
+                                                <span className="truncate font-black tracking-tight">{partner.company_name}</span>
                                             </button>
                                         ))}
                                     </div>
-                                    {!partners.length && <p className="text-xs text-gray-300 mt-2 text-center py-4">등록된 거래처가 없습니다.</p>}
+                                    {!partners.length && <p className="text-xs text-slate-300 mt-2 text-center py-10 bg-slate-50 rounded-[2rem] border border-dashed border-slate-200">등록된 거래처 정보가 없습니다.</p>}
                                 </div>
 
                                 {/* [카드 2] 등급별 수량 입력 */}
-                                <div className="bg-white rounded-[2rem] p-6 border-2 border-indigo-50 shadow-sm space-y-4">
-                                    <label className="block text-sm font-black text-indigo-600 mb-2 uppercase tracking-tighter flex items-center gap-1.5">
-                                        <Package className="w-4 h-4" /> 2. 등급별 수량 (박스)
+                                <div className="bg-slate-50/50 rounded-[2.5rem] p-8 border border-slate-100 shadow-inner space-y-6">
+                                    <label className="block text-xs font-black text-indigo-600 mb-2 uppercase tracking-[0.2em] flex items-center gap-2 px-1">
+                                        <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></div>
+                                        2. 등급별 수량 (박스)
                                     </label>
-                                    <div className="grid grid-cols-3 gap-3">
+                                    <div className="grid grid-cols-3 gap-4">
                                         {[
                                             { id: 'sang', label: '특/상', value: bulkQtySang, setter: setBulkQtySang, color: 'indigo' },
-                                            { id: 'jung', label: '중', value: bulkQtyJung, setter: setBulkQtyJung, color: 'green' },
-                                            { id: 'ha', label: '하', value: bulkQtyHa, setter: setBulkQtyHa, color: 'gray' }
+                                            { id: 'jung', label: '중', value: bulkQtyJung, setter: setBulkQtyJung, color: 'blue' },
+                                            { id: 'ha', label: '하', value: bulkQtyHa, setter: setBulkQtyHa, color: 'slate' }
                                         ].map(item => (
-                                            <div key={item.id} className="space-y-2">
-                                                <div className={`text - [10px] font - black text - ${item.color} -500 bg - ${item.color} -50 px - 2 py - 1 rounded - lg text - center`}>
+                                            <div key={item.id} className="space-y-3">
+                                                <div className={`text-[11px] font-black text-center py-2 rounded-xl border
+                                                    ${item.id === 'sang' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
+                                                        item.id === 'jung' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                                            'bg-slate-100 text-slate-500 border-slate-200'}`}>
                                                     {item.label}
                                                 </div>
-                                                <input type="number"
-                                                    value={item.value} onChange={(e) => item.setter(e.target.value)}
+                                                <input type="text"
+                                                    inputMode="numeric"
+                                                    pattern="[0-9]*"
+                                                    value={item.value}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value.replace(/[^0-9]/g, '');
+                                                        item.setter(val);
+                                                    }}
                                                     placeholder="0"
-                                                    className="w-full p-4 bg-gray-50 border-2 border-transparent rounded-2xl text-center font-black text-lg focus:bg-white focus:border-indigo-500 transition-all outline-none" />
+                                                    className="w-full p-6 bg-white border-2 border-transparent rounded-[1.5rem] text-center font-black text-4xl focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 transition-all outline-none shadow-sm" />
                                             </div>
                                         ))}
                                     </div>
-                                    <div className="pt-2 flex justify-between items-center px-2">
-                                        <span className="text-xs font-bold text-gray-400">납품 총 합계</span>
-                                        <span className="text-xl font-black text-indigo-600">
-                                            총 {(Number(bulkQtySang) || 0) + (Number(bulkQtyJung) || 0) + (Number(bulkQtyHa) || 0)}박스
+                                    <div className="pt-4 flex justify-between items-center px-4 border-t border-slate-200/50">
+                                        <span className="text-xs font-black text-slate-400 uppercase tracking-widest">납품 총 합계</span>
+                                        <span className="text-3xl font-black text-indigo-600 tabular-nums">
+                                            {(Number(bulkQtySang) || 0) + (Number(bulkQtyJung) || 0) + (Number(bulkQtyHa) || 0)} <span className="text-sm font-bold opacity-40 ml-1">박스</span>
                                         </span>
                                     </div>
                                 </div>
 
                                 {/* [카드 3] 결제 정보 및 정산 */}
-                                <div className="bg-indigo-50/50 rounded-[2rem] p-6 border border-indigo-100/50 space-y-4">
-                                    <label className="block text-sm font-black text-indigo-600 mb-2 uppercase tracking-tighter flex items-center gap-1.5">
-                                        <DollarSign className="w-4 h-4" /> 3. 정산 및 금액 설정
+                                <div className="space-y-4">
+                                    <label className="block text-xs font-black text-indigo-600 mb-2 uppercase tracking-[0.2em] flex items-center gap-2 px-1">
+                                        <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></div>
+                                        3. 정산 및 금액 설정
                                     </label>
                                     <div className="flex gap-4">
-                                        <div className="flex-1">
+                                        <div className="flex-[3] relative">
+                                            <div className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 font-black text-xl">₩</div>
                                             <input type="text"
                                                 value={formatCurrency(bulkPrice)}
                                                 onChange={(e) => setBulkPrice(stripNonDigits(e.target.value))}
-                                                placeholder="오늘 받은 금액 (없으면 0)"
-                                                className="w-full p-4 bg-white border-2 border-gray-100 rounded-2xl font-black text-indigo-600 placeholder-gray-300 focus:border-indigo-500 shadow-sm outline-none" />
+                                                placeholder="오늘 받은 금액"
+                                                className="w-full p-6 pl-12 bg-white border-2 border-slate-100 rounded-[1.5rem] font-black text-xl text-indigo-600 placeholder-slate-200 focus:border-indigo-500 shadow-sm outline-none transition-all" />
                                         </div>
                                         <button onClick={() => setIsSettled(!isSettled)}
-                                            className={`px - 6 rounded - 2xl border - 2 font - black text - xs transition - all shadow - sm
-                                                ${isSettled ? 'bg-indigo-600 border-indigo-700 text-white' : 'bg-white border-gray-200 text-gray-400'} `}>
+                                            className={`flex-1 rounded-[1.5rem] border-2 font-black text-[13px] transition-all shadow-sm
+                                                ${isSettled
+                                                    ? 'bg-indigo-600 border-indigo-700 text-white shadow-indigo-100'
+                                                    : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100'} `}>
                                             {isSettled ? '전액입금' : '미정산'}
                                         </button>
                                     </div>
-                                    <p className="text-[10px] text-gray-400 font-medium px-2 italic">
-                                        * 등급별 단가는 결산 페이지에서 나중에 따로 매기실 수도 있습니다.
-                                    </p>
                                 </div>
                             </div>
                         ) : (
                             // B2C 폼
-                            <div className="space-y-6 animate-in fade-in">
+                            <div className="space-y-8 animate-in fade-in duration-500">
                                 {/* 주문자(결제자) 및 수령인 영역 */}
-                                <div className="bg-gray-50 rounded-[2.5rem] p-6 border border-gray-100 relative shadow-inner space-y-5">
-                                    <div className="flex items-start justify-between px-2">
-                                        <div className="space-y-1">
-                                            <label className="block text-sm font-black text-indigo-600 uppercase tracking-tighter flex items-center gap-1.5">
-                                                <CreditCard className="w-4 h-4" /> 1. 주문자 정보
-                                            </label>
-                                            <p className="text-[10px] text-gray-400 font-bold italic">* 딸기값을 입금하거나 주문을 직접 하신 분입니다.</p>
-                                        </div>
-                                        <div className="flex flex-col items-end gap-1.5">
-                                            <button onClick={() => setIsOrdererLocked(!isOrdererLocked)}
-                                                className={`flex items - center gap - 1.5 px - 4 py - 2 rounded - 2xl text - [11px] font - black transition - all border shadow - sm
-                                                ${isOrdererLocked ? 'bg-indigo-600 border-indigo-700 text-white shadow-indigo-100' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'} `}>
-                                                {isOrdererLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
-                                                {isOrdererLocked ? '주문자 고정됨' : '주문자 고정'}
-                                            </button>
-                                            <p className="text-[9px] text-indigo-500 font-bold mr-1">한 번에 여러 곳으로 보낼 때 켜두세요!</p>
-                                        </div>
+                                <div className="space-y-6">
+                                    <div className="flex items-center justify-between px-1 mb-2">
+                                        <label className="block text-xs font-black text-rose-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                                            <div className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-pulse"></div>
+                                            1. 주문자 정보
+                                        </label>
+                                        <button onClick={() => setIsOrdererLocked(!isOrdererLocked)}
+                                            className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-[11px] font-black transition-all border shadow-sm
+                                            ${isOrdererLocked
+                                                    ? 'bg-rose-500 border-rose-600 text-white shadow-rose-100'
+                                                    : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'} `}>
+                                            {isOrdererLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+                                            {isOrdererLocked ? '주문자 고정됨' : '주문자 고정'}
+                                        </button>
                                     </div>
 
                                     {!selectedSearchResult && !isNewClientMode ? (
@@ -930,8 +941,8 @@ ADD COLUMN IF NOT EXISTS detail_address TEXT; `}
                                                                 </div>
                                                             ) : (
                                                                 <>
-                                                                    <p className="text-sm font-black text-gray-900 truncate tracking-tight">{newClientName}</p>
-                                                                    <p className="text-[10px] font-bold text-gray-400">{formatPhone(newClientPhone)}</p>
+                                                                    <p className="text-3xl font-black text-gray-900 truncate tracking-tight">{newClientName}</p>
+                                                                    <p className="text-xl font-bold text-gray-400">{formatPhone(newClientPhone)}</p>
                                                                 </>
                                                             )}
                                                         </div>
@@ -1094,34 +1105,44 @@ ADD COLUMN IF NOT EXISTS detail_address TEXT; `}
                                 <div className="space-y-5">
                                     <div className="space-y-3">
                                         <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">결제 및 배송비 설정</label>
-                                        <div className="flex bg-gray-100 p-1.5 rounded-[1.5rem] shadow-inner">
+                                        <div className="grid grid-cols-2 gap-4">
                                             <button onClick={() => setShippingPaymentType('prepaid')}
-                                                className={`flex - 1 py - 4 text - sm font - black rounded - 2xl transition - all ${shippingPaymentType === 'prepaid' ? 'bg-white text-gray-900 shadow-md ring-1 ring-black/5' : 'text-gray-400 hover:text-gray-600'} `}>
+                                                className={`py-5 text-sm font-black rounded-[1.5rem] transition-all border-2 flex items-center justify-center gap-2 ${shippingPaymentType === 'prepaid' ? 'bg-rose-50 border-rose-500 text-rose-700 shadow-lg shadow-rose-100' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'} `}>
+                                                <div className={`w-2 h-2 rounded-full ${shippingPaymentType === 'prepaid' ? 'bg-rose-500' : 'bg-slate-200'}`} />
                                                 판매자 부담 (선불)
                                             </button>
                                             <button onClick={() => setShippingPaymentType('cod')}
-                                                className={`flex - 1 py - 4 text - sm font - black rounded - 2xl transition - all ${shippingPaymentType === 'cod' ? 'bg-white text-gray-900 shadow-md ring-1 ring-black/5' : 'text-gray-400 hover:text-gray-600'} `}>
+                                                className={`py-5 text-sm font-black rounded-[1.5rem] transition-all border-2 flex items-center justify-center gap-2 ${shippingPaymentType === 'cod' ? 'bg-rose-50 border-rose-500 text-rose-700 shadow-lg shadow-rose-100' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'} `}>
+                                                <div className={`w-2 h-2 rounded-full ${shippingPaymentType === 'cod' ? 'bg-rose-500' : 'bg-slate-200'}`} />
                                                 고객 부담 (착불)
                                             </button>
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <label className="block text-xs font-black text-gray-400 ml-1 uppercase">박스 수량 (BOX)</label>
+                                    <div className="flex gap-4">
+                                        <div className="flex-[3] space-y-2">
+                                            <label className="block text-xs font-black text-gray-400 ml-1 uppercase">박스 수량</label>
                                             <div className="relative">
-                                                <input type="number" value={courierBoxCount} onChange={(e) => setCourierBoxCount(e.target.value)}
-                                                    className="w-full p-5 bg-white border-2 border-gray-200 rounded-[1.25rem] text-xl font-black focus:border-pink-500 outline-none shadow-sm transition-all" placeholder="1" />
-                                                <span className="absolute right-5 top-1/2 -translate-y-1/2 text-xs font-black text-gray-300">박스</span>
+                                                <input type="text" value={courierBoxCount}
+                                                    inputMode="numeric"
+                                                    pattern="[0-9]*"
+                                                    onChange={(e) => {
+                                                        const val = e.target.value.replace(/[^0-9]/g, '');
+                                                        setCourierBoxCount(val);
+                                                    }}
+                                                    className="w-full p-5 bg-white border-2 border-gray-200 rounded-[1.25rem] text-2xl font-black focus:border-pink-500 outline-none shadow-sm transition-all text-center" placeholder="1" />
+                                                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-gray-300">박스</span>
                                             </div>
                                         </div>
-                                        <div className="space-y-2">
+                                        <div className="flex-[7] space-y-2">
                                             <label className="block text-xs font-black text-gray-400 ml-1 uppercase">판매 총액 (원)</label>
                                             <div className="relative">
                                                 <input type="text" value={formatCurrency(courierTotalPrice)}
+                                                    inputMode="numeric"
+                                                    pattern="[0-9]*"
                                                     onChange={(e) => setCourierTotalPrice(stripNonDigits(e.target.value))}
-                                                    className="w-full p-5 bg-white border-2 border-gray-200 rounded-[1.25rem] text-xl font-black focus:border-pink-500 outline-none shadow-sm text-right transition-all" placeholder="0원" />
-                                                <span className="absolute left-5 top-1/2 -translate-y-1/2 text-lg font-black text-gray-300">₩</span>
+                                                    className="w-full p-5 bg-white border-2 border-gray-200 rounded-[1.25rem] text-2xl font-black focus:border-pink-500 outline-none shadow-sm text-right transition-all pr-10 pl-12" placeholder="0원" />
+                                                <span className="absolute left-6 top-1/2 -translate-y-1/2 text-xl font-black text-gray-300">₩</span>
                                             </div>
                                         </div>
                                     </div>
@@ -1135,7 +1156,7 @@ ADD COLUMN IF NOT EXISTS detail_address TEXT; `}
                                             </span>
                                             <div className="flex items-center gap-2 opacity-40">
                                                 <span className="text-[10px] font-bold uppercase tracking-widest">{showCostDetails ? 'CLOSE' : 'OPEN'}</span>
-                                                <ChevronRight className={`w - 4 h - 4 transition - transform ${showCostDetails ? 'rotate-90' : ''} `} />
+                                                <ChevronRight className={`w-4 h-4 transition-transform ${showCostDetails ? 'rotate-90' : ''}`} />
                                             </div>
                                         </button>
 
@@ -1194,8 +1215,7 @@ ADD COLUMN IF NOT EXISTS detail_address TEXT; `}
                                         {!showCostDetails && (
                                             <div className="px-5 py-3 bg-gray-50/50 flex justify-between items-center text-[10px] font-black uppercase tracking-wider">
                                                 <div className="flex gap-3">
-                                                    <span className="text-gray-400">지출 합계:</span>
-                                                    <span className="text-gray-900">{formatCurrency(totalShippingCost + totalMaterialCost)}</span>
+                                                    <span className="text-gray-400 italic">비용 설정을 확인하려면 OPEN 버튼을 누르세요.</span>
                                                 </div>
                                                 <span className="text-indigo-500 animate-bounce-horizontal">Edit Detail →</span>
                                             </div>
@@ -1221,7 +1241,7 @@ ADD COLUMN IF NOT EXISTS detail_address TEXT; `}
                                                         </div>
                                                     </div>
                                                     <div className="text-right">
-                                                        <span className={`text - [10px] font - black px - 2.5 py - 1 rounded - full border border - white / 10 bg - white / 5 ${shippingPaymentType === 'prepaid' ? 'text-indigo-400' : 'text-amber-400'} `}>
+                                                        <span className={`text-[10px] font-black px-2.5 py-1 rounded-full border border-white/10 bg-white/5 ${shippingPaymentType === 'prepaid' ? 'text-indigo-400' : 'text-amber-400'}`}>
                                                             {shippingPaymentType === 'prepaid' ? '선불 결제 적용' : '착불 결제 적용'}
                                                         </span>
                                                     </div>
@@ -1237,7 +1257,7 @@ ADD COLUMN IF NOT EXISTS detail_address TEXT; `}
                                                         </div>
                                                         <div className="flex items-center gap-2 text-[11px] font-bold text-gray-400">
                                                             <span className="w-1.5 h-1.5 rounded-full bg-pink-500"></span>
-                                                            예상 지출: -{formatCurrency(totalShippingCost + totalMaterialCost)}
+                                                            지출 합계: -{formatCurrency(Number(totalShippingCost || 0) + Number(totalMaterialCost || 0))}
                                                         </div>
                                                     </div>
                                                     <div className="text-right">
@@ -1258,17 +1278,24 @@ ADD COLUMN IF NOT EXISTS detail_address TEXT; `}
 
                         <div className="px-6 pb-8">
                             <button onClick={handleSave} disabled={saving}
-                                className={`w - full py - 4 rounded - xl text - lg font - bold text - white shadow - xl transition - all active: scale - 95 flex items - center justify - center gap - 2
+                                className={`w-full py-6 rounded-[2rem] text-xl font-black text-white shadow-[0_20px_50px_rgba(0,0,0,0.1)] transition-all active:scale-[0.98] flex items-center justify-center gap-3 relative overflow-hidden group/save
                             ${activeTab === 'bulk'
-                                        ? (editingRecordId ? 'bg-indigo-500 shadow-indigo-100' : 'bg-indigo-600 shadow-indigo-200 hover:bg-indigo-700')
-                                        : (editingRecordId ? 'bg-pink-500 shadow-pink-100' : 'bg-pink-600 shadow-pink-200 hover:bg-pink-700')
+                                        ? (editingRecordId ? 'bg-gradient-to-r from-indigo-400 to-indigo-500 shadow-indigo-100' : 'bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 shadow-indigo-200')
+                                        : (editingRecordId ? 'bg-gradient-to-r from-rose-400 to-rose-500 shadow-rose-100' : 'bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 shadow-rose-200')
                                     } `}>
+                                <div className="absolute inset-0 bg-white/10 translate-y-full group-hover/save:translate-y-0 transition-transform duration-300" />
                                 {saving ? (
-                                    <span className="animate-pulse">저장 중...</span>
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+                                        <span className="animate-pulse font-bold">저장 중...</span>
+                                    </div>
                                 ) : (
                                     <>
-                                        <Check className="w-5 h-5" strokeWidth={3} />
-                                        {editingRecordId ? '수정 내용 저장' : (activeTab === 'bulk' ? '납품 기록 저장' : '택배 주문 저장')}
+                                        {activeTab === 'bulk' ? <Building2 className="w-7 h-7" /> : <Truck className="w-7 h-7" />}
+                                        <span className="tracking-tight">
+                                            {editingRecordId ? '수정 완료 및 저장' : (activeTab === 'bulk' ? '대량 납품 완료 저장' : '프리미엄 택배 주문 완료')}
+                                        </span>
+                                        <CheckCircle className="w-7 h-7 ml-1 opacity-50 group-hover/save:scale-125 group-hover/save:opacity-100 transition-all font-bold" />
                                     </>
                                 )}
                             </button>

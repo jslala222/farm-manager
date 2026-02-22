@@ -33,7 +33,7 @@ async function checkSchema() {
         Object.keys(cData[0]).forEach(k => console.log(`[customers] ${k}`));
     } else {
         console.log("No data in customers. Checking test columns...");
-        const testCols = ['detail_address', 'postal_code'];
+        const testCols = ['detail_address', 'postal_code', 'gender'];
         for (const col of testCols) {
             const { error } = await supabase.from('customers').select(col).limit(1);
             console.log(`[customers] ${col}: ${error ? '❌ MISSING' : '✅ EXISTS'}`);

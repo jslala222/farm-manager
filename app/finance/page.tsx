@@ -20,7 +20,8 @@ import {
     BarChart3,
     AlertTriangle,
     RefreshCcw,
-    X
+    X,
+    Utensils
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
@@ -35,6 +36,7 @@ export default function FinancePage() {
     // Summary Stats
     const [revenue, setRevenue] = useState(0);        // 총 매출
     const [laborCost, setLaborCost] = useState(0);    // 총 인건비
+    const [mealCost, setMealCost] = useState(0);      // 식대 및 새참비
     const [expense, setExpense] = useState(0);        // 일반 지출
     const [shippingCost, setShippingCost] = useState(0); // 택배비(자재비 포함)
     const [unsettledB2B, setUnsettledB2B] = useState(0); // 미결산 B2B
@@ -116,7 +118,7 @@ export default function FinancePage() {
             // 2. 지출 데이터 (Expenditures) - 카테고리 포함 조회
             const { data: expensesData } = await supabase
                 .from('expenditures')
-                .select('amount, category')
+                .select('amount, category, main_category')
                 .eq('farm_id', farm.id)
                 .gte('expense_date', startStr.split('T')[0])
                 .lte('expense_date', endStr.split('T')[0]);
@@ -169,23 +171,47 @@ export default function FinancePage() {
                 }
             });
 
-            // [bkit 데이터 출처 검증] 
-            // 1. 일반 지출 합계 (식대 제외)
-            const normalExpenses = expensesData?.filter(e => !e.category?.includes('식대')) || [];
-            const totalExp = normalExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0;
+            // [bkit 데이터 출처 정밀화] 
+            // 1. 인건비 및 식대 분리 집계
+            const WAGE_CATS = ["기본급/월급", "아르바이트(일당)", "명절떡값/선물", "성과급/보너스", "퇴직금/보험", "기타 인건비"];
 
-            // 2. 인건비 합계 (일당 * 인원수 + 식대 지출)
-            const mealExpenses = expensesData?.filter(e => e.category?.includes('식대')) || [];
-            const totalMealCost = mealExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0;
+            // 순수 인건비 (식대 제외)
+            const wagesExpenses = expensesData?.filter(e => {
+                const isWageSub = WAGE_CATS.includes(e.category || "");
+                const isWageMain = e.main_category === '인건비' && !e.category?.includes('식대');
+                const hasWageKeyword = (e.category?.includes('인건비') || e.category?.includes('일당')) && !e.category?.includes('식대');
+                return (isWageSub || isWageMain || hasWageKeyword) && !e.category?.includes('식대');
+            }) || [];
 
-            const totalLabor = (attendanceData?.reduce((acc, curr) => {
+            // 식대 (식대/새참비 등)
+            const mealsExpenses = expensesData?.filter(e => {
+                return (e.category?.includes('식대') || e.category?.includes('새참')) || (e.main_category === '인건비' && e.category?.includes('식대'));
+            }) || [];
+
+            const totalWagesFromExpenses = wagesExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0);
+            const totalMealsFromExpenses = mealsExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0);
+
+            // 출근부 기반 자동 계산 (출근부는 보통 인건비(일당)에 포함)
+            const attendanceWages = attendanceData?.reduce((acc, curr) => {
                 return acc + ((curr.daily_wage || 0) * (curr.headcount || 1));
-            }, 0) || 0) + totalMealCost;
+            }, 0) || 0;
+
+            const finalWages = totalWagesFromExpenses + (attendanceWages > 0 ? attendanceWages : 0);
+            const finalMeals = totalMealsFromExpenses;
+
+            // 2. 일반 지출 합계 (인건비, 식대를 제외한 나머지)
+            const normalExpenses = expensesData?.filter(e =>
+                !wagesExpenses.includes(e) && !mealsExpenses.includes(e)
+            ) || [];
+            const totalExp = normalExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0;
 
             setRevenue(totalRev);
             setB2bRevenue(b2bRev);
             setB2cRevenue(b2cRev);
             setShippingCost(totalShipping);
+            setLaborCost(finalWages);
+            setMealCost(finalMeals);
+            setExpense(totalExp);
             setUnsettledB2B(unsettledAmt);
             setUnsettledB2bCount(unsettledCount);
             setSettledB2bCount(settledCount);
@@ -215,8 +241,9 @@ export default function FinancePage() {
             });
 
             setUnsettledRecords(grouped.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+            setLaborCost(finalWages);
+            setMealCost(finalMeals);
             setExpense(totalExp);
-            setLaborCost(totalLabor);
             setDbError(null);
 
         } catch (error: any) {
@@ -358,7 +385,7 @@ export default function FinancePage() {
                         </div>
                         <div>
                             <h1 className="text-2xl font-black text-gray-900 tracking-tight">통합 결산</h1>
-                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Financial Trinity Dashboard</p>
+                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">통합 재무 관리 대시보드</p>
                         </div>
                     </div>
 
@@ -399,7 +426,7 @@ export default function FinancePage() {
                     <div className="relative z-10 space-y-6">
                         <div className="flex justify-between items-start">
                             <div>
-                                <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Estimated Net Profit</p>
+                                <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">이번 달 예상 순이익</p>
                                 <h2 className="text-5xl font-black tracking-tighter text-white">
                                     {formatCurrency(netProfit)}
                                 </h2>
@@ -413,37 +440,54 @@ export default function FinancePage() {
 
                         <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/10">
                             <div>
-                                <p className="text-gray-500 text-[9px] font-bold uppercase mb-1">Total Revenue</p>
+                                <p className="text-gray-500 text-[9px] font-bold uppercase mb-1">총 매출액</p>
                                 <p className="text-xl font-black text-white">{formatCurrency(revenue)}</p>
                             </div>
                             <div className="text-right">
-                                <p className="text-gray-500 text-[9px] font-bold uppercase mb-1">Total Costs</p>
-                                <p className="text-xl font-black text-gray-300">{formatCurrency(laborCost + expense + shippingCost)}</p>
+                                <p className="text-gray-500 text-[9px] font-bold uppercase mb-1">총 지출액</p>
+                                <p className="text-xl font-black text-gray-300">{formatCurrency(laborCost + mealCost + expense + shippingCost)}</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* 인건비 섹션 */}
                     <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm space-y-2 relative group-hover:bg-blue-50/30 transition-colors">
                         <div className="flex items-center gap-2 mb-2">
                             <div className="p-2 bg-blue-50 rounded-lg"><Users className="w-4 h-4 text-blue-600" /></div>
-                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Labor</span>
+                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">순수 인건비</span>
                         </div>
                         <p className="text-2xl font-black text-gray-900">{formatCurrency(laborCost)}</p>
-                        <p className="text-[10px] text-gray-400 font-bold break-keep">출근부 + 식대 지출 합산</p>
-                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <AlertTriangle className="w-3 h-3 text-blue-300" />
+                        <p className="text-[10px] text-gray-400 font-bold break-keep">일당/월급/성과급 등</p>
+                    </div>
+
+                    {/* 식대 섹션 */}
+                    <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm space-y-2 relative group-hover:bg-amber-50/30 transition-colors">
+                        <div className="flex items-center gap-2 mb-2">
+                            <div className="p-2 bg-amber-50 rounded-lg"><Utensils className="w-4 h-4 text-amber-600" /></div>
+                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">식대 및 새참비</span>
                         </div>
+                        <p className="text-2xl font-black text-gray-900">{formatCurrency(mealCost)}</p>
+                        <p className="text-[10px] text-gray-400 font-bold break-keep">식당 결제/새참 비용</p>
                     </div>
 
                     <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm space-y-2 relative">
                         <div className="flex items-center gap-2 mb-2">
                             <div className="p-2 bg-pink-50 rounded-lg"><Truck className="w-4 h-4 text-pink-600" /></div>
-                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Post & Pack</span>
+                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">택배 및 자재비</span>
                         </div>
                         <p className="text-2xl font-black text-gray-900">{formatCurrency(shippingCost)}</p>
                         <p className="text-[10px] text-gray-400 font-bold break-keep">판매장부의 택배/자재비</p>
+                    </div>
+
+                    <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm space-y-2 relative">
+                        <div className="flex items-center gap-2 mb-2">
+                            <div className="p-2 bg-indigo-50 rounded-lg"><Download className="w-4 h-4 text-indigo-600" /></div>
+                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">기타 영농지출</span>
+                        </div>
+                        <p className="text-2xl font-black text-gray-900">{formatCurrency(expense)}</p>
+                        <p className="text-[10px] text-gray-400 font-bold break-keep">공과금/유류비/기타 영농비</p>
                     </div>
                 </div>
 
@@ -660,7 +704,7 @@ export default function FinancePage() {
                             <div className="p-8 bg-gray-900 text-white flex justify-between items-center share-container">
                                 <div>
                                     <h3 className="text-xl font-black tracking-tight">{selectedGroup.companyName} 정산</h3>
-                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">B2B Settlement Detail ({selectedGroup.date})</p>
+                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">B2B 정산 상세 내역 ({selectedGroup.date})</p>
                                 </div>
                                 <button onClick={() => setIsSettleModalOpen(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
                                     <X className="w-6 h-6" />
@@ -749,7 +793,7 @@ export default function FinancePage() {
                                     {/* 총합 표시 */}
                                     <div className="pt-3 mt-1 border-t-2 border-dashed border-blue-100 flex justify-between items-center px-2">
                                         <div className="flex flex-col">
-                                            <span className="text-[10px] font-black text-blue-400 uppercase italic">EXPECTED TOTAL</span>
+                                            <span className="text-[10px] font-black text-blue-400 uppercase italic">예상 정산 합계</span>
                                             <span className="text-[8px] text-gray-400 font-bold">* 수량 × 단가 합계 (참고용)</span>
                                         </div>
                                         <span id="modal-total-display" className="text-xl font-black text-blue-600">

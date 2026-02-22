@@ -1,13 +1,20 @@
 import { createBrowserClient } from '@supabase/ssr';
 
-export const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
 // [bkit 진단] 초기 연결 상태 로그 (사장님 콘솔 확인용)
-console.log("🍓 [bkit] 수파베이스 통신 준비 완료");
-console.log("🔗 접속 서버:", process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 20) + "...");
+if (typeof window !== 'undefined') {
+    console.log("🍓 [bkit] 수파베이스 통신 준비 중...");
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+        console.error("❌ [bkit] 치명적 오류: 환경 변수(URL/KEY)가 로드되지 않았습니다!");
+    } else {
+        console.log("🔗 접속 서버:", process.env.NEXT_PUBLIC_SUPABASE_URL.substring(0, 25) + "...");
+        console.log("✅ [bkit] 수파베이스 클라이언트 초기화 완료");
+    }
+}
+
+export const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+);
 
 // 타입 정의
 export type UserRole = 'admin' | 'owner';
@@ -126,10 +133,13 @@ export interface Worker {
 export interface Expenditure {
     id: string;
     farm_id: string;
-    category: string;
+    main_category: string; // [bkit] 대분류 (농작관리, 인건비, 가계생활)
+    sub_category: string;  // [bkit] 소분류 (세부 항목)
+    category: string;      // Legacy
     amount: number;
     notes: string | null;
     expense_date: string;
+    payment_method: '현금' | '카드' | string; // [bkit] 결제 수단 추가
     created_at: string;
 }
 
@@ -158,10 +168,12 @@ export interface Partner {
     manager_email: string | null;
     fax_number: string | null;
     hq_address: string | null;
+    hq_detail_address: string | null; // 본사 상세 주소
     hq_postal_code: string | null; // 시나리오 C: 본사 우편번호
     hq_latitude: number | null;    // 시나리오 C: 본사 위도
     hq_longitude: number | null;   // 시나리오 C: 본사 경도
     delivery_address: string | null;
+    delivery_detail_address: string | null; // 납품 상세 주소
     delivery_postal_code: string | null; // 시나리오 C: 납품지 우편번호
     delivery_latitude: number | null;    // 시나리오 C: 납품지 위도
     delivery_longitude: number | null;   // 시나리오 C: 납품지 경도
@@ -184,6 +196,7 @@ export interface Customer {
     latitude: number | null;    // 시나리오 C: 위도 (숨김 자산)
     longitude: number | null;   // 시나리오 C: 경도 (숨김 자산)
     is_vip: boolean;
+    gender: string | null; // 고객 성별 (남/여/미지정)
     special_notes: string | null;
     created_at: string;
 }
