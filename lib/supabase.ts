@@ -89,6 +89,10 @@ export interface SalesRecord {
     detail_address?: string | null; // 상세 주소 (동/호수)
     delivery_note?: string | null; // 배송 특이사항 (초인종 금지 등)
     is_settled?: boolean; // 정산 완료 여부
+    crop_name?: string | null;   // 품목 (딸기, 고구마 등)
+    sale_unit?: string | null;   // 단위 (박스, kg 등)
+    payment_status?: string | null; // 정산 상태 (pending, completed)
+    payment_method?: string | null; // 결제 수단 (카드, 현금 등)
     settled_amount?: number; // 정산 완료 시 확정된 금액 (정산 완료/후불 건 등)
     grade?: string | null; // 등급 (특/상/보통/하/미지정)
     clients?: { name: string; client_type: string }; // Legacy Join Result

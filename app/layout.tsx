@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import NavBar from "@/components/NavBar";
 import AuthProvider from "@/components/AuthProvider";
+import QueryProvider from "@/components/QueryProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -23,12 +24,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ko">
       <body className={`${inter.className} bg-gray-50`}>
         <AuthProvider>
-          <div className="min-h-screen flex flex-col">
-            <NavBar />
-            <main className="flex-1 max-w-5xl mx-auto w-full">
-              {children}
-            </main>
-          </div>
+          <QueryProvider>
+            <div className="min-h-screen flex flex-col">
+              <NavBar />
+              <main className="flex-1 max-w-5xl mx-auto w-full">
+                {children}
+              </main>
+            </div>
+          </QueryProvider>
         </AuthProvider>
       </body>
     </html>

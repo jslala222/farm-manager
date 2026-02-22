@@ -68,6 +68,19 @@ export default function SalesPage() {
 
     const [showCostDetails, setShowCostDetails] = useState(false); // 상세 설정 토글
 
+    // [New] 다품종 및 정산 관리 상태
+    const [cropName, setCropName] = useState('딸기');
+    const [saleUnit, setSaleUnit] = useState('박스');
+    const [paymentStatus, setPaymentStatus] = useState<'pending' | 'completed'>('completed');
+    const [paymentMethod, setPaymentMethod] = useState('카드');
+
+    const CROPS = [
+        { id: 'strawberry', name: '딸기', icon: '🍓', units: ['박스', 'kg', '다라'] },
+        { id: 'potato', name: '감자', icon: '🥔', units: ['kg', '포대', '박스'] },
+        { id: 'sweet_potato', name: '고구마', icon: '🍠', units: ['kg', '포대', '박스'] },
+        { id: 'etc', name: '기타', icon: '📦', units: ['개', '박스', 'kg'] }
+    ];
+
     // Auto-calculate totals when box count or unit costs change
     // But ONLY if we are NOT editing an existing record that might have custom values
     // Actually, even when editing, if user changes box count, we should probably recalculate?
@@ -160,7 +173,11 @@ export default function SalesPage() {
         setIsAddressManualMode(false);
         setNewClientLatitude(null);
         setNewClientLongitude(null);
-        setIsSettled(activeTab === 'courier'); // 택배는 기본 완료, 납품은 기본 미정산
+        // [3] 품목 및 정산 정보 초기화
+        setCropName('딸기');
+        setSaleUnit('박스');
+        setPaymentStatus(activeTab === 'courier' ? 'completed' : 'completed'); // 사장님 요청에 따라 기본 완료
+        setPaymentMethod('카드');
 
         // [2] 주문자(결제자) 정보 - 고정 모드가 아닐 때만 초기화
         if (!isOrdererLocked) {
@@ -456,6 +473,12 @@ export default function SalesPage() {
             setNewClientLatitude(record.latitude || null);
             setNewClientLongitude(record.longitude || null);
             setIsSettled(record.is_settled || false);
+
+            // [New] 추가 필드 로드
+            setCropName(record.crop_name || '딸기');
+            setSaleUnit(record.sale_unit || '박스');
+            setPaymentStatus(record.payment_status || (record.is_settled ? 'completed' : 'pending'));
+            setPaymentMethod(record.payment_method || '카드');
         }
 
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -503,7 +526,12 @@ export default function SalesPage() {
                         grade: targetEntry.grade,
                         // [bkit 데이터 결벽증] 단가 필드에는 (수량 * 입력단가) 합계를 저장하여 결산 정합성 확보
                         price: bulkPrice ? (targetEntry.qty * Number(stripNonDigits(bulkPrice))) : null,
-                        is_settled: isSettled,
+                        is_settled: paymentStatus === 'completed',
+                        // [New] 다품종 필드 추가
+                        crop_name: cropName,
+                        sale_unit: saleUnit,
+                        payment_status: paymentStatus,
+                        payment_method: paymentMethod,
                     };
                     const { error } = await supabase.from('sales_records').update(updateData).eq('id', editingRecordId);
                     if (error) throw error;
@@ -521,7 +549,12 @@ export default function SalesPage() {
                         price: bulkPrice ? (entry.qty * Number(stripNonDigits(bulkPrice))) : null,
                         shipping_cost: 0,
                         packaging_cost: 0,
-                        is_settled: isSettled,
+                        is_settled: paymentStatus === 'completed',
+                        // [New] 다품종 필드 추가
+                        crop_name: cropName,
+                        sale_unit: saleUnit,
+                        payment_status: paymentStatus,
+                        payment_method: paymentMethod,
                     }));
                     const { error } = await supabase.from('sales_records').insert(records);
                     if (error) throw error;
@@ -584,7 +617,12 @@ export default function SalesPage() {
                     delivery_note: deliveryNote,
                     latitude: newClientLatitude,
                     longitude: newClientLongitude,
-                    is_settled: isSettled,
+                    is_settled: paymentStatus === 'completed',
+                    // [New] 다품종 필드 추가
+                    crop_name: cropName,
+                    sale_unit: saleUnit,
+                    payment_status: paymentStatus,
+                    payment_method: paymentMethod,
                     // [사장님 요청 해결] 수령인 이름이 없으면 주문자 이름으로 자동 채움
                     recipient_name: recipientName || newClientName || "수령인미상",
                     recipient_phone: recipientPhone || newClientPhone || null,
@@ -769,6 +807,24 @@ export default function SalesPage() {
                     </button>
                 </div>
 
+                {/* [New] 품목 선택 섹션 (3번 전략) */}
+                <div className="bg-white/60 backdrop-blur-sm p-4 rounded-[2rem] border border-white/60 shadow-sm space-y-3">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">판매 작물 선택</label>
+                    <div className="flex gap-2">
+                        {CROPS.map(c => (
+                            <button key={c.id} onClick={() => {
+                                setCropName(c.name);
+                                setSaleUnit(c.units[0]);
+                            }}
+                                className={`flex-1 py-3 rounded-2xl border-2 transition-all flex flex-col items-center gap-1
+                            ${cropName === c.name ? 'bg-white border-green-500 shadow-lg shadow-green-100' : 'bg-transparent border-slate-100 text-slate-400 hover:border-slate-200'}`}>
+                                <span className="text-xl">{c.icon}</span>
+                                <span className={`text-[11px] font-black ${cropName === c.name ? 'text-green-600' : 'text-slate-400'}`}>{c.name}</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
                 {/* 입력 폼 */}
                 {/* 입력 폼 컨테이너 */}
                 <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden relative">
@@ -805,9 +861,17 @@ export default function SalesPage() {
 
                                 {/* [카드 2] 등급별 수량 입력 */}
                                 <div className="bg-slate-50/50 rounded-[2.5rem] p-8 border border-slate-100 shadow-inner space-y-6">
-                                    <label className="block text-xs font-black text-indigo-600 mb-2 uppercase tracking-[0.2em] flex items-center gap-2 px-1">
-                                        <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></div>
-                                        2. 등급별 수량 (박스)
+                                    <label className="block text-xs font-black text-indigo-600 mb-2 uppercase tracking-[0.2em] flex items-center justify-between px-1">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></div>
+                                            2. 수량 입력 ({saleUnit})
+                                        </div>
+                                        {cropName !== '딸기' && (
+                                            <select value={saleUnit} onChange={(e) => setSaleUnit(e.target.value)}
+                                                className="bg-indigo-50 border-none text-[10px] font-black p-1 rounded-lg text-indigo-600 outline-none">
+                                                {CROPS.find(c => c.name === cropName)?.units.map(u => <option key={u} value={u}>{u}</option>)}
+                                            </select>
+                                        )}
                                     </label>
                                     <div className="grid grid-cols-3 gap-4">
                                         {[
@@ -838,7 +902,7 @@ export default function SalesPage() {
                                     <div className="pt-4 flex justify-between items-center px-4 border-t border-slate-200/50">
                                         <span className="text-xs font-black text-slate-400 uppercase tracking-widest">납품 총 합계</span>
                                         <span className="text-3xl font-black text-indigo-600 tabular-nums">
-                                            {(Number(bulkQtySang) || 0) + (Number(bulkQtyJung) || 0) + (Number(bulkQtyHa) || 0)} <span className="text-sm font-bold opacity-40 ml-1">박스</span>
+                                            {(Number(bulkQtySang) || 0) + (Number(bulkQtyJung) || 0) + (Number(bulkQtyHa) || 0)} <span className="text-sm font-bold opacity-40 ml-1">{saleUnit}</span>
                                         </span>
                                     </div>
                                 </div>
@@ -855,16 +919,19 @@ export default function SalesPage() {
                                             <input type="text"
                                                 value={formatCurrency(bulkPrice)}
                                                 onChange={(e) => setBulkPrice(stripNonDigits(e.target.value))}
-                                                placeholder="오늘 받은 금액"
+                                                placeholder="거래 단가"
                                                 className="w-full p-6 pl-12 bg-white border-2 border-slate-100 rounded-[1.5rem] font-black text-xl text-indigo-600 placeholder-slate-200 focus:border-indigo-500 shadow-sm outline-none transition-all" />
                                         </div>
-                                        <button onClick={() => setIsSettled(!isSettled)}
-                                            className={`flex-1 rounded-[1.5rem] border-2 font-black text-[13px] transition-all shadow-sm
-                                                ${isSettled
-                                                    ? 'bg-indigo-600 border-indigo-700 text-white shadow-indigo-100'
-                                                    : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100'} `}>
-                                            {isSettled ? '전액입금' : '미정산'}
-                                        </button>
+                                        <div className="flex-[2] flex flex-col gap-2">
+                                            <button onClick={() => setPaymentStatus(paymentStatus === 'completed' ? 'pending' : 'completed')}
+                                                className={`flex-1 rounded-[1.5rem] border-2 font-black text-[13px] transition-all shadow-sm flex items-center justify-center gap-2
+                                                    ${paymentStatus === 'completed'
+                                                        ? 'bg-indigo-600 border-indigo-700 text-white shadow-indigo-100'
+                                                        : 'bg-amber-50 border-amber-200 text-amber-600 shadow-amber-50'} `}>
+                                                {paymentStatus === 'completed' ? <CheckCircle className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
+                                                {paymentStatus === 'completed' ? '입금완료' : '미입금(외상)'}
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1131,7 +1198,7 @@ export default function SalesPage() {
                                                         setCourierBoxCount(val);
                                                     }}
                                                     className="w-full p-5 bg-white border-2 border-gray-200 rounded-[1.25rem] text-2xl font-black focus:border-pink-500 outline-none shadow-sm transition-all text-center" placeholder="1" />
-                                                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-gray-300">박스</span>
+                                                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-gray-300">{saleUnit}</span>
                                             </div>
                                         </div>
                                         <div className="flex-[7] space-y-2">
@@ -1220,6 +1287,34 @@ export default function SalesPage() {
                                                 <span className="text-indigo-500 animate-bounce-horizontal">Edit Detail →</span>
                                             </div>
                                         )}
+                                    </div>
+
+                                    {/* 정산 상태 및 결제 수단 (4번 전략) */}
+                                    <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 flex flex-col gap-4">
+                                        <div className="flex items-center justify-between px-2">
+                                            <span className="text-xs font-black text-slate-500 uppercase tracking-widest">정산 상태</span>
+                                            <div className="flex gap-2">
+                                                <button onClick={() => setPaymentStatus('completed')}
+                                                    className={`px-4 py-2 rounded-xl text-[11px] font-black transition-all border ${paymentStatus === 'completed' ? 'bg-indigo-600 border-indigo-700 text-white shadow-lg shadow-indigo-100' : 'bg-white border-slate-200 text-slate-400'} `}>
+                                                    입금완료
+                                                </button>
+                                                <button onClick={() => setPaymentStatus('pending')}
+                                                    className={`px-4 py-2 rounded-xl text-[11px] font-black transition-all border ${paymentStatus === 'pending' ? 'bg-amber-500 border-amber-600 text-white shadow-lg shadow-amber-100' : 'bg-white border-slate-200 text-slate-400'} `}>
+                                                    미입금(외상)
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center justify-between px-2">
+                                            <span className="text-xs font-black text-slate-500 uppercase tracking-widest">결제 수단</span>
+                                            <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+                                                {['카드', '계좌이체', '현금', '외상'].map(method => (
+                                                    <button key={method} onClick={() => setPaymentMethod(method)}
+                                                        className={`px-3 py-2 rounded-xl text-[10px] font-black transition-all border shrink-0 ${paymentMethod === method ? 'bg-slate-800 border-slate-900 text-white' : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'} `}>
+                                                        {method}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
                                     </div>
 
                                     {/* 실시간 이익 분석기 (슈퍼 프리미엄 디자인) */}
@@ -1379,9 +1474,10 @@ export default function SalesPage() {
                                 <div key={item.id} className={`bg - white p - 4 rounded - 2xl border shadow - sm flex justify - between items - center transition - all
                                 ${editingRecordId === item.id ? 'border-yellow-400 ring-2 ring-yellow-100 bg-yellow-50' : 'border-gray-100'} `}>
                                     <div className="flex items-center gap-3">
-                                        <div className={`w - 10 h - 10 rounded - xl flex items - center justify - center border
+                                        <div className={`w-10 h-10 rounded-xl flex flex-col items-center justify-center border relative
                                         ${settlementService.isB2B(item) ? 'bg-indigo-50 border-indigo-100 text-indigo-500' : 'bg-pink-50 border-pink-100 text-pink-500'} `}>
-                                            {settlementService.isB2B(item) ? <Truck className="w-5 h-5" /> : <Package className="w-5 h-5" />}
+                                            <span className="text-lg leading-none">{CROPS.find(c => c.name === item.crop_name)?.icon || (settlementService.isB2B(item) ? '🏢' : '🍓')}</span>
+                                            {item.crop_name && <span className="text-[7px] font-black opacity-50 uppercase">{item.crop_name}</span>}
                                         </div>
                                         <div>
                                             <div className="flex items-center gap-2 mb-0.5">
@@ -1395,32 +1491,38 @@ export default function SalesPage() {
                                                 </p>
                                                 {(() => {
                                                     const status = settlementService.getSettlementStatus(item);
+                                                    const isPending = item.payment_status === 'pending' || !item.is_settled;
                                                     return (
-                                                        <button
-                                                            onClick={async () => {
-                                                                if (!confirm(`'${item.partner?.company_name || item.customer?.name || item.customer_name}' 정산 상태를 변경하시겠습니까 ? `)) return;
-                                                                const { error } = await supabase.from('sales_records').update({ is_settled: !item.is_settled }).eq('id', item.id);
-                                                                if (error) alert("상태 변경 실패: " + error.message);
-                                                            }}
-                                                            className={`text - [9px] font - black px - 2 py - 0.5 rounded - lg border transition - all active: scale - 95
-                                                            ${status.color === 'green' ? 'bg-green-50 text-green-600 border-green-200' :
-                                                                    status.color === 'blue' ? 'bg-blue-50 text-blue-600 border-blue-200' :
-                                                                        status.color === 'amber' ? 'bg-amber-50 text-amber-600 border-amber-200' :
-                                                                            status.color === 'red' ? 'bg-red-50 text-red-600 border-red-200 animate-pulse' :
-                                                                                'bg-pink-50 text-pink-600 border-pink-200'
-                                                                } `}
-                                                        >
-                                                            {status.label}
-                                                        </button>
+                                                        <div className="flex gap-1">
+                                                            <button
+                                                                onClick={async () => {
+                                                                    if (!confirm(`'${item.partner?.company_name || item.customer?.name || item.customer_name}' 정산 상태를 변경하시겠습니까 ? `)) return;
+                                                                    const { error } = await supabase.from('sales_records').update({
+                                                                        is_settled: !item.is_settled,
+                                                                        payment_status: !item.is_settled ? 'completed' : 'pending'
+                                                                    }).eq('id', item.id);
+                                                                    if (error) alert("상태 변경 실패: " + error.message);
+                                                                }}
+                                                                className={`text-[9px] font-black px-2 py-0.5 rounded-lg border transition-all active:scale-95 flex items-center gap-1
+                                                                ${!isPending ? 'bg-green-50 text-green-600 border-green-200' : 'bg-amber-50 text-amber-600 border-amber-200 animate-pulse'} `}>
+                                                                {!isPending ? <CheckCircle className="w-2.5 h-2.5" /> : <Clock className="w-2.5 h-2.5" />}
+                                                                {!isPending ? '정산완료' : '미정산(외상)'}
+                                                            </button>
+                                                            {item.payment_method && (
+                                                                <span className="text-[9px] font-black px-1.5 py-0.5 bg-slate-100 text-slate-500 border border-slate-200 rounded-lg">
+                                                                    {item.payment_method}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     );
                                                 })()}
                                             </div>
                                             <div className="flex flex-col gap-0.5 mt-0.5">
                                                 <p className="text-xs font-bold text-gray-400 flex items-center gap-1.5">
-                                                    <span className="text-gray-600">{item.quantity}박스</span>
+                                                    <span className="text-gray-600">{item.quantity}{item.sale_unit || '박스'}</span>
                                                     {item.grade && (
-                                                        <span className={`text - [9px] px - 1 rounded - md font - black
-                                                            ${item.grade === '특' ? 'bg-indigo-50 text-indigo-500' :
+                                                        <span className={`text-[9px] px-1 rounded-md font-black
+                                                            ${item.grade === '특' || item.grade === '특/상' ? 'bg-indigo-50 text-indigo-500' :
                                                                 item.grade === '상' ? 'bg-green-50 text-green-500' :
                                                                     'bg-gray-100 text-gray-400'
                                                             } `}>
@@ -1428,7 +1530,7 @@ export default function SalesPage() {
                                                         </span>
                                                     )}
                                                     {item.price ? ` · ${formatCurrency(item.price)} ` : <span className="text-red-400"> · 가격 미정</span>}
-                                                    {item.delivery_method === 'courier' && item.shipping_cost === 0 && <span className="text-pink-500">(착불)</span>}
+                                                    {item.delivery_method === 'courier' && item.shipping_cost === 0 && <span className="text-pink-500 text-[10px]">(착불)</span>}
                                                     · <span className="opacity-60">{new Date(item.recorded_at).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })}</span>
                                                 </p>
                                                 {item.harvest_note && (

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Plus, Trash2, Receipt, Calendar as CalendarIcon, CreditCard, Tag, ChevronDown, Filter, X, Search, RefreshCcw, Check, Users, Heart } from "lucide-react";
+import { Plus, Trash2, Receipt, Calendar as CalendarIcon, CreditCard, Tag, ChevronDown, Filter, X, Search, RefreshCcw, Check, Users, Heart, AlertCircle } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/authStore";
 import { supabase, Expenditure } from "@/lib/supabase";
 import { formatCurrency, stripNonDigits } from "@/lib/utils";
@@ -15,9 +16,7 @@ const CATEGORY_MAP: Record<string, string[]> = {
 
 export default function ExpensesPage() {
     const { farm, initialized } = useAuthStore();
-    const [expenses, setExpenses] = useState<Expenditure[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [dbStatus, setDbStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
+    const queryClient = useQueryClient();
     const [isAdding, setIsAdding] = useState(false);
 
     // Filter State
@@ -38,60 +37,83 @@ export default function ExpensesPage() {
         setExpenseDate(selectedDate);
     }, [selectedDate]);
 
-    useEffect(() => {
-        if (initialized && farm?.id) {
-            fetchExpenses();
-        }
-    }, [farm, initialized]);
+    // [bkit 엔터프라이즈] React Query를 이용한 지출 내역 관리
+    const {
+        data: expenses = [],
+        isLoading: loading,
+        isError,
+        error: queryError,
+        refetch: fetchExpenses,
+        isFetching
+    } = useQuery({
+        queryKey: ['expenses', farm?.id],
+        queryFn: async () => {
+            if (!farm?.id) return [];
+            const { data, error } = await supabase.from('expenditures')
+                .select('*')
+                .eq('farm_id', farm.id)
+                .order('expense_date', { ascending: false });
+            if (error) throw error;
+            return data as Expenditure[];
+        },
+        enabled: initialized && !!farm?.id,
+    });
 
-    const fetchExpenses = async () => {
-        if (!farm?.id) return;
-        setLoading(true);
-        setDbStatus('connecting');
+    // 지출 추가 Mutation
+    const addMutation = useMutation({
+        mutationFn: async (newExpense: any) => {
+            const { error } = await supabase.from('expenditures').insert(newExpense);
+            if (error) throw error;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['expenses', farm?.id] });
+            setAmount("");
+            setNotes("");
+            setIsAdding(false);
+        },
+        onError: (error: any) => alert(`저장 실패: ${error.message}`)
+    });
 
-        const { data, error } = await supabase.from('expenditures').select('*')
-            .eq('farm_id', farm.id).order('expense_date', { ascending: false });
+    // 지출 삭제 Mutation
+    const deleteMutation = useMutation({
+        mutationFn: async (id: string) => {
+            const { error } = await supabase.from('expenditures').delete().eq('id', id);
+            if (error) throw error;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['expenses', farm?.id] });
+        },
+        onError: () => alert("삭제 실패")
+    });
 
-        if (error) {
-            console.error("지출 내역 로드 실패:", error);
-            setDbStatus('error');
-        } else {
-            setExpenses(data ?? []);
-            setDbStatus('connected');
-        }
-        setLoading(false);
+    // 로딩 단계 메시지 동적 생성
+    const loadingStep = !initialized ? "인증 정보 확인 중..." : !farm?.id ? "농장 정보 대기 중..." : "지출 내역 동기화 중...";
+
+    // [bkit] 긴급 캐시 초기화 (사장님 요청)
+    const handleForceReset = () => {
+        if (!confirm("모든 로컬 설정(로그인 캐시 포함)을 강제로 삭제하고 다시 시작하시겠습니까? (연결 문제 해결의 최후 수단)")) return;
+        localStorage.clear();
+        sessionStorage.clear();
+        window.location.href = "/login";
     };
 
     const handleAddExpense = async () => {
         if (!amount || !farm?.id) return;
-        setLoading(true);
-        const { error } = await supabase.from('expenditures').insert({
+        addMutation.mutate({
             farm_id: farm.id,
             main_category: mainCategory,
             sub_category: subCategory,
-            category: subCategory, // Legacy 하위 호환
+            category: subCategory,
             amount: parseInt(stripNonDigits(amount)),
-            payment_method: paymentMethod, // [bkit] 결제 수단 추가
+            payment_method: paymentMethod,
             notes,
             expense_date: expenseDate
         });
-
-        if (error) {
-            alert(`저장 실패: ${error.message}`);
-            setLoading(false);
-        } else {
-            setAmount("");
-            setNotes("");
-            setIsAdding(false);
-            fetchExpenses();
-        }
     };
 
     const deleteExpense = async (id: string) => {
         if (!confirm("이 지출 기록을 삭제하시겠습니까?")) return;
-        const { error } = await supabase.from('expenditures').delete().eq('id', id);
-        if (error) alert("삭제 실패");
-        else fetchExpenses();
+        deleteMutation.mutate(id);
     };
 
     // 달력용 지출 발생일 데이터 가공
@@ -167,17 +189,24 @@ export default function ExpensesPage() {
                         지출 관리
                         <Receipt className="w-5 h-5 text-red-500" />
                     </h1>
-                    <div className="flex items-center gap-2 mt-1">
-                        <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${dbStatus === 'connected' ? 'bg-green-50 text-green-600' :
-                            dbStatus === 'error' ? 'bg-red-50 text-red-600' : 'bg-yellow-50 text-yellow-600'
-                            }`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${dbStatus === 'connected' ? 'bg-green-500' :
-                                dbStatus === 'error' ? 'bg-red-500' : 'bg-yellow-500 animate-pulse'
-                                }`}></span>
-                            {dbStatus === 'connected' ? 'DB 연결 성공' : dbStatus === 'error' ? 'DB 연결 끊김' : 'DB 연결 중...'}
-                        </div>
-                        {dbStatus === 'error' && (
-                            <button onClick={fetchExpenses} className="text-[9px] font-black text-blue-600 underline cursor-pointer">재연결</button>
+                    <div className="flex flex-col gap-1 mt-1">
+                        {(loading || isFetching) && (
+                            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-slate-50 text-slate-400">
+                                <RefreshCcw className="w-2.5 h-2.5 animate-spin" />
+                                {loadingStep}
+                            </div>
+                        )}
+                        {isError && (
+                            <div className="flex flex-col gap-2 p-3 bg-red-50 border border-red-100 rounded-xl animate-in fade-in zoom-in-95 duration-300">
+                                <div className="flex items-center gap-2">
+                                    <AlertCircle className="w-4 h-4 text-red-500" />
+                                    <p className="text-[10px] font-bold text-red-600">데이터 동기화 실패 (네트워크 확인 필요)</p>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button onClick={() => fetchExpenses()} className="px-2 py-1 bg-white border border-red-200 text-[9px] font-black text-red-600 rounded-md shadow-sm">강제 재시도</button>
+                                    <button onClick={handleForceReset} className="px-2 py-1 bg-red-600 text-white text-[9px] font-black rounded-md shadow-sm">전체 초기화</button>
+                                </div>
+                            </div>
                         )}
                     </div>
                 </div>
@@ -386,7 +415,7 @@ export default function ExpensesPage() {
                             <p className="text-sm font-bold text-gray-300">지출 데이터를 분석 중입니다...</p>
                         </div>
                     ) : filteredExpenses.length > 0 ? (
-                        filteredExpenses.map(exp => (
+                        filteredExpenses.map((exp: Expenditure) => (
                             <div key={exp.id} className="group bg-white rounded-3xl border border-gray-100 p-5 shadow-sm hover:shadow-xl hover:shadow-gray-200/50 transition-all flex items-center justify-between animate-in fade-in slide-in-from-bottom-2 duration-300">
                                 <div className="flex items-center gap-5">
                                     <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-inner transition-colors ${exp.main_category === '농작관리' ? 'bg-red-50 text-red-500' : exp.main_category === '인건비' ? 'bg-orange-50 text-orange-500' : 'bg-sky-50 text-sky-500'
