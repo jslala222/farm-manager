@@ -227,19 +227,29 @@ export default function SalesPage() {
         if (customersRes.data) setCustomers(customersRes.data);
     };
 
-    const fetchHistory = async () => {
+    const fetchHistory = async (unsettledOnly: boolean = showUnsettledOnly) => {
         if (!farm?.id) return;
         setLoading(true);
-        const { data } = await supabase
+
+        let query = supabase
             .from('sales_records')
             .select(`
-    *,
-    partner: partners(id, company_name, manager_contact),
-        customer: customers(id, name, contact, address, is_vip)
+                *,
+                partner: partners(id, company_name, manager_contact),
+                customer: customers(id, name, contact, address, is_vip)
             `)
             .eq('farm_id', farm.id)
-            .order('recorded_at', { ascending: false })
-            .limit(20);
+            .order('recorded_at', { ascending: false });
+
+        // [bkit 전역 동기화] 미정산 필터 시 20건 제한 해제 (통합 결산과 숫자 일치 유도)
+        if (unsettledOnly) {
+            query = query.eq('is_settled', false);
+        } else {
+            query = query.limit(20);
+        }
+
+        const { data, error } = await query;
+        if (error) console.error("Fetch History Error:", error);
 
         setHistory(data ?? []);
         setDbError(null);
