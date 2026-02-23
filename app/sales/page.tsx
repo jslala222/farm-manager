@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { Truck, Package, Search, Plus, Calendar, Filter, ArrowRight, User, Phone, MapPin, Building2, CreditCard, DollarSign, Edit2, Trash2, History, TrendingUp, CheckCircle, Clock, ChevronRight, RotateCcw, UserPlus, Lock, Unlock, Star, MoreVertical, ShoppingCart, AlertTriangle, RefreshCcw, X, AlignLeft, Zap, Save, Utensils, UserSquare, Calculator, Settings, Check } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Truck, Search, Plus, Calendar as CalendarIcon, Building2, Edit2, Trash2, History, CheckCircle, Clock, RefreshCcw, X, AlignLeft, Save, ShoppingCart, MapPin, Phone, User, ArrowRight, UserCheck, ChevronDown } from 'lucide-react';
 import { useAuthStore } from "@/store/authStore";
 import { supabase, SalesRecord, Partner, Customer } from "@/lib/supabase";
 import { settlementService } from '@/lib/settlementService';
-import { formatPhone, formatCurrency, stripNonDigits } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
 import AddressSearch from "@/components/AddressSearch";
-import { getRecentAddressSets, AddressSet } from '@/lib/deliveryService';
+import CalendarComponent from "@/components/Calendar";
 
 export default function SalesPage() {
     const { farm, initialized } = useAuthStore();
@@ -18,1545 +18,361 @@ export default function SalesPage() {
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-
+    const [showCalendar, setShowCalendar] = useState(false);
     const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
     const [showUnsettledOnly, setShowUnsettledOnly] = useState(false);
-    const [dbError, setDbError] = useState<string | null>(null);
+    const [farmCrops, setFarmCrops] = useState<any[]>([]);
 
-    // B2B State (품질 등급별 일괄 입력)
+    // B2B State
     const [selectedClientId, setSelectedClientId] = useState<string>("");
-    const [bulkQtySang, setBulkQtySang] = useState(""); // 특/상
-    const [bulkQtyJung, setBulkQtyJung] = useState(""); // 중
-    const [bulkQtyHa, setBulkQtyHa] = useState("");   // 하
-    const [bulkPrice, setBulkPrice] = useState("");
+    const [bulkQtySang, setBulkQtySang] = useState("");
+    const [bulkQtyJung, setBulkQtyJung] = useState("");
+    const [bulkQtyHa, setBulkQtyHa] = useState("");
 
     // B2C State
     const [searchTerm, setSearchTerm] = useState("");
     const [searchResult, setSearchResult] = useState<Customer[]>([]);
     const [selectedSearchResult, setSelectedSearchResult] = useState<Customer | null>(null);
-    const [newClientName, setNewClientName] = useState("");
-    const [newClientPhone, setNewClientPhone] = useState("");
-    const [newClientAddress, setNewClientAddress] = useState("");
-    const [newClientPostalCode, setNewClientPostalCode] = useState("");
-    const [newClientLatitude, setNewClientLatitude] = useState<number | null>(null);
-    const [newClientLongitude, setNewClientLongitude] = useState<number | null>(null);
-    const [newClientDetailAddress, setNewClientDetailAddress] = useState(""); // 상세 주소 (동/호수)
-    const [deliveryNote, setDeliveryNote] = useState(""); // 배송 특이사항 (메모)
     const [isNewClientMode, setIsNewClientMode] = useState(false);
-
+    const [ordererName, setOrdererName] = useState("");
+    const [ordererPhone, setOrdererPhone] = useState("");
+    const [isSameAsOrderer, setIsSameAsOrderer] = useState(true);
+    const [recipientName, setRecipientName] = useState("");
+    const [recipientPhone, setRecipientPhone] = useState("");
+    const [recipientAddress, setRecipientAddress] = useState("");
+    const [recipientDetailAddress, setRecipientDetailAddress] = useState("");
     const [courierBoxCount, setCourierBoxCount] = useState("");
-    const [courierTotalPrice, setCourierTotalPrice] = useState(""); // 총 판매금액
-    const [isSettled, setIsSettled] = useState(false); // 정산 완료 여부
-    const [isSearchOpen, setIsSearchOpen] = useState(false); // 검색 드롭다운 상태
-    const [isOrdererLocked, setIsOrdererLocked] = useState(false); // 주문자 정보 고정 여부
-    const [recipientName, setRecipientName] = useState(""); // 수령인 (사람/업체/부서)
-    const [recipientPhone, setRecipientPhone] = useState(""); // 수령인 연락처
-    const [isAddressManualMode, setIsAddressManualMode] = useState(false); // 다른 주소 배송 모드
-    const [recentAddresses, setRecentAddresses] = useState<AddressSet[]>([]); // 최근 배송지 세트 리스트
-    const [customerStats, setCustomerStats] = useState<{ count: number, total_qty: number, total_price: number } | null>(null); // 고객별 누적 통계
+    const [courierTotalPrice, setCourierTotalPrice] = useState("");
+    const [deliveryNote, setDeliveryNote] = useState("");
 
-    // Payment & Shipping Configuration
-    const [shippingPaymentType, setShippingPaymentType] = useState<'prepaid' | 'cod'>('prepaid');
-
-    // Cost Configuration (Unit Costs)
-    const [unitShippingCost, setUnitShippingCost] = useState(settlementService.getDefaultB2CCosts().unitShipping.toString()); // 박스당 택배비
-    const [unitMaterialCost, setUnitMaterialCost] = useState(settlementService.getDefaultB2CCosts().unitMaterial.toString()); // 박스당 자재비
-
-    // Calculated Total Costs (Editable)
-    const [totalShippingCost, setTotalShippingCost] = useState("");
-    const [totalMaterialCost, setTotalMaterialCost] = useState("");
-
-    const [showCostDetails, setShowCostDetails] = useState(false); // 상세 설정 토글
-
-    // [New] 다품종 및 정산 관리 상태
+    // Common State
     const [cropName, setCropName] = useState('딸기');
     const [saleUnit, setSaleUnit] = useState('박스');
     const [paymentStatus, setPaymentStatus] = useState<'pending' | 'completed'>('completed');
     const [paymentMethod, setPaymentMethod] = useState('카드');
 
-    const CROPS = [
-        { id: 'strawberry', name: '딸기', icon: '🍓', units: ['박스', 'kg', '다라'] },
-        { id: 'potato', name: '감자', icon: '🥔', units: ['kg', '포대', '박스'] },
-        { id: 'sweet_potato', name: '고구마', icon: '🍠', units: ['kg', '포대', '박스'] },
-        { id: 'etc', name: '기타', icon: '📦', units: ['개', '박스', 'kg'] }
-    ];
-
-    // Auto-calculate totals when box count or unit costs change
-    // But ONLY if we are NOT editing an existing record that might have custom values
-    // Actually, even when editing, if user changes box count, we should probably recalculate?
-    // Let's stick to simple logic: change in Quantity/UnitCost -> Recalculate Total.
     useEffect(() => {
-        const count = parseFloat(courierBoxCount) || 0;
-        const shippingUnit = parseInt(unitShippingCost.replace(/[^\d]/g, '')) || 0;
-        const materialUnit = parseInt(unitMaterialCost.replace(/[^\d]/g, '')) || 0;
-
-        // If we are editing, we might want to preserve the loaded totals initially.
-        // But if user changes box count, we must update.
-        // We can check if totals are empty to initialize?
-
-        // Simple heuristic: always calc unless user manually typed in totals (which we can't easily track without more state).
-        // For now, let's just calc. User can override totals again if needed.
-        // BETTER: when loading, set totals directly. This effect might run after state update? 
-    }, [courierBoxCount, unitShippingCost, unitMaterialCost]);
-
-    // Refined Effect for Auto-calc
-    useEffect(() => {
-        // We only want to auto-calc if the USER changes these inputs, not when we programmatically set them during Edit Load.
-        // But we can't easily distinguish.
-        // A workaround: Check if the current total matches the formula. If not (meaning manual override), maybe don't touch it?
-        // Too complex. Let's just calculate.
-        const count = parseFloat(courierBoxCount) || 0;
-        const shippingUnit = parseInt(unitShippingCost.replace(/[^\d]/g, '')) || 0;
-        const materialUnit = parseInt(unitMaterialCost.replace(/[^\d]/g, '')) || 0;
-
-        if (count > 0) {
-            // We set it, but we strictly don't want to overwrite if we just loaded an edit form
-            // simple check: do nothing here.
-            // Wait, we need this for new entries.
-            setTotalShippingCost((shippingUnit * count).toString());
-            setTotalMaterialCost((materialUnit * count).toString());
-        } else {
-            setTotalShippingCost("");
-            setTotalMaterialCost("");
-        }
-    }, [courierBoxCount, unitShippingCost, unitMaterialCost]);
+        const fetchFarmCrops = async () => {
+            if (!farm?.id) return;
+            const { data } = await supabase.from('farm_crops').select('*').eq('farm_id', farm.id).is('is_active', true).order('sort_order');
+            if (data) {
+                setFarmCrops(data);
+                if (data.length > 0) {
+                    const strawberry = data.find((c: any) => c.crop_name === '딸기');
+                    if (strawberry) { setCropName('딸기'); setSaleUnit(strawberry.available_units?.[0] || '박스'); }
+                    else { setCropName(data[0].crop_name); setSaleUnit(data[0].available_units?.[0] || '박스'); }
+                }
+            }
+        };
+        fetchFarmCrops();
+    }, [farm?.id]);
 
     const fetchInitialData = useCallback(async () => {
         if (!farm?.id) return;
         setLoading(true);
-        await Promise.all([
-            fetchClients(),
-            fetchHistory()
-        ]);
-        setLoading(false);
-    }, [farm]);
+        try {
+            const [partnersRes, customersRes] = await Promise.all([
+                supabase.from('partners').select('*').eq('farm_id', farm.id).order('company_name'),
+                supabase.from('customers').select('*').eq('farm_id', farm.id).order('name')
+            ]);
+            if (partnersRes.data) setPartners(partnersRes.data);
+            if (customersRes.data) setCustomers(customersRes.data);
+            await fetchHistory();
+        } finally { setLoading(false); }
+    }, [farm?.id]);
+
+    const fetchHistory = async () => {
+        if (!farm?.id) return;
+        const { data } = await supabase.from('sales_records').select(`*, partner:partners(*), customer:customers(*)`).eq('farm_id', farm.id).order('recorded_at', { ascending: false }).limit(30);
+        if (data) setHistory(data);
+    };
+
+    useEffect(() => { if (initialized && farm?.id) fetchInitialData(); }, [initialized, farm?.id, fetchInitialData]);
 
     useEffect(() => {
-        if (initialized && farm?.id) {
-            fetchInitialData();
-        }
-    }, [farm, initialized, fetchInitialData]);
+        if (searchTerm.length < 1) { setSearchResult([]); return; }
+        const filtered = customers.filter(c => c.name.includes(searchTerm) || (c.contact && c.contact.includes(searchTerm)));
+        setSearchResult(filtered.slice(0, 5));
+    }, [searchTerm, customers]);
 
-    // [bkit] 실시간 동기화 엔진 (사장님의 "실시간 반영" 요구사항 반영)
     useEffect(() => {
-        const channel = supabase
-            .channel('sales_changes')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'sales_records' }, () => {
-                fetchInitialData(); // 변경 감지 시 즉시 재조회
-            })
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [fetchInitialData]);
-
-    // 탭 전환 시 모든 상태 초기화 (메모리 누수 차단 및 사장님 요청사항)
-    useEffect(() => {
-        handleResetAllStates();
-        if (activeTab === 'bulk') setIsSettled(false); // B2B는 기본 미정산
-        else setIsSettled(true); // B2C는 기본 정산 완료
-    }, [activeTab]);
+        if (isSameAsOrderer) { setRecipientName(ordererName); setRecipientPhone(ordererPhone); }
+    }, [isSameAsOrderer, ordererName, ordererPhone]);
 
     const handleResetAllStates = () => {
-        // [1] 배송 목적지 및 이번 거래 전용 정보 - 무조건 초기화
-        setCourierBoxCount("");
-        setCourierTotalPrice("");
-        setTotalShippingCost("");
-        setTotalMaterialCost("");
-        setRecipientName("");
-        setRecipientPhone("");
-        setNewClientAddress("");
-        setNewClientPostalCode("");
-        setNewClientDetailAddress("");
-        setDeliveryNote("");
-        setIsAddressManualMode(false);
-        setNewClientLatitude(null);
-        setNewClientLongitude(null);
-        // [3] 품목 및 정산 정보 초기화
-        setCropName('딸기');
-        setSaleUnit('박스');
-        setPaymentStatus(activeTab === 'courier' ? 'completed' : 'completed'); // 사장님 요청에 따라 기본 완료
-        setPaymentMethod('카드');
-
-        // [2] 주문자(결제자) 정보 - 고정 모드가 아닐 때만 초기화
-        if (!isOrdererLocked) {
-            // B2B 폼 초기화
-            setSelectedClientId("");
-            setBulkQtySang("");
-            setBulkQtyJung("");
-            setBulkQtyHa("");
-            setBulkPrice("");
-
-            // B2C 폼 초기화
-            setSearchTerm("");
-            setSearchResult([]);
-            setIsSearchOpen(false);
-            setSelectedSearchResult(null);
-            setNewClientName("");
-            setNewClientPhone("");
-            setIsNewClientMode(false);
-            setCustomerStats(null);
-            setRecentAddresses([]);
-        } else {
-            // 고정 모드일 때는 검색 관련 상태만 비워줌
-            setSearchTerm("");
-            setSearchResult([]);
-            setIsSearchOpen(false);
-        }
-    };
-
-    useEffect(() => {
-        // B2C 검색 로직 (Customers 테이블 기반)
-        if (searchTerm.length > 0) {
-            const results = customers.filter(c =>
-                c.name.includes(searchTerm) || (c.contact && c.contact.includes(searchTerm))
-            );
-            setSearchResult(results);
-        } else if (isSearchOpen && searchTerm.length === 0) {
-            // 검색 버튼이나 인풋을 클릭했을 때만 VIP(단골) 목록 노출
-            const vips = customers.filter(c => c.is_vip);
-            setSearchResult(vips);
-        } else {
-            setSearchResult([]);
-        }
-    }, [searchTerm, customers, isSearchOpen]);
-
-    // 외부 클릭 시 검색 드롭다운 닫기
-    useEffect(() => {
-        const handleOutsideClick = (e: MouseEvent) => {
-            const target = e.target as HTMLElement;
-            if (!target.closest('.search-container')) {
-                setIsSearchOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleOutsideClick);
-        return () => document.removeEventListener('mousedown', handleOutsideClick);
-    }, []);
-
-    const fetchClients = async () => {
-        if (!farm?.id) return;
-        const [partnersRes, customersRes] = await Promise.all([
-            supabase.from('partners').select('*').eq('farm_id', farm.id).order('company_name'),
-            supabase.from('customers').select('*').eq('farm_id', farm.id).order('name')
-        ]);
-        if (partnersRes.data) setPartners(partnersRes.data);
-        if (customersRes.data) setCustomers(customersRes.data);
-    };
-
-    const fetchHistory = async (unsettledOnly: boolean = showUnsettledOnly) => {
-        if (!farm?.id) return;
-        setLoading(true);
-
-        let query = supabase
-            .from('sales_records')
-            .select(`
-                *,
-                partner: partners(id, company_name, manager_contact),
-                customer: customers(id, name, contact, address, is_vip)
-            `)
-            .eq('farm_id', farm.id)
-            .order('recorded_at', { ascending: false });
-
-        // [bkit 전역 동기화] 미정산 필터 시 20건 제한 해제 (통합 결산과 숫자 일치 유도)
-        if (unsettledOnly) {
-            query = query.eq('is_settled', false);
-        } else {
-            query = query.limit(20);
-        }
-
-        const { data, error } = await query;
-        if (error) console.error("Fetch History Error:", error);
-
-        setHistory(data ?? []);
-        setDbError(null);
-        setLoading(false);
-    };
-
-    const handleAutoFix = async () => {
-        if (!confirm("데이터베이스 구조를 자동으로 정비하시겠습니까?\n(배송 특이사항, 상세 주소 등 누락된 모든 필드가 즉시 생성됩니다.)")) return;
-
-        setLoading(true);
-        const fullSql = `
---1. 기존 필드 체크 및 추가
-            ALTER TABLE public.sales_records ADD COLUMN IF NOT EXISTS harvest_note TEXT;
-            ALTER TABLE public.sales_records ADD COLUMN IF NOT EXISTS is_settled BOOLEAN DEFAULT FALSE;
-            ALTER TABLE public.sales_records ADD COLUMN IF NOT EXISTS recipient_name TEXT;
-            ALTER TABLE public.sales_records ADD COLUMN IF NOT EXISTS recipient_phone TEXT;
-            ALTER TABLE public.sales_records ADD COLUMN IF NOT EXISTS postal_code TEXT;
-            ALTER TABLE public.sales_records ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION;
-            ALTER TABLE public.sales_records ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;
-
---2. 상세 주소 및 배송 메모 필드(사장님 긴급 요청사항)
-            ALTER TABLE public.sales_records ADD COLUMN IF NOT EXISTS detail_address TEXT;
-            ALTER TABLE public.sales_records ADD COLUMN IF NOT EXISTS delivery_note TEXT;
-            ALTER TABLE public.sales_records ADD COLUMN IF NOT EXISTS grade TEXT DEFAULT '미지정';
-            ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS detail_address TEXT;
-
---3. 기타 운영 필드
-            ALTER TABLE public.workers ADD COLUMN IF NOT EXISTS default_daily_wage INTEGER DEFAULT 0;
-            ALTER TABLE public.attendance_records ADD COLUMN IF NOT EXISTS actual_wage INTEGER;
-            ALTER TABLE public.attendance_records ADD COLUMN IF NOT EXISTS memo TEXT;
-
---4. 권한 부여(혹시 모를 권한 문제 방지)
-            GRANT ALL ON TABLE public.sales_records TO authenticated;
-            GRANT ALL ON TABLE public.customers TO authenticated;
-`;
-
-        const { error } = await supabase.rpc('exec_sql', { sql_query: fullSql });
-
-        if (error) {
-            console.error("AutoFix Error:", error);
-            alert("자동 복구 도중 오류가 발생했습니다.\n\n[원인]: " + (error.message || "권한 부족") + "\n\n사장님, 죄송하지만 Supabase SQL Editor에서 제가 드린 코드를 한 번만 직접 실행해 주세요. (가장 확실한 방법입니다.)");
-        } else {
-            alert("DB 구조가 성공적으로 복구되었습니다! 🍓\n\n이제 상세 주소와 배송 특이사항을 마음껏 기록하실 수 있습니다. 장부를 다시 불러옵니다.");
-            fetchHistory();
-        }
-        setLoading(false);
-    };
-
-    const handleSelectClient = async (customer: Customer) => {
-        setSelectedSearchResult(customer);
-        setNewClientName(customer.name);
-        setNewClientPhone(customer.contact || "");
-        setNewClientAddress(customer.address || "");
-        setNewClientPostalCode(customer.postal_code || "");
-        setNewClientDetailAddress(customer.detail_address || "");
-        setNewClientLatitude(customer.latitude || null);
-        setNewClientLongitude(customer.longitude || null);
-        setSearchTerm("");
-        setSearchResult([]);
-        setIsSearchOpen(false);
-        setIsNewClientMode(false);
-
-        // 구매 인사이트 연동 (Standardization 8번 준수: 모든 과거 내역 데이터화)
-        try {
-            const { data, error } = await supabase
-                .from('sales_records')
-                .select('quantity, price')
-                .eq('customer_id', customer.id);
-
-            if (data) {
-                const stats = data.reduce((acc, curr) => ({
-                    count: acc.count + 1,
-                    total_qty: acc.total_qty + (curr.quantity || 0),
-                    total_price: acc.total_price + (curr.price || 0)
-                }), { count: 0, total_qty: 0, total_price: 0 });
-                setCustomerStats(stats);
-            }
-        } catch (e: any) {
-            console.warn("인사이트 로드 실패:", e.message || e);
-        }
-    };
-
-    // 고객 선택 시 최근 배송지 불러오기
-    useEffect(() => {
-        const loadRecentAddresses = async () => {
-            if (activeTab === 'courier' && selectedSearchResult?.id) {
-                // 수동 모드거나 수정 중일 때는 자동 로드를 건너뜁니다 (사장님의 의도적 변경 보호)
-                if (editingRecordId || isAddressManualMode) return;
-
-                const sets = await getRecentAddressSets(selectedSearchResult.id);
-                setRecentAddresses(sets);
-
-                // 기본적으로 가장 최근 배송지가 있으면 채워줌 (사장님 편의)
-                if (sets.length > 0) {
-                    const latest = sets[0];
-                    setRecipientName(latest.recipient_name || "");
-                    setRecipientPhone(latest.recipient_phone || "");
-                    setNewClientAddress(latest.address || "");
-                    setNewClientPostalCode(latest.postal_code || "");
-                    setNewClientDetailAddress(latest.detail_address || "");
-                    setDeliveryNote(latest.delivery_note || "");
-                } else {
-                    // 기록이 없으면 고객 본인 정보를 기본으로
-                    setRecipientName(selectedSearchResult.name || "");
-                    setRecipientPhone(selectedSearchResult.contact || "");
-                    setNewClientAddress(selectedSearchResult?.address || "");
-                    setNewClientPostalCode(selectedSearchResult?.postal_code || "");
-                    setNewClientDetailAddress(selectedSearchResult.detail_address || "");
-                    setDeliveryNote("");
-                }
-            }
-        };
-        loadRecentAddresses();
-    }, [selectedSearchResult?.id, activeTab, editingRecordId, isAddressManualMode]); // id와 탭이 바뀔 때만 실행하여 입력 중 '되돌아감' 방지
-
-    const handleResetClient = () => {
-        setSelectedSearchResult(null);
-        setNewClientName("");
-        setNewClientPhone("");
-        setNewClientAddress("");
-        setNewClientPostalCode("");
-        setNewClientLatitude(null);
-        setNewClientLongitude(null);
-        setSearchTerm("");
-        setSearchResult([]);
-        setIsSearchOpen(false);
-        setIsNewClientMode(false);
-        setRecipientName("");
-        setRecipientPhone("");
-        setIsAddressManualMode(false);
-        setRecentAddresses([]);
-    };
-
-    const calculateProfit = () => {
-        if (activeTab === 'bulk') {
-            const price = parseInt(stripNonDigits(bulkPrice)) || 0;
-            // B2B는 현재 단순 매출로 표시 (추후 자재비 연동 가능)
-            return price;
-        } else {
-            const price = parseInt(stripNonDigits(courierTotalPrice)) || 0;
-            const shipping = parseInt(stripNonDigits(totalShippingCost)) || 0;
-            const material = parseInt(stripNonDigits(totalMaterialCost)) || 0;
-
-            if (shippingPaymentType === 'cod') {
-                return (price - material);
-            } else {
-                return (price - (shipping + material));
-            }
-        }
-    };
-
-    // EDIT FUNCTIONALITY
-    const handleEdit = (record: SalesRecord) => {
-        setEditingRecordId(record.id);
-        const recordDate = new Date(record.recorded_at).toISOString().split('T')[0];
-        setSelectedDate(recordDate);
-
-        // [bkit 정밀 수술] 기록의 정체(sale_type)를 최우선으로 하여 해당 탭으로 강제 소환
-        if (settlementService.isB2B(record)) {
-            setActiveTab('bulk');
-            setSelectedClientId(record.partner_id || "");
-            // 수정 시 해당 등급에 맞는 칸에 수량 배치
-            setBulkQtySang("");
-            setBulkQtyJung("");
-            setBulkQtyHa("");
-            if (record.grade === '특/상' || record.grade === '특') setBulkQtySang(record.quantity.toString());
-            else if (record.grade === '중' || record.grade === '보통') setBulkQtyJung(record.quantity.toString());
-            else if (record.grade === '하') setBulkQtyHa(record.quantity.toString());
-            else setBulkQtySang(record.quantity.toString()); // 기본값
-
-            setBulkPrice(record.price ? record.price.toString() : "");
-            setIsSettled(record.is_settled || false);
-        } else {
-            setActiveTab('courier');
-            // Restore Customer Info
-            if (record.customer) {
-                handleSelectClient(record.customer as unknown as Customer);
-            } else {
-                setNewClientName(record.customer_name || "");
-                setIsNewClientMode(true);
-            }
-
-            setCourierBoxCount(record.quantity.toString());
-            setCourierTotalPrice(record.price ? record.price.toString() : "");
-
-            setTotalShippingCost((record.shipping_cost ?? 0).toString());
-            setTotalMaterialCost((record.packaging_cost ?? 0).toString());
-
-            if (record.quantity > 0) {
-                setUnitShippingCost(Math.round((record.shipping_cost ?? 0) / record.quantity).toString());
-                setUnitMaterialCost(Math.round((record.packaging_cost ?? 0) / record.quantity).toString());
-            }
-
-            if (record.shipping_cost === 0 && record.delivery_method === 'courier') {
-                setShippingPaymentType('cod');
-            } else {
-                setShippingPaymentType('prepaid');
-            }
-
-            setRecipientName(record.recipient_name || "");
-            setRecipientPhone(record.recipient_phone || "");
-            setNewClientAddress(record.address || "");
-            setNewClientPostalCode(record.postal_code || "");
-            setNewClientLatitude(record.latitude || null);
-            setNewClientLongitude(record.longitude || null);
-            setIsSettled(record.is_settled || false);
-
-            // [New] 추가 필드 로드
-            setCropName(record.crop_name || '딸기');
-            setSaleUnit(record.sale_unit || '박스');
-            setPaymentStatus(record.payment_status || (record.is_settled ? 'completed' : 'pending'));
-            setPaymentMethod(record.payment_method || '카드');
-        }
-
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-
-    const handleCancelEdit = () => {
-        handleResetAllStates();
-        setEditingRecordId(null);
+        setEditingRecordId(null); setSelectedClientId(""); setBulkQtySang(""); setBulkQtyJung(""); setBulkQtyHa("");
+        setSearchTerm(""); setSelectedSearchResult(null); setIsNewClientMode(false); setOrdererName(""); setOrdererPhone("");
+        setRecipientName(""); setRecipientPhone(""); setRecipientAddress(""); setRecipientDetailAddress("");
+        setCourierBoxCount(""); setCourierTotalPrice(""); setDeliveryNote(""); setIsSameAsOrderer(true);
+        setPaymentStatus('completed'); setPaymentMethod('카드');
     };
 
     const handleSave = async () => {
-        if (!farm?.id) return;
+        if (!farm?.id || saving) return;
         setSaving(true);
-
         try {
-            const now = new Date();
-            const timeString = now.toTimeString().split(' ')[0];
-            const recordedAt = `${selectedDate}T${timeString} `;
-
-            let recordData: any = {
-                farm_id: farm.id,
-                recorded_at: new Date(recordedAt).toISOString(),
-            };
-
             if (activeTab === 'bulk') {
                 if (!selectedClientId) { alert("거래처를 선택해주세요."); setSaving(false); return; }
-
-                const entries = [
-                    { grade: '특/상', qty: Number(bulkQtySang) || 0 },
-                    { grade: '중', qty: Number(bulkQtyJung) || 0 },
-                    { grade: '하', qty: Number(bulkQtyHa) || 0 }
-                ].filter(e => e.qty > 0);
-
-                if (entries.length === 0) { alert("최소 하나 이상의 등급 수량을 입력해주세요."); setSaving(false); return; }
-
-                if (editingRecordId) {
-                    // [수정 모드] B2B 단일 기록 수정
-                    const targetEntry = entries[0]; // 수정 시에는 어차피 한 칸만 채워져 있거나 합산된 값이 들어옴
-                    const updateData = {
-                        ...recordData,
-                        partner_id: selectedClientId,
-                        sale_type: 'nonghyup',
-                        delivery_method: 'nonghyup',
-                        quantity: targetEntry.qty,
-                        grade: targetEntry.grade,
-                        // [bkit 데이터 결벽증] 단가 필드에는 (수량 * 입력단가) 합계를 저장하여 결산 정합성 확보
-                        price: bulkPrice ? (targetEntry.qty * Number(stripNonDigits(bulkPrice))) : null,
-                        is_settled: paymentStatus === 'completed',
-                        // [New] 다품종 필드 추가
-                        crop_name: cropName,
-                        sale_unit: saleUnit,
-                        payment_status: paymentStatus,
-                        payment_method: paymentMethod,
+                const grades = [{ grade: '특/상', qty: bulkQtySang }, { grade: '중', qty: bulkQtyJung }, { grade: '하', qty: bulkQtyHa }].filter(g => Number(g.qty) > 0);
+                if (grades.length === 0) { alert("수량을 입력해주세요."); setSaving(false); return; }
+                for (const g of grades) {
+                    const saleData = {
+                        farm_id: farm.id, partner_id: selectedClientId, crop_name: cropName, sale_unit: saleUnit, quantity: Number(g.qty), grade: g.grade,
+                        is_settled: paymentStatus === 'completed', payment_status: paymentStatus, payment_method: paymentMethod,
+                        recorded_at: selectedDate + 'T' + new Date().toTimeString().split(' ')[0]
                     };
-                    const { error } = await supabase.from('sales_records').update(updateData).eq('id', editingRecordId);
-                    if (error) throw error;
-                    alert("✅ 납품 기록이 수정되었습니다.");
-                } else {
-                    // [신규 모드] 등급별 일괄 저장
-                    const records = entries.map(entry => ({
-                        ...recordData,
-                        partner_id: selectedClientId,
-                        sale_type: 'nonghyup',
-                        delivery_method: 'nonghyup',
-                        quantity: entry.qty,
-                        grade: entry.grade,
-                        // [bkit 데이터 결벽증] 일괄 저장 시에도 각 내역별로 (수량 * 단가)를 정확히 계산하여 저장
-                        price: bulkPrice ? (entry.qty * Number(stripNonDigits(bulkPrice))) : null,
-                        shipping_cost: 0,
-                        packaging_cost: 0,
-                        is_settled: paymentStatus === 'completed',
-                        // [New] 다품종 필드 추가
-                        crop_name: cropName,
-                        sale_unit: saleUnit,
-                        payment_status: paymentStatus,
-                        payment_method: paymentMethod,
-                    }));
-                    const { error } = await supabase.from('sales_records').insert(records);
-                    if (error) throw error;
-                    alert(`✅ ${partners.find(p => p.id === selectedClientId)?.company_name} 납품 기록 ${records.length}건이 저장되었습니다.`);
+                    if (editingRecordId) await supabase.from('sales_records').update(saleData).eq('id', editingRecordId);
+                    else await supabase.from('sales_records').insert([saleData]);
                 }
-
-                handleCancelEdit();
-                fetchHistory();
-                setSaving(false);
-                return; // B2B는 여기서 끝냄
             } else {
-                // Courier Tab (B2C)
-                if (!courierBoxCount) { alert("박스 수량을 입력해주세요."); setSaving(false); return; }
-
-                let finalCustomerId = selectedSearchResult?.id;
-
-                // 신규 고객이면 먼저 등록
-                if (!finalCustomerId) {
-                    if (!newClientName) { alert("고객 이름을 입력해주세요."); setSaving(false); return; }
-
-                    const { data: newCustomer, error: clientError } = await supabase
-                        .from('customers')
-                        .insert({
-                            farm_id: farm.id,
-                            name: newClientName,
-                            contact: newClientPhone,
-                            address: newClientAddress,
-                            postal_code: newClientPostalCode,
-                            latitude: newClientLatitude,
-                            longitude: newClientLongitude,
-                            is_vip: false
-                        })
-                        .select()
-                        .single();
-
-                    if (clientError) throw clientError;
-                    finalCustomerId = newCustomer.id;
-                    fetchClients();
-                }
-
-                // [완벽 보강] 모든 숫자 값 정밀 정제 (NaN 및 소수점 문제 해결)
-                const count = Math.max(0, Number(courierBoxCount) || 0);
-                const shipping = Math.max(0, Number(stripNonDigits(totalShippingCost)) || 0);
-                const material = Math.max(0, Number(stripNonDigits(totalMaterialCost)) || 0);
-                const totalPrice = courierTotalPrice ? Math.max(0, Number(stripNonDigits(courierTotalPrice))) : null;
-                const finalShippingCost = shippingPaymentType === 'cod' ? 0 : shipping;
-
-                recordData = {
-                    ...recordData,
-                    customer_id: finalCustomerId,
-                    sale_type: 'etc',
-                    delivery_method: 'courier',
-                    quantity: count,
-                    price: totalPrice,
-                    shipping_cost: finalShippingCost,
-                    packaging_cost: material,
-                    address: newClientAddress,
-                    postal_code: newClientPostalCode,
-                    detail_address: newClientDetailAddress,
-                    delivery_note: deliveryNote,
-                    latitude: newClientLatitude,
-                    longitude: newClientLongitude,
-                    is_settled: paymentStatus === 'completed',
-                    // [New] 다품종 필드 추가
-                    crop_name: cropName,
-                    sale_unit: saleUnit,
-                    payment_status: paymentStatus,
-                    payment_method: paymentMethod,
-                    // [사장님 요청 해결] 수령인 이름이 없으면 주문자 이름으로 자동 채움
-                    recipient_name: recipientName || newClientName || "수령인미상",
-                    recipient_phone: recipientPhone || newClientPhone || null,
+                if (!ordererName) { alert("주문자를 입력하거나 선택해주세요."); setSaving(false); return; }
+                const courierData = {
+                    farm_id: farm.id, customer_id: selectedSearchResult?.id, customer_name: ordererName, phone: ordererPhone,
+                    recipient_name: recipientName, recipient_phone: recipientPhone, address: recipientAddress, detail_address: recipientDetailAddress,
+                    delivery_note: deliveryNote, quantity: Number(courierBoxCount), price: Number(courierTotalPrice), crop_name: cropName, sale_unit: saleUnit,
+                    delivery_method: 'courier', is_settled: paymentStatus === 'completed', payment_status: paymentStatus, payment_method: paymentMethod,
+                    recorded_at: selectedDate + 'T' + new Date().toTimeString().split(' ')[0]
                 };
-
-                if (!recordData.customer_id) {
-                    alert("⚠️ 주문자 정보(돈 내는 사람)를 확인할 수 없습니다. 고객을 다시 선택해주세요.");
-                    setSaving(false);
-                    return;
-                }
-
-                if (recordData.quantity <= 0) {
-                    alert("⚠️ 박스 수량은 최소 1개 이상이어야 합니다.");
-                    setSaving(false);
-                    return;
-                }
-            } // else (B2C) block end
-
-            console.log("💾 저장 시도 데이터:", recordData);
-
-            // [추가] 데이터 무결성 검사 (NaN 방지)
-            if (isNaN(recordData.quantity) || recordData.quantity === undefined) {
-                throw new Error("수량(박스/kg)이 올바르지 않습니다. 숫자를 입력해주세요.");
+                if (editingRecordId) await supabase.from('sales_records').update(courierData).eq('id', editingRecordId);
+                else await supabase.from('sales_records').insert([courierData]);
             }
-            if (recordData.price !== null && isNaN(recordData.price)) {
-                throw new Error("판매 금액이 올바르지 않습니다. 숫자를 입력해주세요.");
-            }
+            handleResetAllStates(); await fetchHistory();
+        } catch (error: any) { alert("저장 실패: " + error.message); } finally { setSaving(false); }
+    };
 
-            if (editingRecordId) {
-                const { error } = await supabase
-                    .from('sales_records')
-                    .update(recordData)
-                    .eq('id', editingRecordId);
-                if (error) throw error;
-                alert("✅ 판매 기록이 수정되었습니다.");
-            } else {
-                const { error } = await supabase
-                    .from('sales_records')
-                    .insert(recordData);
-                if (error) throw error;
-                alert("✅ 판매 기록이 저장되었습니다.");
-            }
-
-            handleCancelEdit();
-            fetchHistory();
-
-        } catch (error: any) {
-            console.error("🚑 [저장 에러 기록] 🚑", error);
-
-            // [{}] 에러의 정체를 밝히기 위한 3중 속성 추출
-            let detailedMsg = "에러 상세 정보를 추출할 수 없습니다.";
-            try {
-                const props: any = {};
-                // 모든 숨겨진 속성까지 강제로 긁어모읍니다.
-                Object.getOwnPropertyNames(error).forEach(key => {
-                    props[key] = error[key];
-                });
-                detailedMsg = JSON.stringify(props, null, 2);
-            } catch (e) {
-                detailedMsg = String(error);
-            }
-
-            const errMsg = error?.message || error?.details || error?.hint || detailedMsg;
-
-            if (errMsg.includes('delivery_note') || errMsg.includes('detail_address') || errMsg.includes('column') || errMsg.includes('schema')) {
-                setDbError("데이터베이스 구조 문제: '상세 주소'나 '배송 특이사항' 칸을 생성해야 합니다.");
-            } else {
-                // 사장님께 최고의 정보를 제공 (Object.keys가 []일 때를 대비)
-                const techInfo = `
-[Error Message]: ${error?.message || "N/A"}
-[Details]: ${error?.details || "N/A"}
-[Hint]: ${error?.hint || "N/A"}
-[JSON]: ${detailedMsg.substring(0, 500)}
-[String]: ${String(error)}
-`;
-                alert(`🚑 장부 저장 실패(정밀 복구팀 보고): \n\n사장님, 아래 내용을 사진 찍어 제게 보여주시면 즉시 해결하겠습니다!\n\n${techInfo} `);
-            }
-        } finally {
-            setSaving(false);
+    const handleEdit = (record: any) => {
+        setEditingRecordId(record.id); setActiveTab(record.delivery_method === 'courier' ? 'courier' : 'bulk');
+        const targetCrop = farmCrops.find(c => c.crop_name === record.crop_name);
+        setCropName(record.crop_name || '딸기');
+        setSaleUnit(record.sale_unit || targetCrop?.available_units?.[0] || '박스');
+        setSelectedDate(record.recorded_at.split('T')[0]); setPaymentStatus(record.payment_status as 'pending' | 'completed'); setPaymentMethod(record.payment_method || '카드');
+        if (record.delivery_method === 'courier') {
+            setCourierBoxCount(record.quantity?.toString() || ""); setCourierTotalPrice(record.price?.toString() || "");
+            setOrdererName(record.customer_name || ""); setOrdererPhone(record.phone || "");
+            setRecipientName(record.recipient_name || ""); setRecipientPhone(record.recipient_phone || "");
+            setRecipientAddress(record.address || ""); setRecipientDetailAddress(record.detail_address || "");
+            setDeliveryNote(record.delivery_note || "");
+            setIsSameAsOrderer(record.recipient_name === record.customer_name && record.recipient_phone === record.phone);
+            if (record.customer) { setSelectedSearchResult(record.customer); setSearchTerm(record.customer.name); } else { setIsNewClientMode(true); }
+        } else {
+            setSelectedClientId(record.partner_id || "");
+            if (record.grade === '특/상') setBulkQtySang(record.quantity?.toString() || "");
+            else if (record.grade === '중') setBulkQtyJung(record.quantity?.toString() || "");
+            else if (record.grade === '하') setBulkQtyHa(record.quantity?.toString() || "");
         }
     };
 
-    const handleDelete = async (id: string) => {
-        if (!confirm("삭제하시겠습니까?")) return;
-        const { error } = await supabase.from('sales_records').delete().eq('id', id);
-        if (!error) fetchHistory();
-    };
+    const handleDelete = async (id: string) => { if (!confirm("삭제하시겠습니까?")) return; const { error } = await supabase.from('sales_records').delete().eq('id', id); if (!error) fetchHistory(); };
 
-    const filteredHistory = history.filter(item => {
-        if (showUnsettledOnly && item.is_settled) return false;
-        return true;
-    });
     return (
-        <div className="min-h-screen pb-24 md:pb-10 bg-slate-50/50">
-            <div className="max-w-2xl mx-auto p-4 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="min-h-screen pb-24 bg-slate-50/30">
+            <div className="max-w-2xl mx-auto p-3 md:p-6 space-y-4">
 
-                {/* DB 오류 알림 및 복구 통합 가이드 (사장님 최우선 처리 영역) */}
-                {dbError && (
-                    <div className="mb-8 bg-white border border-red-200 p-8 rounded-3xl shadow-2xl shadow-red-50 animate-in zoom-in-95 duration-500 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-4 bg-red-500 text-white font-black text-[10px] rounded-bl-2xl">URGENT</div>
-                        <div className="space-y-6">
-                            <div className="flex items-start gap-4">
-                                <div className="p-4 bg-red-50 rounded-2xl text-red-600 animate-pulse">
-                                    <AlertTriangle className="w-8 h-8" />
-                                </div>
-                                <div className="space-y-1">
-                                    <h3 className="font-black text-gray-900 text-lg tracking-tight">데이터베이스 구조 정비 필요 🚨</h3>
-                                    <p className="text-sm font-medium text-gray-500 leading-relaxed">
-                                        새로운 기능을 위해 장부 구조를 한 번만 업데이트해 주세요.
-                                    </p>
-                                </div>
-                            </div>
-
-                            <button onClick={handleAutoFix}
-                                className="w-full py-4 bg-red-600 text-white rounded-2xl font-black text-base shadow-xl shadow-red-100 hover:bg-red-700 active:scale-95 transition-all flex items-center justify-center gap-3 group">
-                                <RefreshCcw className="w-5 h-5 group-hover:rotate-180 transition-all duration-500" />
-                                자동 복구 시도하기
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {/* 헤더 섹션: 프리미엄 에메랄드 디자인 */}
-                <div className="flex items-center gap-4 bg-white/40 backdrop-blur-sm p-4 rounded-[2.5rem] border border-white/60 shadow-sm">
-                    <div className="p-4 bg-emerald-600 rounded-[2rem] shadow-xl shadow-emerald-100/50 relative overflow-hidden group">
-                        <ShoppingCart className="w-6 h-6 text-white relative z-10" />
-                        <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
-                    </div>
+                {/* [초압축 고정 헤더] */}
+                <div className="flex items-center justify-between px-1">
                     <div>
-                        <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-none mb-1">판매 / 출하</h1>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] opacity-60">Sales Management System</p>
+                        <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                            판매 / 출하 <ShoppingCart className="w-5 h-5 text-emerald-500" />
+                        </h1>
+                        <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest leading-none mt-0.5">Sales & Delivery System</p>
                     </div>
-                    <div className="ml-auto relative group">
-                        <div className="absolute inset-0 bg-emerald-100 blur-xl opacity-0 group-hover:opacity-30 transition-opacity"></div>
-                        <div className="relative flex items-center bg-white border border-slate-100 rounded-2xl px-4 py-2.5 shadow-sm group-hover:border-emerald-200 transition-all">
-                            <Calendar className="w-3.5 h-3.5 text-emerald-500 mr-2" />
-                            <input
-                                type="date"
-                                value={selectedDate}
-                                onChange={(e) => setSelectedDate(e.target.value)}
-                                className={`bg-transparent text-sm font-black outline-none cursor-pointer
-                                ${editingRecordId ? 'text-amber-600' : 'text-slate-700'}`}
-                            />
-                        </div>
-                    </div>
+                    <button onClick={() => setShowCalendar(!showCalendar)}
+                        className={`h-10 px-4 rounded-xl font-black text-xs flex items-center gap-2 transition-all shadow-sm border
+                        ${showCalendar ? 'bg-emerald-600 text-white border-emerald-700' : 'bg-white text-emerald-600 border-emerald-100 hover:bg-emerald-50'}`}>
+                        <CalendarIcon className="w-4 h-4" /> {showCalendar ? '닫기' : '달력'}
+                    </button>
                 </div>
 
-                {/* 수정 모드 알림: 세련된 엠버 칩 */}
-                {editingRecordId && (
-                    <div className="bg-amber-50 text-amber-700 px-6 py-4 rounded-3xl border border-amber-100 flex justify-between items-center shadow-sm animate-in zoom-in-95">
-                        <div className="flex items-center gap-3">
-                            <div className="w-2 h-2 bg-amber-500 rounded-full animate-ping"></div>
-                            <span className="text-sm font-black flex items-center gap-2">판매 기록 수정 모드 활성화</span>
+                {showCalendar && (
+                    <div className="animate-in slide-in-from-top-2 duration-300">
+                        <CalendarComponent selectedDate={selectedDate} onChange={setSelectedDate} harvestedDates={{}} />
+                        <div className="mt-2 flex items-center justify-center p-2 bg-white rounded-xl border border-slate-100 shadow-sm">
+                            <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)}
+                                className="bg-transparent text-sm font-black text-slate-700 outline-none w-full text-center" />
                         </div>
-                        <button onClick={handleCancelEdit} className="bg-white px-4 py-2 rounded-xl text-xs font-black text-amber-600 border border-amber-200 hover:bg-amber-100 transition-all shadow-sm">
-                            변경 취소
-                        </button>
                     </div>
                 )}
 
-                {/* 탭 내비게이션: 모던 에메랄드 스타일 */}
-                <div className="flex bg-white/80 backdrop-blur-md p-1.5 rounded-[2rem] shadow-sm border border-slate-100/50">
-                    <button onClick={() => setActiveTab('bulk')}
-                        disabled={!!editingRecordId && activeTab !== 'bulk'}
-                        className={`flex-1 py-4 rounded-[1.75rem] text-sm font-black transition-all flex items-center justify-center gap-2.5
-                        ${activeTab === 'bulk'
-                                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100 scale-[1.02]'
-                                : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}
-                        ${editingRecordId && activeTab !== 'bulk' ? 'opacity-30 cursor-not-allowed' : ''}`}>
-                        <Building2 className={`w-4 h-4 ${activeTab === 'bulk' ? 'animate-bounce' : ''}`} />
-                        대량 납품 <span className="text-[10px] opacity-60 font-medium">(B2B)</span>
-                    </button>
-                    <button onClick={() => setActiveTab('courier')}
-                        disabled={!!editingRecordId && activeTab !== 'courier'}
-                        className={`flex-1 py-4 rounded-[1.75rem] text-sm font-black transition-all flex items-center justify-center gap-2.5
-                        ${activeTab === 'courier'
-                                ? 'bg-rose-500 text-white shadow-lg shadow-rose-100 scale-[1.02]'
-                                : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}
-                        ${editingRecordId && activeTab !== 'courier' ? 'opacity-30 cursor-not-allowed' : ''}`}>
-                        <Truck className={`w-4 h-4 ${activeTab === 'courier' ? 'animate-bounce' : ''}`} />
-                        개별 택배 <span className="text-[10px] opacity-60 font-medium">(B2C)</span>
-                    </button>
-                </div>
-
-                {/* [New] 품목 선택 섹션 (3번 전략) */}
-                <div className="bg-white/60 backdrop-blur-sm p-4 rounded-[2rem] border border-white/60 shadow-sm space-y-3">
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">판매 작물 선택</label>
-                    <div className="flex gap-2">
-                        {CROPS.map(c => (
-                            <button key={c.id} onClick={() => {
-                                setCropName(c.name);
-                                setSaleUnit(c.units[0]);
-                            }}
-                                className={`flex-1 py-3 rounded-2xl border-2 transition-all flex flex-col items-center gap-1
-                            ${cropName === c.name ? 'bg-white border-green-500 shadow-lg shadow-green-100' : 'bg-transparent border-slate-100 text-slate-400 hover:border-slate-200'}`}>
-                                <span className="text-xl">{c.icon}</span>
-                                <span className={`text-[11px] font-black ${cropName === c.name ? 'text-green-600' : 'text-slate-400'}`}>{c.name}</span>
+                {/* [작물 자동 등분 레이아웃] */}
+                <div className="bg-white/80 backdrop-blur-md p-3 rounded-3xl border border-white shadow-sm space-y-3">
+                    <div className="flex gap-1.5">
+                        {farmCrops.map((crop) => (
+                            <button key={crop.id}
+                                onClick={() => {
+                                    setCropName(crop.crop_name);
+                                    // [핵심] 작물 선택 시 해당 작물의 첫 번째 단위로 강제 업데이트
+                                    if (crop.available_units && crop.available_units.length > 0) {
+                                        setSaleUnit(crop.available_units[0]);
+                                    }
+                                }}
+                                className={`flex-1 flex flex-col items-center justify-center py-2.5 rounded-2xl border-2 transition-all gap-1 min-w-0 animate-in zoom-in-95 duration-200
+                                ${cropName === crop.crop_name ? 'bg-emerald-50 border-emerald-500 shadow-sm ring-2 ring-emerald-100' : 'bg-white border-slate-50 opacity-40'}`}>
+                                <span className="text-2xl leading-none">{crop.crop_icon || '📦'}</span>
+                                <span className="text-[9px] font-black text-slate-800 tracking-tighter truncate w-full text-center px-1">{crop.crop_name}</span>
                             </button>
                         ))}
                     </div>
+                    {/* [인라인 단위 선택] - 작물에 종속되어 표시됨 */}
+                    <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-hide bg-slate-50/50 p-1 rounded-xl border border-slate-100">
+                        {farmCrops.find(c => c.crop_name === cropName)?.available_units?.map((unit: string) => (
+                            <button key={unit} onClick={() => setSaleUnit(unit)}
+                                className={`px-4 py-2 rounded-lg text-[11px] font-black transition-all whitespace-nowrap
+                                ${saleUnit === unit ? 'bg-emerald-600 text-white shadow-md' : 'bg-white text-slate-400 border border-slate-100'}`}>{unit}</button>
+                        )) || <div className="text-[10px] text-slate-300 font-bold p-1">선택된 작물의 단위가 없습니다</div>}
+                    </div>
                 </div>
 
-                {/* 입력 폼 */}
-                {/* 입력 폼 컨테이너 */}
-                <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden relative">
-                    <div className={`h-1.5 w-full ${activeTab === 'bulk' ? 'bg-indigo-600' : 'bg-rose-500'}`} />
+                {/* [탭 스위치] */}
+                <div className="flex p-1 bg-slate-100 rounded-2xl">
+                    <button onClick={() => { setActiveTab('bulk'); handleResetAllStates(); }}
+                        className={`flex-1 py-3 rounded-[0.9rem] text-xs font-black transition-all flex items-center justify-center gap-2
+                        ${activeTab === 'bulk' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}>
+                        <Building2 className="w-3.5 h-3.5" /> B2B 납품
+                    </button>
+                    <button onClick={() => { setActiveTab('courier'); handleResetAllStates(); }}
+                        className={`flex-1 py-3 rounded-[0.9rem] text-xs font-black transition-all flex items-center justify-center gap-2
+                        ${activeTab === 'courier' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-400'}`}>
+                        <Truck className="w-3.5 h-3.5" /> B2C 택배
+                    </button>
+                </div>
 
-                    <div className="p-8 space-y-8">
-
+                {/* [메인 입력 영역] */}
+                <div className="bg-white rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden">
+                    <div className={`h-1.5 w-full ${activeTab === 'bulk' ? 'bg-indigo-500' : 'bg-rose-500'}`} />
+                    <div className="p-5 space-y-6">
                         {activeTab === 'bulk' ? (
-                            // B2B 폼 (카드형 개편)
-                            <div className="space-y-8 animate-in fade-in duration-500">
-                                {/* [카드 1] 거래처 선택 */}
-                                <div className="space-y-4">
-                                    <label className="block text-xs font-black text-indigo-600 mb-2 uppercase tracking-[0.2em] flex items-center gap-2 px-1">
-                                        <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse"></div>
-                                        1. 거래처 선택
-                                    </label>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        {partners.map(partner => (
-                                            <button key={partner.id}
-                                                onClick={() => setSelectedClientId(partner.id)}
-                                                className={`p-5 rounded-[1.5rem] text-sm font-bold border-2 transition-all text-left flex items-center gap-3
-                                                ${selectedClientId === partner.id
-                                                        ? 'bg-indigo-50 border-indigo-500 text-indigo-700 shadow-lg shadow-indigo-50 animate-in zoom-in-95 duration-200'
-                                                        : 'bg-white border-slate-100 text-slate-500 hover:border-slate-200'}`}>
-                                                <div className={`p-2.5 rounded-xl transition-colors ${selectedClientId === partner.id ? 'bg-indigo-500 text-white' : 'bg-slate-50 text-slate-300'}`}>
-                                                    <Building2 className="w-4.5 h-4.5" />
-                                                </div>
-                                                <span className="truncate font-black tracking-tight">{partner.company_name}</span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                    {!partners.length && <p className="text-xs text-slate-300 mt-2 text-center py-10 bg-slate-50 rounded-[2rem] border border-dashed border-slate-200">등록된 거래처 정보가 없습니다.</p>}
-                                </div>
-
-                                {/* [카드 2] 등급별 수량 입력 */}
-                                <div className="bg-slate-50/50 rounded-[2.5rem] p-8 border border-slate-100 shadow-inner space-y-6">
-                                    <label className="block text-xs font-black text-indigo-600 mb-2 uppercase tracking-[0.2em] flex items-center justify-between px-1">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></div>
-                                            2. 수량 입력 ({saleUnit})
-                                        </div>
-                                        {cropName !== '딸기' && (
-                                            <select value={saleUnit} onChange={(e) => setSaleUnit(e.target.value)}
-                                                className="bg-indigo-50 border-none text-[10px] font-black p-1 rounded-lg text-indigo-600 outline-none">
-                                                {CROPS.find(c => c.name === cropName)?.units.map(u => <option key={u} value={u}>{u}</option>)}
-                                            </select>
-                                        )}
-                                    </label>
-                                    <div className="grid grid-cols-3 gap-4">
-                                        {[
-                                            { id: 'sang', label: '특/상', value: bulkQtySang, setter: setBulkQtySang, color: 'indigo' },
-                                            { id: 'jung', label: '중', value: bulkQtyJung, setter: setBulkQtyJung, color: 'blue' },
-                                            { id: 'ha', label: '하', value: bulkQtyHa, setter: setBulkQtyHa, color: 'slate' }
-                                        ].map(item => (
-                                            <div key={item.id} className="space-y-3">
-                                                <div className={`text-[11px] font-black text-center py-2 rounded-xl border
-                                                    ${item.id === 'sang' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
-                                                        item.id === 'jung' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                                                            'bg-slate-100 text-slate-500 border-slate-200'}`}>
-                                                    {item.label}
-                                                </div>
-                                                <input type="text"
-                                                    inputMode="numeric"
-                                                    pattern="[0-9]*"
-                                                    value={item.value}
-                                                    onChange={(e) => {
-                                                        const val = e.target.value.replace(/[^0-9]/g, '');
-                                                        item.setter(val);
-                                                    }}
-                                                    placeholder="0"
-                                                    className="w-full p-6 bg-white border-2 border-transparent rounded-[1.5rem] text-center font-black text-4xl focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 transition-all outline-none shadow-sm" />
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <div className="pt-4 flex justify-between items-center px-4 border-t border-slate-200/50">
-                                        <span className="text-xs font-black text-slate-400 uppercase tracking-widest">납품 총 합계</span>
-                                        <span className="text-3xl font-black text-indigo-600 tabular-nums">
-                                            {(Number(bulkQtySang) || 0) + (Number(bulkQtyJung) || 0) + (Number(bulkQtyHa) || 0)} <span className="text-sm font-bold opacity-40 ml-1">{saleUnit}</span>
-                                        </span>
+                            <div className="space-y-5 animate-in fade-in duration-300">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-indigo-500 uppercase px-1">거래처 선택</label>
+                                    <div className="relative">
+                                        <select value={selectedClientId} onChange={(e) => setSelectedClientId(e.target.value)}
+                                            className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-base font-black appearance-none outline-none focus:border-indigo-400 focus:bg-white transition-all">
+                                            <option value="">거래처를 골라주세요</option>
+                                            {partners.map(p => <option key={p.id} value={p.id}>{p.company_name}</option>)}
+                                        </select>
+                                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                                     </div>
                                 </div>
-
-                                {/* [카드 3] 결제 정보 및 정산 */}
-                                <div className="space-y-4">
-                                    <label className="block text-xs font-black text-indigo-600 mb-2 uppercase tracking-[0.2em] flex items-center gap-2 px-1">
-                                        <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></div>
-                                        3. 정산 및 금액 설정
-                                    </label>
-                                    <div className="flex gap-4">
-                                        <div className="flex-[3] relative">
-                                            <div className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 font-black text-xl">₩</div>
-                                            <input type="text"
-                                                value={formatCurrency(bulkPrice)}
-                                                onChange={(e) => setBulkPrice(stripNonDigits(e.target.value))}
-                                                placeholder="거래 단가"
-                                                className="w-full p-6 pl-12 bg-white border-2 border-slate-100 rounded-[1.5rem] font-black text-xl text-indigo-600 placeholder-slate-200 focus:border-indigo-500 shadow-sm outline-none transition-all" />
+                                <div className="grid grid-cols-3 gap-2">
+                                    {[{ label: '특/상', val: bulkQtySang, set: setBulkQtySang }, { label: '중', val: bulkQtyJung, set: setBulkQtyJung }, { label: '하', val: bulkQtyHa, set: setBulkQtyHa }].map((item, i) => (
+                                        <div key={i} className="bg-slate-50/50 p-3 rounded-2xl border border-slate-100 flex flex-col items-center">
+                                            <span className="text-[9px] font-black text-slate-400 mb-1">{item.label}</span>
+                                            <input type="text" inputMode="numeric" value={item.val} onChange={(e) => item.set(e.target.value.replace(/[^0-9]/g, ''))}
+                                                className="w-full bg-transparent text-center text-xl font-black text-slate-800 outline-none" placeholder="0" />
                                         </div>
-                                        <div className="flex-[2] flex flex-col gap-2">
-                                            <button onClick={() => setPaymentStatus(paymentStatus === 'completed' ? 'pending' : 'completed')}
-                                                className={`flex-1 rounded-[1.5rem] border-2 font-black text-[13px] transition-all shadow-sm flex items-center justify-center gap-2
-                                                    ${paymentStatus === 'completed'
-                                                        ? 'bg-indigo-600 border-indigo-700 text-white shadow-indigo-100'
-                                                        : 'bg-amber-50 border-amber-200 text-amber-600 shadow-amber-50'} `}>
-                                                {paymentStatus === 'completed' ? <CheckCircle className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
-                                                {paymentStatus === 'completed' ? '입금완료' : '미입금(외상)'}
-                                            </button>
-                                        </div>
-                                    </div>
+                                    ))}
                                 </div>
                             </div>
                         ) : (
-                            // B2C 폼
-                            <div className="space-y-8 animate-in fade-in duration-500">
-                                {/* 주문자(결제자) 및 수령인 영역 */}
-                                <div className="space-y-6">
-                                    <div className="flex items-center justify-between px-1 mb-2">
-                                        <label className="block text-xs font-black text-rose-500 uppercase tracking-[0.2em] flex items-center gap-2">
-                                            <div className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-pulse"></div>
-                                            1. 주문자 정보
-                                        </label>
-                                        <button onClick={() => setIsOrdererLocked(!isOrdererLocked)}
-                                            className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-[11px] font-black transition-all border shadow-sm
-                                            ${isOrdererLocked
-                                                    ? 'bg-rose-500 border-rose-600 text-white shadow-rose-100'
-                                                    : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'} `}>
-                                            {isOrdererLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
-                                            {isOrdererLocked ? '주문자 고정됨' : '주문자 고정'}
+                            <div className="space-y-5 animate-in fade-in duration-300">
+                                {/* [B2C 주문자 파트] */}
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between px-1">
+                                        <label className="text-[10px] font-black text-rose-500 uppercase">주문자 검색/입력</label>
+                                        <button onClick={() => { setIsNewClientMode(!isNewClientMode); setSelectedSearchResult(null); setOrdererName(""); setOrdererPhone(""); }}
+                                            className="text-[9px] font-black text-white bg-rose-500 px-3 py-1 rounded-lg shadow-sm active:scale-95 transition-all">
+                                            {isNewClientMode ? '기존고객 검색' : '+ 신규고객'}
                                         </button>
                                     </div>
-
-                                    {!selectedSearchResult && !isNewClientMode ? (
-                                        <div className="relative group">
-                                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-300 group-focus-within:text-pink-500 transition-colors" />
+                                    {!isNewClientMode ? (
+                                        <div className="relative">
+                                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-rose-300" />
                                             <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-                                                onFocus={() => setIsSearchOpen(true)}
-                                                onClick={() => setIsSearchOpen(true)}
-                                                placeholder={`고객명 / 번호 검색(총 ${customers.length}명)`}
-                                                className="w-full p-5 pl-12 bg-white border-2 border-gray-200 rounded-[1.5rem] text-base font-black outline-none focus:ring-4 focus:ring-pink-100 placeholder:text-gray-400 shadow-sm transition-all" />
-
-                                            {isSearchOpen && searchResult.length > 0 && (
-                                                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 z-[100] max-h-60 overflow-y-auto">
+                                                className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-base font-black outline-none focus:border-rose-400 focus:bg-white transition-all shadow-inner"
+                                                placeholder="성함 혹은 연락처 뒷번호..." />
+                                            {searchResult.length > 0 && !selectedSearchResult && (
+                                                <div className="absolute top-full left-0 right-0 mt-1.5 bg-white border border-rose-100 rounded-2xl shadow-2xl z-30 divide-y divide-slate-50 overflow-hidden">
                                                     {searchResult.map(c => (
-                                                        <button key={c.id}
-                                                            onMouseDown={(e) => {
-                                                                e.preventDefault(); // 입력창 포커스 아웃 방지
-                                                                handleSelectClient(c);
-                                                            }}
-                                                            className="w-full p-4 text-left hover:bg-pink-50 flex items-center justify-between border-b border-gray-50 last:border-0 group transition-all cursor-pointer">
-                                                            <div>
-                                                                <span className="text-sm font-black text-gray-900 group-hover:text-pink-600 tracking-tight">{c.name}</span>
-                                                                <span className="text-xs text-gray-400 ml-2 font-bold">{formatPhone(c.contact || "")}</span>
-                                                            </div>
-                                                            {c.is_vip && <span className="text-[10px] bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-lg font-black flex items-center gap-1"><Star className="w-3 h-3 fill-yellow-700" />VIP</span>}
+                                                        <button key={c.id} onClick={() => { setSelectedSearchResult(c); setOrdererName(c.name); setOrdererPhone(c.contact || ""); setSearchTerm(c.name); }}
+                                                            className="w-full p-4 hover:bg-rose-50 flex items-center justify-between text-left">
+                                                            <div><p className="font-black text-slate-800">{c.name}</p><p className="text-xs text-slate-400 font-bold">{c.contact}</p></div>
+                                                            <ArrowRight className="w-4 h-4 text-rose-300" />
                                                         </button>
                                                     ))}
                                                 </div>
                                             )}
-                                            {searchTerm.length > 0 && searchResult.length === 0 && (
-                                                <button onClick={() => setIsNewClientMode(true)}
-                                                    className="mt-3 w-full py-3 bg-pink-100 text-pink-600 rounded-xl text-xs font-black hover:bg-pink-200 transition-colors flex items-center justify-center gap-2">
-                                                    <UserPlus className="w-4 h-4" /> 새로운 고객 정보 입력하기
-                                                </button>
-                                            )}
                                         </div>
                                     ) : (
-                                        <div className="space-y-4 animate-in zoom-in-95 duration-300">
-                                            {/* 선택된 고객 카드 - 더 콤팩트하게 */}
-                                            <div className="bg-white px-4 py-3 rounded-2xl border border-gray-100 flex flex-col gap-3 shadow-sm overflow-hidden">
-                                                <div className="flex justify-between items-center">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 bg-pink-50 text-pink-600 rounded-xl flex items-center justify-center shadow-inner shrink-0 focus-within:ring-2 ring-pink-200">
-                                                            <User className="w-5 h-5" />
-                                                        </div>
-                                                        <div className="min-w-0 flex-1">
-                                                            {isNewClientMode ? (
-                                                                <div className="space-y-2">
-                                                                    <input type="text" placeholder="고객 성함" value={newClientName} onChange={(e) => setNewClientName(e.target.value)}
-                                                                        className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-black outline-none focus:border-pink-400" />
-                                                                    <input type="text" placeholder="연락처 (010-0000-0000)" value={newClientPhone} onChange={(e) => setNewClientPhone(formatPhone(e.target.value))}
-                                                                        className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold outline-none focus:border-pink-400" />
-                                                                </div>
-                                                            ) : (
-                                                                <>
-                                                                    <p className="text-3xl font-black text-gray-900 truncate tracking-tight">{newClientName}</p>
-                                                                    <p className="text-xl font-bold text-gray-400">{formatPhone(newClientPhone)}</p>
-                                                                </>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                    {!isOrdererLocked && (
-                                                        <button onClick={handleResetClient} className="p-2 text-gray-300 hover:text-red-500 rounded-lg transition-all shrink-0">
-                                                            <RotateCcw className="w-4 h-4" />
-                                                        </button>
-                                                    )}
-                                                </div>
-
-                                                {/* 구매 인사이트 실시간 요약 (Standardization 8번 준수: 모든 데이터 가시성 확보) */}
-                                                {customerStats && (
-                                                    <div className="flex items-center gap-1.5 pt-2 border-t border-gray-50 overflow-x-auto no-scrollbar">
-                                                        <div className="px-2 py-1 bg-indigo-50 rounded-lg shrink-0">
-                                                            <span className="text-[9px] font-black text-indigo-400 uppercase leading-none block mb-0.5">누적 주문</span>
-                                                            <span className="text-[11px] font-black text-indigo-600">{customerStats.count}회</span>
-                                                        </div>
-                                                        <div className="px-2 py-1 bg-green-50 rounded-lg shrink-0">
-                                                            <span className="text-[9px] font-black text-green-400 uppercase leading-none block mb-0.5">총 수량</span>
-                                                            <span className="text-[11px] font-black text-green-600">{customerStats.total_qty.toFixed(1)}</span>
-                                                        </div>
-                                                        <div className="px-2 py-1 bg-amber-50 rounded-lg shrink-0">
-                                                            <span className="text-[9px] font-black text-amber-400 uppercase leading-none block mb-0.5">누적 결제액</span>
-                                                            <span className="text-[11px] font-black text-amber-600">{(customerStats.total_price || 0).toLocaleString()}원</span>
-                                                        </div>
-                                                        {customerStats.count >= 5 && (
-                                                            <div className="px-2 py-1 bg-pink-50 border border-pink-100 rounded-lg shrink-0 animate-pulse">
-                                                                <span className="text-[10px] font-black text-pink-500">💎 VIP 고객</span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* 수령인 상세 정보 및 배송지 (지능형 영역) */}
-                                            <div className="bg-white p-6 rounded-[2rem] border-2 border-pink-200/50 shadow-xl shadow-pink-50 space-y-5 relative overflow-hidden">
-                                                <div className="absolute top-0 right-0 p-4 opacity-5">
-                                                    <Truck className="w-12 h-12 text-pink-500" />
-                                                </div>
-
-                                                <div className="flex items-center justify-between relative z-10">
-                                                    <label className="text-[11px] font-black text-pink-600 uppercase tracking-widest flex items-center gap-2">
-                                                        <Truck className="w-4 h-4 fill-pink-600 animate-pulse" /> 2. 받는 사람 정보 (딸기 받는 곳)
-                                                    </label>
-                                                    <div className="flex items-center gap-2">
-                                                        <button
-                                                            onClick={() => {
-                                                                setRecipientName(newClientName);
-                                                                setRecipientPhone(newClientPhone);
-                                                                setNewClientAddress(newClientAddress);
-                                                                setNewClientPostalCode(newClientPostalCode);
-                                                                setNewClientLatitude(newClientLatitude);
-                                                                setNewClientLongitude(newClientLongitude);
-                                                            }}
-                                                            className="text-[10px] font-black bg-pink-50 text-pink-600 px-3 py-1.5 rounded-lg border border-pink-100 hover:bg-pink-100 transition-colors"
-                                                        >
-                                                            주문자와 동일
-                                                        </button>
-                                                        {recentAddresses.length > 0 && (
-                                                            <span className="text-[10px] font-black text-gray-300">최근 배송지 {recentAddresses.length}건</span>
-                                                        )}
-                                                    </div>
-                                                </div>
-
-                                                {/* 최근 배송지 스마트 칩 */}
-                                                {recentAddresses.length > 0 && (
-                                                    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide no-scrollbar -mx-2 px-2 relative z-10">
-                                                        {recentAddresses.map((set, idx) => (
-                                                            <button key={idx}
-                                                                onClick={() => {
-                                                                    setRecipientName(set.recipient_name);
-                                                                    setRecipientPhone(set.recipient_phone);
-                                                                    setNewClientAddress(set.address);
-                                                                    setNewClientPostalCode(set.postal_code);
-                                                                    setNewClientDetailAddress(set.detail_address || "");
-                                                                    setDeliveryNote(set.delivery_note || "");
-                                                                    setIsAddressManualMode(false);
-                                                                }}
-                                                                className="shrink-0 bg-pink-50 border border-pink-100 px-4 py-3 rounded-2xl shadow-sm hover:bg-pink-100 hover:border-pink-300 transition-all text-left max-w-[160px] group">
-                                                                <p className="text-xs font-black text-pink-700 truncate group-hover:text-pink-800">{set.recipient_name || '수령인명 없음'}</p>
-                                                                <p className="text-[10px] text-pink-400 font-bold truncate mt-0.5">{set.address.split(' ').slice(0, 2).join(' ')}...</p>
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                )}
-
-                                                <div className="flex flex-col sm:grid sm:grid-cols-2 gap-3 relative z-10">
-                                                    <div className="space-y-1">
-                                                        <label className="text-[9px] font-black text-gray-400 ml-1 uppercase">받으실 분 성함/업체</label>
-                                                        <input type="text" placeholder="성함 또는 업체명" value={recipientName} onChange={(e) => setRecipientName(e.target.value)}
-                                                            className="w-full px-3 py-3 bg-gray-50 border-2 border-gray-100 rounded-xl text-[14px] font-black outline-none focus:bg-white focus:border-pink-400 shadow-sm transition-all" />
-                                                    </div>
-                                                    <div className="space-y-1">
-                                                        <label className="text-[9px] font-black text-gray-400 ml-1 uppercase">수령인 연락처</label>
-                                                        <input type="text" placeholder="010-0000-0000" value={recipientPhone} onChange={(e) => setRecipientPhone(formatPhone(e.target.value))}
-                                                            className="w-full px-3 py-3 bg-gray-50 border-2 border-gray-100 rounded-xl text-[14px] font-black outline-none focus:bg-white focus:border-pink-400 shadow-sm transition-all" />
-                                                    </div>
-                                                </div>
-
-                                                <div className="space-y-3 relative z-10">
-                                                    <div className="flex justify-between items-center px-1">
-                                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">배송지 주소 (상세 주소 포함)</label>
-                                                        <button onClick={() => setIsAddressManualMode(!isAddressManualMode)}
-                                                            className={`text - [10px] font - black px - 4 py - 2 rounded - xl transition - all border flex items - center gap - 2 shadow - sm
-                                                            ${isAddressManualMode ? 'bg-pink-600 border-pink-700 text-white' : 'bg-white border-pink-200 text-pink-600 hover:bg-pink-50'} `}>
-                                                            {isAddressManualMode ? <Search className="w-3.5 h-3.5" /> : <MapPin className="w-3.5 h-3.5" />}
-                                                            {isAddressManualMode ? '검색창 활성화됨' : '다른 주소로 배송 (변경)'}
-                                                        </button>
-                                                    </div>
-
-                                                    {/* 주소 입력창 - 가로로 길게 단독 배치 */}
-                                                    <div className="w-full">
-                                                        <AddressSearch
-                                                            label=""
-                                                            value={newClientAddress}
-                                                            onChange={(val) => setNewClientAddress(val)}
-                                                            onAddressSelect={(res) => {
-                                                                setNewClientAddress(res.address);
-                                                                setNewClientPostalCode(res.zonecode);
-                                                                setNewClientLatitude(res.latitude || null);
-                                                                setNewClientLongitude(res.longitude || null);
-                                                            }}
-                                                            placeholder="변경 버튼을 눌러 정확한 주소를 검색하세요"
-                                                            className={!isAddressManualMode ? "opacity-60 pointer-events-none grayscale border-gray-200" : "border-pink-500 shadow-xl ring-4 ring-pink-50"}
-                                                        />
-                                                    </div>
-
-                                                    {/* 우편번호 - 하단에 별도 배치 */}
-                                                    <div className="flex flex-col sm:flex-row gap-3 relative z-10">
-                                                        <div className="flex-[2] space-y-1">
-                                                            <label className="text-[9px] font-black text-gray-400 ml-1 uppercase">상세 주소 (동, 호수, 사무실 등)</label>
-                                                            <input type="text" placeholder="예) 상현빌라 201호 / 1002동 122호" value={newClientDetailAddress} onChange={(e) => setNewClientDetailAddress(e.target.value)}
-                                                                className="w-full px-3 py-3 bg-white border-2 border-pink-100 rounded-xl text-[14px] font-black outline-none focus:border-pink-400 shadow-sm transition-all placeholder:text-gray-300" />
-                                                        </div>
-                                                        <div className="flex-1 space-y-1">
-                                                            <label className="text-[9px] font-black text-gray-400 ml-1 uppercase">우편번호</label>
-                                                            <div className="h-[48px] bg-gray-100 border border-gray-200 rounded-xl flex items-center justify-center px-4 shadow-inner">
-                                                                <input type="text" value={newClientPostalCode} readOnly
-                                                                    className="bg-transparent text-center text-[13px] font-black text-gray-500 outline-none w-full" placeholder="-" />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* 배송 특이사항 - 사장님 요청 (Standardization 7번 준수: 모든 요청사항 명시화) */}
-                                                    <div className="space-y-1 relative z-10">
-                                                        <label className="text-[9px] font-black text-amber-500 ml-1 uppercase flex items-center gap-1">
-                                                            <AlignLeft className="w-3 h-3" /> 배송 특이사항 (기사님 전달용)
-                                                        </label>
-                                                        <input type="text" placeholder="예) 아기가 자고 있으니 벨 누르지 마세요 / 고양이 주의" value={deliveryNote} onChange={(e) => setDeliveryNote(e.target.value)}
-                                                            className="w-full px-4 py-3 bg-amber-50/30 border-2 border-amber-100 rounded-xl text-[14px] font-black text-amber-900 outline-none focus:bg-white focus:border-amber-400 shadow-sm transition-all placeholder:text-amber-200" />
-                                                    </div>
-                                                </div>
-                                            </div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div className="relative"><User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" /><input type="text" value={ordererName} onChange={(e) => setOrdererName(e.target.value)} placeholder="주문자명" className="w-full pl-9 p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-black outline-none focus:border-rose-300" /></div>
+                                            <div className="relative"><Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" /><input type="text" value={ordererPhone} onChange={(e) => setOrdererPhone(e.target.value)} placeholder="010-0000-0000" className="w-full pl-9 p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-black outline-none focus:border-rose-300" /></div>
                                         </div>
                                     )}
                                 </div>
 
-                                {/* 가격 및 비용 설정 영역 */}
-                                <div className="space-y-5">
-                                    <div className="space-y-3">
-                                        <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">결제 및 배송비 설정</label>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <button onClick={() => setShippingPaymentType('prepaid')}
-                                                className={`py-5 text-sm font-black rounded-[1.5rem] transition-all border-2 flex items-center justify-center gap-2 ${shippingPaymentType === 'prepaid' ? 'bg-rose-50 border-rose-500 text-rose-700 shadow-lg shadow-rose-100' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'} `}>
-                                                <div className={`w-2 h-2 rounded-full ${shippingPaymentType === 'prepaid' ? 'bg-rose-500' : 'bg-slate-200'}`} />
-                                                판매자 부담 (선불)
-                                            </button>
-                                            <button onClick={() => setShippingPaymentType('cod')}
-                                                className={`py-5 text-sm font-black rounded-[1.5rem] transition-all border-2 flex items-center justify-center gap-2 ${shippingPaymentType === 'cod' ? 'bg-rose-50 border-rose-500 text-rose-700 shadow-lg shadow-rose-100' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'} `}>
-                                                <div className={`w-2 h-2 rounded-full ${shippingPaymentType === 'cod' ? 'bg-rose-500' : 'bg-slate-200'}`} />
-                                                고객 부담 (착불)
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex gap-4">
-                                        <div className="flex-[3] space-y-2">
-                                            <label className="block text-xs font-black text-gray-400 ml-1 uppercase">박스 수량</label>
-                                            <div className="relative">
-                                                <input type="text" value={courierBoxCount}
-                                                    inputMode="numeric"
-                                                    pattern="[0-9]*"
-                                                    onChange={(e) => {
-                                                        const val = e.target.value.replace(/[^0-9]/g, '');
-                                                        setCourierBoxCount(val);
-                                                    }}
-                                                    className="w-full p-5 bg-white border-2 border-gray-200 rounded-[1.25rem] text-2xl font-black focus:border-pink-500 outline-none shadow-sm transition-all text-center" placeholder="1" />
-                                                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-gray-300">{saleUnit}</span>
-                                            </div>
-                                        </div>
-                                        <div className="flex-[7] space-y-2">
-                                            <label className="block text-xs font-black text-gray-400 ml-1 uppercase">판매 총액 (원)</label>
-                                            <div className="relative">
-                                                <input type="text" value={formatCurrency(courierTotalPrice)}
-                                                    inputMode="numeric"
-                                                    pattern="[0-9]*"
-                                                    onChange={(e) => setCourierTotalPrice(stripNonDigits(e.target.value))}
-                                                    className="w-full p-5 bg-white border-2 border-gray-200 rounded-[1.25rem] text-2xl font-black focus:border-pink-500 outline-none shadow-sm text-right transition-all pr-10 pl-12" placeholder="0원" />
-                                                <span className="absolute left-6 top-1/2 -translate-y-1/2 text-xl font-black text-gray-300">₩</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* 상세 비용 아코디언 */}
-                                    <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm">
-                                        <button onClick={() => setShowCostDetails(!showCostDetails)}
-                                            className="w-full flex justify-between items-center p-4 bg-gray-50/50 hover:bg-gray-100 transition-colors">
-                                            <span className="text-xs font-black text-gray-600 flex items-center gap-2">
-                                                <Settings className="w-4 h-4 text-gray-400" /> 비용 상세 설정 (고급 사용자용)
-                                            </span>
-                                            <div className="flex items-center gap-2 opacity-40">
-                                                <span className="text-[10px] font-bold uppercase tracking-widest">{showCostDetails ? 'CLOSE' : 'OPEN'}</span>
-                                                <ChevronRight className={`w-4 h-4 transition-transform ${showCostDetails ? 'rotate-90' : ''}`} />
-                                            </div>
+                                {/* [B2C 수령인 및 주소] */}
+                                <div className="space-y-4 pt-4 border-t border-dashed border-slate-100">
+                                    <div className="flex items-center justify-between px-1">
+                                        <label className="text-[10px] font-black text-rose-400 uppercase">배송지 정보</label>
+                                        <button onClick={() => setIsSameAsOrderer(!isSameAsOrderer)}
+                                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black transition-all border
+                                            ${isSameAsOrderer ? 'bg-rose-600 border-rose-700 text-white shadow-md' : 'bg-white border-slate-200 text-slate-400'}`}>
+                                            <UserCheck className="w-3.5 h-3.5" /> 주문자고정
                                         </button>
-
-                                        {showCostDetails && (
-                                            <div className="p-6 space-y-5 animate-in slide-in-from-top-4 duration-300 border-t border-gray-50">
-                                                <div className="grid grid-cols-2 gap-6">
-                                                    <div className="space-y-3">
-                                                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">박스당 기준 단가</label>
-                                                        <div className="space-y-2">
-                                                            <div className="flex items-center justify-between bg-gray-50/80 p-3 rounded-2xl shadow-inner">
-                                                                <span className="text-xs font-bold text-gray-500">배송비</span>
-                                                                <div className="flex items-center gap-1">
-                                                                    <input type="text" value={formatCurrency(unitShippingCost)}
-                                                                        onChange={(e) => setUnitShippingCost(stripNonDigits(e.target.value))}
-                                                                        className="w-24 bg-transparent text-right text-sm font-black outline-none text-indigo-600" />
-                                                                </div>
-                                                            </div>
-                                                            <div className="flex items-center justify-between bg-gray-50/80 p-3 rounded-2xl shadow-inner">
-                                                                <span className="text-xs font-bold text-gray-500">자재비</span>
-                                                                <div className="flex items-center gap-1">
-                                                                    <input type="text" value={formatCurrency(unitMaterialCost)}
-                                                                        onChange={(e) => setUnitMaterialCost(stripNonDigits(e.target.value))}
-                                                                        className="w-24 bg-transparent text-right text-sm font-black outline-none text-pink-600" />
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="border-l-2 border-gray-50 pl-6 space-y-3">
-                                                        <label className="block text-[10px] font-black text-indigo-600 uppercase tracking-widest px-1">최종 지출 합계 (수정가능)</label>
-                                                        <div className="space-y-2">
-                                                            <div className="flex items-center justify-between p-1">
-                                                                <span className={`text-xs font-bold ${shippingPaymentType === 'cod' ? 'text-gray-300 line-through italic' : 'text-gray-500'} `}>총 배송비</span>
-                                                                <input type="text" value={formatCurrency(totalShippingCost)}
-                                                                    onChange={(e) => setTotalShippingCost(stripNonDigits(e.target.value))}
-                                                                    disabled={shippingPaymentType === 'cod'}
-                                                                    className={`w-32 border-b-2 border-gray-100 focus:border-indigo-500 text-right text-base font-black outline-none transition-all ${shippingPaymentType === 'cod' ? 'text-gray-300 bg-transparent' : 'text-indigo-600'} `} />
-                                                            </div>
-                                                            <div className="flex items-center justify-between p-1">
-                                                                <span className="text-xs font-bold text-gray-500">총 자재비</span>
-                                                                <input type="text" value={formatCurrency(totalMaterialCost)}
-                                                                    onChange={(e) => setTotalMaterialCost(stripNonDigits(e.target.value))}
-                                                                    className="w-32 border-b-2 border-gray-100 focus:border-pink-500 text-right text-base font-black outline-none transition-all text-pink-600" />
-                                                            </div>
-                                                        </div>
-                                                        {shippingPaymentType === 'cod' && (
-                                                            <div className="mt-4 p-2 bg-amber-50 rounded-lg flex items-center gap-2">
-                                                                <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse"></div>
-                                                                <p className="text-[9px] font-bold text-amber-700">착불 설정으로 인해 배송비가 0원 처리되었습니다.</p>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {!showCostDetails && (
-                                            <div className="px-5 py-3 bg-gray-50/50 flex justify-between items-center text-[10px] font-black uppercase tracking-wider">
-                                                <div className="flex gap-3">
-                                                    <span className="text-gray-400 italic">비용 설정을 확인하려면 OPEN 버튼을 누르세요.</span>
-                                                </div>
-                                                <span className="text-indigo-500 animate-bounce-horizontal">Edit Detail →</span>
-                                            </div>
-                                        )}
                                     </div>
-
-                                    {/* 정산 상태 및 결제 수단 (4번 전략) */}
-                                    <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 flex flex-col gap-4">
-                                        <div className="flex items-center justify-between px-2">
-                                            <span className="text-xs font-black text-slate-500 uppercase tracking-widest">정산 상태</span>
-                                            <div className="flex gap-2">
-                                                <button onClick={() => setPaymentStatus('completed')}
-                                                    className={`px-4 py-2 rounded-xl text-[11px] font-black transition-all border ${paymentStatus === 'completed' ? 'bg-indigo-600 border-indigo-700 text-white shadow-lg shadow-indigo-100' : 'bg-white border-slate-200 text-slate-400'} `}>
-                                                    입금완료
-                                                </button>
-                                                <button onClick={() => setPaymentStatus('pending')}
-                                                    className={`px-4 py-2 rounded-xl text-[11px] font-black transition-all border ${paymentStatus === 'pending' ? 'bg-amber-500 border-amber-600 text-white shadow-lg shadow-amber-100' : 'bg-white border-slate-200 text-slate-400'} `}>
-                                                    미입금(외상)
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center justify-between px-2">
-                                            <span className="text-xs font-black text-slate-500 uppercase tracking-widest">결제 수단</span>
-                                            <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
-                                                {['카드', '계좌이체', '현금', '외상'].map(method => (
-                                                    <button key={method} onClick={() => setPaymentMethod(method)}
-                                                        className={`px-3 py-2 rounded-xl text-[10px] font-black transition-all border shrink-0 ${paymentMethod === method ? 'bg-slate-800 border-slate-900 text-white' : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'} `}>
-                                                        {method}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* 실시간 이익 분석기 (슈퍼 프리미엄 디자인) */}
-                                    {courierBoxCount && courierTotalPrice && (
-                                        <div className="bg-gray-900 rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-2xl shadow-indigo-200">
-                                            {/* 배경 데코레이션 */}
-                                            <div className="absolute top-0 right-0 -mr-10 -mt-10 w-40 h-40 bg-pink-500 rounded-full blur-[80px] opacity-20"></div>
-                                            <div className="absolute bottom-0 left-0 -ml-10 -mb-10 w-40 h-40 bg-indigo-500 rounded-full blur-[80px] opacity-20"></div>
-
-                                            <div className="relative z-10 space-y-4">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="p-2 bg-white/10 rounded-xl">
-                                                            <Calculator className="w-5 h-5 text-pink-400" />
-                                                        </div>
-                                                        <div>
-                                                            <h4 className="text-sm font-black tracking-tight">순수익 시뮬레이션</h4>
-                                                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-0.5">Estimated Net Profit</p>
-                                                        </div>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <span className={`text-[10px] font-black px-2.5 py-1 rounded-full border border-white/10 bg-white/5 ${shippingPaymentType === 'prepaid' ? 'text-indigo-400' : 'text-amber-400'}`}>
-                                                            {shippingPaymentType === 'prepaid' ? '선불 결제 적용' : '착불 결제 적용'}
-                                                        </span>
-                                                    </div>
-                                                </div>
-
-                                                <div className="h-px bg-white/5 w-full"></div>
-
-                                                <div className="flex justify-between items-end">
-                                                    <div className="space-y-1.5">
-                                                        <div className="flex items-center gap-2 text-[11px] font-bold text-gray-400">
-                                                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
-                                                            판매 총액: {formatCurrency(courierTotalPrice)}
-                                                        </div>
-                                                        <div className="flex items-center gap-2 text-[11px] font-bold text-gray-400">
-                                                            <span className="w-1.5 h-1.5 rounded-full bg-pink-500"></span>
-                                                            지출 합계: -{formatCurrency(Number(totalShippingCost || 0) + Number(totalMaterialCost || 0))}
-                                                        </div>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <p className="text-sm font-black text-gray-500 uppercase tracking-tighter leading-none mb-1">Final Profit</p>
-                                                        <p className="text-4xl font-black text-white tracking-tighter tabular-nums drop-shadow-lg shadow-pink-500/50">
-                                                            {formatCurrency(calculateProfit())}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                    {!isSameAsOrderer && (
+                                        <div className="grid grid-cols-2 gap-2 animate-in slide-in-from-top-1 duration-200">
+                                            <input type="text" value={recipientName} onChange={(e) => setRecipientName(e.target.value)} placeholder="수령인명" className="p-3.5 bg-slate-50 border border-slate-100 rounded-xl text-sm font-black outline-none focus:border-rose-300" />
+                                            <input type="text" value={recipientPhone} onChange={(e) => setRecipientPhone(e.target.value)} placeholder="수령인 연락처" className="p-3.5 bg-slate-50 border border-slate-100 rounded-xl text-sm font-black outline-none focus:border-rose-300" />
                                         </div>
                                     )}
+                                    <AddressSearch label="" value={recipientAddress} onChange={setRecipientAddress} className="!space-y-0" placeholder="주소를 검색하세요" />
+                                    <input type="text" value={recipientDetailAddress} onChange={(e) => setRecipientDetailAddress(e.target.value)} placeholder="동/호수/상세주소 직접 입력" className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black outline-none focus:border-rose-400" />
                                 </div>
+
+                                <div className="grid grid-cols-2 gap-3 pt-4 border-t border-dashed border-slate-100">
+                                    <div className="space-y-1"><label className="text-[9px] font-black text-slate-300 px-1">박스 수</label><input type="text" value={courierBoxCount} onChange={(e) => setCourierBoxCount(e.target.value.replace(/[^0-9]/g, ''))} className="w-full p-4 bg-slate-50/50 border border-slate-100 rounded-2xl text-2xl font-black text-center" placeholder="0" /></div>
+                                    <div className="space-y-1"><label className="text-[9px] font-black text-slate-300 px-1">총 금액</label><input type="text" value={courierTotalPrice} onChange={(e) => setCourierTotalPrice(e.target.value.replace(/[^0-9]/g, ''))} className="w-full p-4 bg-emerald-50/30 border border-emerald-100 rounded-2xl text-2xl font-black text-center text-emerald-600" placeholder="0" /></div>
+                                </div>
+                                <div className="relative"><AlignLeft className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" /><input type="text" value={deliveryNote} onChange={(e) => setDeliveryNote(e.target.value)} className="w-full pl-11 p-3.5 bg-slate-50/50 border border-slate-100 rounded-2xl text-xs font-bold outline-none" placeholder="배송 특이사항 입력..." /></div>
                             </div>
                         )}
 
-                        {/* 버튼 영역 */}
-
-                        <div className="px-6 pb-8">
-                            <button onClick={handleSave} disabled={saving}
-                                className={`w-full py-6 rounded-[2rem] text-xl font-black text-white shadow-[0_20px_50px_rgba(0,0,0,0.1)] transition-all active:scale-[0.98] flex items-center justify-center gap-3 relative overflow-hidden group/save
-                            ${activeTab === 'bulk'
-                                        ? (editingRecordId ? 'bg-gradient-to-r from-indigo-400 to-indigo-500 shadow-indigo-100' : 'bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 shadow-indigo-200')
-                                        : (editingRecordId ? 'bg-gradient-to-r from-rose-400 to-rose-500 shadow-rose-100' : 'bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 shadow-rose-200')
-                                    } `}>
-                                <div className="absolute inset-0 bg-white/10 translate-y-full group-hover/save:translate-y-0 transition-transform duration-300" />
-                                {saving ? (
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin" />
-                                        <span className="animate-pulse font-bold">저장 중...</span>
-                                    </div>
-                                ) : (
-                                    <>
-                                        {activeTab === 'bulk' ? <Building2 className="w-7 h-7" /> : <Truck className="w-7 h-7" />}
-                                        <span className="tracking-tight">
-                                            {editingRecordId ? '수정 완료 및 저장' : (activeTab === 'bulk' ? '대량 납품 완료 저장' : '프리미엄 택배 주문 완료')}
-                                        </span>
-                                        <CheckCircle className="w-7 h-7 ml-1 opacity-50 group-hover/save:scale-125 group-hover/save:opacity-100 transition-all font-bold" />
-                                    </>
-                                )}
+                        {/* [결제 및 저장 버튼] */}
+                        <div className="grid grid-cols-2 gap-3 pt-4 border-t border-slate-100">
+                            <div className="flex gap-1 p-1 bg-slate-100 rounded-xl">
+                                {['카드', '현금', '계좌'].map(m => (<button key={m} onClick={() => setPaymentMethod(m)} className={`flex-1 py-2 rounded-lg text-xs font-black transition-all ${paymentMethod === m ? (activeTab === 'bulk' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-rose-600 text-white shadow-sm') : 'text-slate-400'}`}>{m}</button>))}
+                            </div>
+                            <button onClick={() => setPaymentStatus(paymentStatus === 'completed' ? 'pending' : 'completed')}
+                                className={`py-4 rounded-xl border-2 font-black text-xs transition-all flex items-center justify-center
+                                ${paymentStatus === 'completed' ? 'border-emerald-500 bg-emerald-50 text-emerald-600' : 'border-amber-400 bg-amber-50 text-amber-600'}`}>
+                                {paymentStatus === 'completed' ? '정산 완료' : '미정산 (외상)'}
                             </button>
-
-                            {editingRecordId && (
-                                <button onClick={handleCancelEdit} className="w-full py-3 bg-gray-100 text-gray-500 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors">
-                                    수정 취소 (새 입력으로 돌아가기)
-                                </button>
-                            )}
-
                         </div>
-                    </div>
-                </div>
 
-
-                {/* 최근 판매 기록 */}
-                <div className="space-y-4">
-                    <div className="flex items-center justify-between px-2">
-                        <h2 className="text-xl font-black text-gray-800 flex items-center gap-2">
-                            <History className="w-6 h-6 text-gray-400" />
-                            {activeTab === 'bulk' && selectedClientId
-                                ? `${partners.find(p => p.id === selectedClientId)?.company_name || '거래처'} 최근 기록`
-                                : '최근 통합 판매 기록'}
-                        </h2>
-                        <button
-                            onClick={() => setShowUnsettledOnly(!showUnsettledOnly)}
-                            className={`text - [9px] font - black px - 2.5 py - 1 rounded - full transition - all border
-                                ${showUnsettledOnly
-                                    ? 'bg-amber-600 border-amber-700 text-white shadow-lg shadow-amber-100'
-                                    : 'bg-white border-gray-200 text-gray-400 hover:border-amber-300 hover:text-amber-600'
-                                } `}
-                        >
-                            {showUnsettledOnly ? '⚠️ 미정산만 보기' : '전체 내역 보기'}
+                        <button onClick={handleSave} disabled={saving}
+                            className={`w-full py-5 rounded-[1.25rem] text-lg font-black text-white shadow-2xl transition-all active:scale-[0.98] flex items-center justify-center gap-2
+                            ${activeTab === 'bulk' ? 'bg-indigo-600 shadow-indigo-200' : 'bg-rose-600 shadow-rose-200'}`}>
+                            {saving ? <RefreshCcw className="w-6 h-6 animate-spin" /> : <><Save className="w-5 h-5" /> <span>{editingRecordId ? '수정 내용 저장' : '판매 기록 저장'}</span></>}
                         </button>
                     </div>
-
-                    <div className="space-y-4">
-                        {loading ? (
-                            <p className="text-center text-xs text-gray-400 py-10">로딩 중...</p>
-                        ) : history
-                            .filter(item => {
-                                // [1] 미정산 필터링 (공통)
-                                if (showUnsettledOnly && item.is_settled) return false;
-
-                                // [2] 탭별/상황별 필터링
-                                if (activeTab === 'bulk') {
-                                    // 대량납품 탭: 농협/B2B 거래만 표시
-                                    if (!settlementService.isB2B(item)) return false;
-                                    // 특정 거래처가 선택된 경우 해당 거래처만 표시
-                                    if (selectedClientId && item.partner_id !== selectedClientId) return false;
-                                } else {
-                                    // 개별택배 탭: 개별 판매(etc) 및 택배 거래만 표시
-                                    if (!settlementService.isB2C(item)) return false;
-                                    // 특정 고객이 선택된 경우 해당 고객만 표시
-                                    if (selectedSearchResult && item.customer_id !== selectedSearchResult.id) return false;
-                                }
-                                return true;
-                            })
-                            .length === 0 ? (
-                            <p className="text-center text-xs text-gray-400 py-10">기록이 없습니다.</p>
-                        ) : history
-                            .filter(item => {
-                                // [1] 미정산 필터링 (공통)
-                                if (showUnsettledOnly && item.is_settled) return false;
-
-                                // [2] 탭별/상황별 필터링
-                                if (activeTab === 'bulk') {
-                                    // 대량납품 탭: 농협/B2B 거래만 표시
-                                    if (!settlementService.isB2B(item)) return false;
-                                    // 특정 거래처가 선택된 경우 해당 거래처만 표시
-                                    if (selectedClientId && item.partner_id !== selectedClientId) return false;
-                                } else {
-                                    // 개별택배 탭: 개별 판매(etc) 및 택배 거래만 표시
-                                    if (!settlementService.isB2C(item)) return false;
-                                    // 특정 고객이 선택된 경우 해당 고객만 표시
-                                    if (selectedSearchResult && item.customer_id !== selectedSearchResult.id) return false;
-                                }
-                                return true;
-                            })
-                            .map(item => (
-                                <div key={item.id} className={`bg - white p - 4 rounded - 2xl border shadow - sm flex justify - between items - center transition - all
-                                ${editingRecordId === item.id ? 'border-yellow-400 ring-2 ring-yellow-100 bg-yellow-50' : 'border-gray-100'} `}>
-                                    <div className="flex items-center gap-3">
-                                        <div className={`w-10 h-10 rounded-xl flex flex-col items-center justify-center border relative
-                                        ${settlementService.isB2B(item) ? 'bg-indigo-50 border-indigo-100 text-indigo-500' : 'bg-pink-50 border-pink-100 text-pink-500'} `}>
-                                            <span className="text-lg leading-none">{CROPS.find(c => c.name === item.crop_name)?.icon || (settlementService.isB2B(item) ? '🏢' : '🍓')}</span>
-                                            {item.crop_name && <span className="text-[7px] font-black opacity-50 uppercase">{item.crop_name}</span>}
-                                        </div>
-                                        <div>
-                                            <div className="flex items-center gap-2 mb-0.5">
-                                                <p className="text-sm font-black text-gray-900 group-hover:text-indigo-600 transition-colors flex items-center gap-2">
-                                                    {item.partner?.company_name || item.customer?.name || item.customer_name || "미지정"}
-                                                    {item.delivery_method === 'courier' && item.recipient_name && (
-                                                        <span className="text-[10px] text-pink-500 font-bold bg-pink-50 px-1.5 py-0.5 rounded flex items-center gap-1">
-                                                            <ChevronRight className="w-2 h-2" /> {item.recipient_name}
-                                                        </span>
-                                                    )}
-                                                </p>
-                                                {(() => {
-                                                    const status = settlementService.getSettlementStatus(item);
-                                                    const isPending = item.payment_status === 'pending' || !item.is_settled;
-                                                    return (
-                                                        <div className="flex gap-1">
-                                                            <button
-                                                                onClick={async () => {
-                                                                    if (!confirm(`'${item.partner?.company_name || item.customer?.name || item.customer_name}' 정산 상태를 변경하시겠습니까 ? `)) return;
-                                                                    const { error } = await supabase.from('sales_records').update({
-                                                                        is_settled: !item.is_settled,
-                                                                        payment_status: !item.is_settled ? 'completed' : 'pending'
-                                                                    }).eq('id', item.id);
-                                                                    if (error) alert("상태 변경 실패: " + error.message);
-                                                                }}
-                                                                className={`text-[9px] font-black px-2 py-0.5 rounded-lg border transition-all active:scale-95 flex items-center gap-1
-                                                                ${!isPending ? 'bg-green-50 text-green-600 border-green-200' : 'bg-amber-50 text-amber-600 border-amber-200 animate-pulse'} `}>
-                                                                {!isPending ? <CheckCircle className="w-2.5 h-2.5" /> : <Clock className="w-2.5 h-2.5" />}
-                                                                {!isPending ? '정산완료' : '미정산(외상)'}
-                                                            </button>
-                                                            {item.payment_method && (
-                                                                <span className="text-[9px] font-black px-1.5 py-0.5 bg-slate-100 text-slate-500 border border-slate-200 rounded-lg">
-                                                                    {item.payment_method}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    );
-                                                })()}
-                                            </div>
-                                            <div className="flex flex-col gap-0.5 mt-0.5">
-                                                <p className="text-xs font-bold text-gray-400 flex items-center gap-1.5">
-                                                    <span className="text-gray-600">{item.quantity}{item.sale_unit || '박스'}</span>
-                                                    {item.grade && (
-                                                        <span className={`text-[9px] px-1 rounded-md font-black
-                                                            ${item.grade === '특' || item.grade === '특/상' ? 'bg-indigo-50 text-indigo-500' :
-                                                                item.grade === '상' ? 'bg-green-50 text-green-500' :
-                                                                    'bg-gray-100 text-gray-400'
-                                                            } `}>
-                                                            {item.grade}
-                                                        </span>
-                                                    )}
-                                                    {item.price ? ` · ${formatCurrency(item.price)} ` : <span className="text-red-400"> · 가격 미정</span>}
-                                                    {item.delivery_method === 'courier' && item.shipping_cost === 0 && <span className="text-pink-500 text-[10px]">(착불)</span>}
-                                                    · <span className="opacity-60">{new Date(item.recorded_at).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })}</span>
-                                                </p>
-                                                {item.harvest_note && (
-                                                    <p className="text-[10px] text-gray-400 italic flex items-center gap-1 bg-gray-50 px-2 py-0.5 rounded-md self-start border border-gray-100/50 mt-1">
-                                                        <AlignLeft className="w-2.5 h-2.5" /> {item.harvest_note}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                        <button onClick={() => handleEdit(item)}
-                                            className={`p - 2 rounded - lg transition - colors ${editingRecordId === item.id ? 'text-yellow-600 bg-yellow-200' : 'text-gray-300 hover:text-indigo-500 hover:bg-indigo-50'} `}>
-                                            <Edit2 className="w-4 h-4" />
-                                        </button>
-                                        <button onClick={() => handleDelete(item.id)} className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
-                    </div>
                 </div>
 
+                {/* [최근 기록 섹션] */}
+                <div className="space-y-3 pb-10">
+                    <div className="flex items-center justify-between px-1">
+                        <h2 className="text-sm font-black text-slate-800 flex items-center gap-2"><History className="w-4 h-4 text-slate-300" /> 최근 판매 내역</h2>
+                        <button onClick={() => setShowUnsettledOnly(!showUnsettledOnly)} className={`text-[10px] font-black px-3 py-1.5 rounded-full border transition-all ${showUnsettledOnly ? 'bg-amber-600 text-white border-amber-700' : 'bg-white text-slate-400 border-slate-100'}`}> {showUnsettledOnly ? '⚠️ 외상만 보기' : '전체 보기'} </button>
+                    </div>
+                    <div className="space-y-2">
+                        {history.filter(item => !showUnsettledOnly || !item.is_settled).map(item => (
+                            <div key={item.id} className="bg-white p-4 rounded-[1.5rem] border border-slate-50 flex justify-between items-center shadow-sm">
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-lg shadow-inner ${settlementService.isB2B(item) ? 'bg-indigo-50 text-indigo-500' : 'bg-rose-50 text-rose-500'}`}> {farmCrops.find((c: any) => c.crop_name === item.crop_name)?.crop_icon || '🍓'} </div>
+                                    <div className="leading-tight">
+                                        <div className="flex items-center gap-1.5 mb-0.5"><p className="text-xs font-black text-slate-800">{item.partner?.company_name || item.customer?.name || item.customer_name || '미지정'}</p><span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full ${item.is_settled ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>{item.is_settled ? '완료' : '미정산'}</span></div>
+                                        <p className="text-[10px] font-bold text-slate-400">{item.quantity}{item.sale_unit} · {formatCurrency(item.price || 0)}</p>
+                                    </div>
+                                </div>
+                                <div className="flex gap-1 items-center">
+                                    <button onClick={() => handleEdit(item)} className="p-2 text-slate-200 hover:text-indigo-400 transition-colors"><Edit2 className="w-4 h-4" /></button>
+                                    <button onClick={() => handleDelete(item.id)} className="p-2 text-slate-200 hover:text-red-400 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
             </div>
-
         </div>
     );
 }

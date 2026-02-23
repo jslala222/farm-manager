@@ -116,7 +116,7 @@ export default function Home() {
         <div className="grid grid-cols-3 gap-3">
           {[
             { href: "/harvest", label: "수확 기록", icon: Sprout, color: "red" },
-            { href: "/sales", label: "판매 기록", icon: TrendingUp, color: "green" },
+            { href: "/bulk", label: "납품 기록", icon: TrendingUp, color: "green" },
             { href: "/attendance", label: "출근 체크", icon: Users, color: "blue" },
           ].map(({ href, label, icon: Icon, color }) => (
             <a key={href} href={href}

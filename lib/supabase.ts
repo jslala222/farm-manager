@@ -1,20 +1,54 @@
 import { createBrowserClient } from '@supabase/ssr';
 
-// [bkit 진단] 초기 연결 상태 로그 (사장님 콘솔 확인용)
-if (typeof window !== 'undefined') {
-    console.log("🍓 [bkit] 수파베이스 통신 준비 중...");
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-        console.error("❌ [bkit] 치명적 오류: 환경 변수(URL/KEY)가 로드되지 않았습니다!");
-    } else {
-        console.log("🔗 접속 서버:", process.env.NEXT_PUBLIC_SUPABASE_URL.substring(0, 25) + "...");
-        console.log("✅ [bkit] 수파베이스 클라이언트 초기화 완료");
-    }
-}
+// [bkit 하이퍼-커넥트] 싱글톤 클라이언트 관리 (Hot Reload 시 중복 생성 방지)
+let supabaseInstance: any;
 
-export const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-);
+const getSupabaseClient = () => {
+    if (supabaseInstance) return supabaseInstance;
+
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+
+    if (typeof window !== 'undefined') {
+        console.log("🍓 [bkit] 하이퍼-커넥트 엔진 가동 중...");
+    }
+
+    supabaseInstance = createBrowserClient(url, key, {
+        auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true
+        },
+        global: {
+            // [bkit] 네트워크 불안정 시 자동 재시도 (사장님 지시사항: 약간 느려도 연결 유지)
+            fetch: async (url, options) => {
+                let retries = 0;
+                const maxRetries = 3;
+                while (retries < maxRetries) {
+                    try {
+                        const response = await fetch(url, options);
+                        // 5xx 서버 에러나 429(Too Many Requests)일 때만 재시도
+                        if (response.status >= 500 || response.status === 429) {
+                            throw new Error(`Server Error: ${response.status}`);
+                        }
+                        return response;
+                    } catch (err: any) {
+                        retries++;
+                        if (retries >= maxRetries) throw err;
+                        console.warn(`⚠️ [bkit] 연결 불안정... 재시도 중 (${retries}/${maxRetries})`);
+                        // 지수 백오프: 1초, 2초, 4초 대기 후 재시도
+                        await new Promise(res => setTimeout(res, 1000 * Math.pow(2, retries - 1)));
+                    }
+                }
+                return fetch(url, options);
+            }
+        }
+    });
+
+    return supabaseInstance;
+};
+
+export const supabase = getSupabaseClient();
 
 // 타입 정의
 export type UserRole = 'admin' | 'owner';
@@ -54,6 +88,19 @@ export interface FarmHouse {
     created_at: string;
 }
 
+// [bkit 엔터프라이즈] 농장별 재배 작물 관리 (하이브리드 다품종 시스템)
+export interface FarmCrop {
+    id: string;
+    farm_id: string;
+    crop_name: string;
+    crop_icon: string;
+    default_unit: string;
+    available_units: string[];
+    sort_order: number;
+    is_active: boolean;
+    created_at: string;
+}
+
 export interface HarvestRecord {
     id: string;
     farm_id: string;
@@ -82,6 +129,7 @@ export interface SalesRecord {
     customer_id?: string; // B2C
     delivery_method?: 'direct' | 'courier' | 'nonghyup';
     shipping_cost?: number;
+    shipping_fee_type?: string; // 선불 / 착불
     packaging_cost?: number;
     harvest_note?: string | null; // 수확 당시 특이사항 (현장 일기)
     recipient_name?: string | null; // 수령인 (사람/업체/부서 등)

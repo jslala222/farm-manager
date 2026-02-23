@@ -1,7 +1,6 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { useState } from "react";
 
 export default function QueryProvider({ children }: { children: React.ReactNode }) {
@@ -13,9 +12,9 @@ export default function QueryProvider({ children }: { children: React.ReactNode 
                         // [bkit 엔터프라이즈 설계]
                         staleTime: 60 * 1000, // 1분간 데이터 신선도 유지
                         gcTime: 5 * 60 * 1000, // 5분간 캐시 유지
-                        retry: 3, // 에러 발생 시 3번 자동 재접도 (1,000개 농장을 위한 안정성)
+                        retry: 3, // 에러 발생 시 3번 자동 재시도 (1,000개 농장을 위한 안정성)
                         retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // 지수 백오프 적용
-                        refetchOnWindowFocus: true, // 창을 다시 띄울 때 최정 정보로 갱신
+                        refetchOnWindowFocus: true, // 창을 다시 띄울 때 최신 정보로 갱신
                     },
                 },
             })
@@ -24,7 +23,6 @@ export default function QueryProvider({ children }: { children: React.ReactNode 
     return (
         <QueryClientProvider client={queryClient}>
             {children}
-            <ReactQueryDevtools initialIsOpen={false} />
         </QueryClientProvider>
     );
 }

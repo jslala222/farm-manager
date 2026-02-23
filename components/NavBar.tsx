@@ -17,7 +17,8 @@ import {
     Building2,
     Calculator,
     RefreshCcw,
-    AlignLeft
+    AlignLeft,
+    Truck
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { useEffect, useState } from "react";
@@ -28,7 +29,8 @@ const navItems = [
     { href: "/", label: "대시보드", icon: LayoutDashboard },
     { href: "/finance", label: "통합 결산", icon: Calculator },
     { href: "/harvest", label: "수확 관리", icon: Sprout },
-    { href: "/sales", label: "판매/출하", icon: ShoppingCart },
+    { href: "/bulk", label: "납품(B2B)", icon: Building2 },
+    { href: "/courier", label: "택배(B2C)", icon: Truck },
     { href: "/expenses", label: "지출 관리", icon: Receipt },
     { href: "/workers", label: "인력 관리", icon: Users },
     { href: "/clients", label: "거래처/고객", icon: Building2 },
@@ -240,14 +242,14 @@ export default function NavBar() {
                 </div>
             )}
 
-            {/* 모바일 하단 탭바 (주요 메뉴 5개로 확장) */}
+            {/* 모바일 하단 탭바 (B2B/B2C 포함 주요 메뉴 5개) */}
             <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-40 flex">
                 {navItems.slice(0, 5).map(({ href, label, icon: Icon }) => (
                     <Link key={href} href={href}
-                        className={`flex-1 flex flex-col items-center py-2 gap-0.5 text-xs font-medium transition-colors
+                        className={`flex-1 flex flex-col items-center py-2 gap-0.5 text-[10px] font-medium transition-colors
               ${pathname === href ? 'text-red-600' : 'text-gray-400 hover:text-gray-600'}`}>
                         <Icon className="w-5 h-5" />
-                        {label.replace(" 기록", "").replace(" 체크", "")}
+                        {label}
                     </Link>
                 ))}
             </nav>

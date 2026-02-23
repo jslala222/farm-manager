@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Save, Plus, Trash2, Home, LayoutGrid, AlertCircle, Building2, CheckCircle2 } from "lucide-react";
+import { Save, Plus, Trash2, Home, LayoutGrid, AlertCircle, Building2, CheckCircle2, Sprout, GripVertical } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
-import { supabase, Farm, FarmHouse } from "@/lib/supabase";
+import { supabase, Farm, FarmHouse, FarmCrop } from "@/lib/supabase";
 import { formatPhone, formatBusinessNumber } from "@/lib/utils";
 import AddressSearch from "@/components/AddressSearch";
 import { Search } from "lucide-react";
@@ -16,6 +16,12 @@ export default function SettingsPage() {
     const [initialHouseCount, setInitialHouseCount] = useState("");
     const [saving, setSaving] = useState(false);
     const [loadingHouses, setLoadingHouses] = useState(false);
+
+    // [bkit 엔터프라이즈] 작물 관리 상태
+    const [farmCrops, setFarmCrops] = useState<FarmCrop[]>([]);
+    const [newCropName, setNewCropName] = useState('');
+    const [newCropIcon, setNewCropIcon] = useState('🌱');
+    const [loadingCrops, setLoadingCrops] = useState(false);
 
     // 컴포넌트 마운트 시 초기화 확인
     useEffect(() => {
@@ -31,9 +37,11 @@ export default function SettingsPage() {
         if (storeFarm) {
             setFarm(storeFarm);
             fetchHouses();
+            fetchCrops();
         } else {
             setFarm({});
             setHouses([]);
+            setFarmCrops([]);
         }
     }, [storeFarm]);
 
@@ -195,7 +203,7 @@ export default function SettingsPage() {
             farm_id: storeFarm.id,
             house_number: num,
             house_name: `${num}동`,
-            current_crop: '딸기', // 기본값 설정
+            current_crop: '', // 기본값 비움 - 작물은 사용자가 설정에서 직접 입력
             is_active: true
         }));
 
@@ -219,6 +227,89 @@ export default function SettingsPage() {
         await supabase.from('farm_houses').delete().eq('id', id);
         fetchHouses();
     };
+
+    // ========================
+    // [bkit 엔터프라이즈] 작물 관리 CRUD
+    // ========================
+    const fetchCrops = async () => {
+        if (!storeFarm?.id) return;
+        setLoadingCrops(true);
+        const { data, error } = await supabase
+            .from('farm_crops')
+            .select('*')
+            .eq('farm_id', storeFarm.id)
+            .order('sort_order');
+        if (error) console.error('작물 목록 로딩 실패:', error);
+        setFarmCrops(data ?? []);
+        setLoadingCrops(false);
+    };
+
+    const addCrop = async () => {
+        if (!newCropName.trim() || !storeFarm?.id) return;
+        const exists = farmCrops.some(c => c.crop_name === newCropName.trim());
+        if (exists) { alert('이미 등록된 작물입니다.'); return; }
+
+        const defaultUnits = newCropName.trim() === '딸기' ? ['박스', 'kg', '다라'] : ['kg', '박스', '포대'];
+        const { error } = await supabase.from('farm_crops').insert({
+            farm_id: storeFarm.id,
+            crop_name: newCropName.trim(),
+            crop_icon: newCropIcon,
+            default_unit: defaultUnits[0],
+            available_units: defaultUnits,
+            sort_order: farmCrops.length,
+        });
+        if (error) { alert(`작물 추가 실패: ${error.message}`); return; }
+        setNewCropName('');
+        setNewCropIcon('🌱');
+        fetchCrops();
+    };
+
+    const deleteCrop = async (id: string, name: string) => {
+        if (!confirm(`"${name}" 작물을 삭제하시겠습니까? (기존 판매/수확 데이터는 유지됩니다)`)) return;
+        await supabase.from('farm_crops').delete().eq('id', id);
+        fetchCrops();
+    };
+
+    const addPresetCrops = async (presets: { name: string; icon: string; units: string[] }[]) => {
+        if (!storeFarm?.id) return;
+        const existing = farmCrops.map(c => c.crop_name);
+        const newOnes = presets.filter(p => !existing.includes(p.name));
+        if (newOnes.length === 0) { alert('모든 추천 작물이 이미 등록되어 있습니다.'); return; }
+        const inserts = newOnes.map((p, i) => ({
+            farm_id: storeFarm.id,
+            crop_name: p.name,
+            crop_icon: p.icon,
+            default_unit: p.units[0],
+            available_units: p.units,
+            sort_order: farmCrops.length + i,
+        }));
+        const { error } = await supabase.from('farm_crops').insert(inserts);
+        if (error) { alert(`프리셋 추가 실패: ${error.message}`); return; }
+        fetchCrops();
+    };
+
+    // 추천 프리셋 목록
+    const PRESETS = {
+        '딸기 농장': [
+            { name: '딸기', icon: '🍓', units: ['박스', 'kg', '다라'] },
+        ],
+        '채소 농장': [
+            { name: '감자', icon: '🥔', units: ['kg', '포대', '박스'] },
+            { name: '고구마', icon: '🍠', units: ['kg', '포대', '박스'] },
+            { name: '상추', icon: '🥬', units: ['kg', '박스'] },
+            { name: '고추', icon: '🌶️', units: ['kg', '근', '박스'] },
+        ],
+        '과일 농장': [
+            { name: '참외', icon: '🍈', units: ['박스', 'kg', '개'] },
+            { name: '멜론', icon: '🍈', units: ['박스', 'kg', '개'] },
+            { name: '토마토', icon: '🍅', units: ['kg', '박스'] },
+        ],
+        '버섯/특수': [
+            { name: '송이버섯', icon: '🍄', units: ['kg', '근', '박스'] },
+            { name: '느타리', icon: '🍄', units: ['kg', '박스'] },
+            { name: '두릉', icon: '🌱', units: ['kg', '근', '단'] },
+        ],
+    } as Record<string, { name: string; icon: string; units: string[] }[]>;
 
 
     const field = (label: string, key: keyof Farm, type = "text", placeholder = "") => (
@@ -359,6 +450,94 @@ export default function SettingsPage() {
                 </button>
             </section>
 
+            {/* [bkit 엔터프라이즈] 재배 작물 관리 섹션 */}
+            {storeFarm?.id && (
+                <section className="bg-white rounded-[2rem] shadow-xl shadow-gray-100/30 border border-gray-100 p-6 md:p-10 space-y-8 animate-in slide-in-from-bottom-8 duration-700">
+                    <div className="flex items-center justify-between gap-4">
+                        <h2 className="text-xl font-bold text-gray-800 flex items-center gap-3">
+                            <span className="w-2 h-7 bg-green-400 rounded-full"></span>
+                            재배 작물 관리
+                        </h2>
+                        <span className="px-3 py-1 bg-green-50 text-green-600 rounded-full text-xs font-bold">
+                            {farmCrops.length}개 등록
+                        </span>
+                    </div>
+
+                    {/* 작물 추가 입력 */}
+                    <div className="flex gap-3">
+                        <div className="relative flex-1 group">
+                            <Sprout className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-green-300 group-focus-within:text-green-500 transition-colors" />
+                            <input type="text" value={newCropName}
+                                onChange={(e) => setNewCropName(e.target.value)}
+                                placeholder="작물명 입력 (예: 딸기, 송이버섯, 참외...)"
+                                onKeyDown={(e) => e.key === 'Enter' && addCrop()}
+                                className="w-full p-4 pl-12 bg-gray-50 border border-transparent rounded-2xl focus:bg-white focus:border-green-200 focus:ring-4 focus:ring-green-50/50 outline-none transition-all shadow-inner" />
+                        </div>
+                        <select value={newCropIcon} onChange={(e) => setNewCropIcon(e.target.value)}
+                            className="w-16 text-center text-2xl bg-gray-50 border border-transparent rounded-2xl focus:border-green-200 outline-none cursor-pointer">
+                            <option value="🍓">🍓</option>
+                            <option value="🥔">🥔</option>
+                            <option value="🍠">🍠</option>
+                            <option value="🍈">🍈</option>
+                            <option value="🍅">🍅</option>
+                            <option value="🍄">🍄</option>
+                            <option value="🥬">🥬</option>
+                            <option value="🌶️">🌶️</option>
+                            <option value="🥒">🥒</option>
+                            <option value="🌱">🌱</option>
+                            <option value="📦">📦</option>
+                        </select>
+                        <button onClick={addCrop}
+                            className="bg-green-600 text-white px-6 py-4 rounded-2xl font-bold hover:bg-green-700 active:scale-95 transition-all shadow-lg shadow-green-100 flex items-center gap-2 shrink-0">
+                            <Plus className="w-5 h-5" />
+                            <span>추가</span>
+                        </button>
+                    </div>
+
+                    {/* 추천 프리셋 버튼 */}
+                    <div className="space-y-2">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">한국 농장 프리셋 (클릭하면 자동 추가)</p>
+                        <div className="flex gap-2 flex-wrap">
+                            {Object.entries(PRESETS).map(([label, crops]) => (
+                                <button key={label} onClick={() => addPresetCrops([...crops])}
+                                    className="px-4 py-2.5 bg-gray-50 hover:bg-green-50 border border-gray-100 hover:border-green-200 rounded-xl text-xs font-bold text-gray-500 hover:text-green-600 transition-all">
+                                    {label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* 등록된 작물 목록 */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                        {loadingCrops ? (
+                            <div className="col-span-full py-10 text-center text-gray-300">작물 목록 로딩 중...</div>
+                        ) : farmCrops.length === 0 ? (
+                            <div className="col-span-full text-center py-16 bg-gray-50/50 rounded-[2rem] border-2 border-dashed border-gray-100">
+                                <Sprout className="w-12 h-12 text-gray-200 mx-auto mb-4" />
+                                <p className="text-gray-400 font-medium">등록된 작물이 없습니다.<br />
+                                    <span className="text-xs text-gray-300">위의 프리셋 버튼을 누르거나 직접 입력해 주세요!</span>
+                                </p>
+                            </div>
+                        ) : (
+                            farmCrops.map((crop) => (
+                                <div key={crop.id}
+                                    className="group flex flex-col items-center justify-center p-5 rounded-[1.5rem] border-2 bg-white border-green-50 shadow-sm hover:shadow-green-100/50 hover:border-green-200 transition-all relative">
+                                    <button onClick={() => deleteCrop(crop.id, crop.crop_name)}
+                                        className="absolute top-2 right-2 text-gray-300 hover:text-red-500 transition-all p-1.5 opacity-0 group-hover:opacity-100 scale-75 hover:scale-100">
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                    <span className="text-3xl mb-1">{crop.crop_icon}</span>
+                                    <span className="text-sm font-black text-gray-800">{crop.crop_name}</span>
+                                    <span className="text-[9px] text-gray-400 font-bold mt-0.5">
+                                        {crop.available_units?.join(' · ') || crop.default_unit}
+                                    </span>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </section>
+            )}
+
             {/* 하우스 동 관리 섹션 (등록 후 노출) */}
             {storeFarm?.id && (
                 <section className="bg-white rounded-[2rem] shadow-xl shadow-gray-100/30 border border-gray-100 p-6 md:p-10 space-y-8 animate-in slide-in-from-bottom-8 duration-700">
@@ -385,50 +564,69 @@ export default function SettingsPage() {
                         </button>
                     </div>
 
-                    {/* 목록 가로 스크롤 또는 그리드 */}
+                    {/* 하우스 동 목록 - 작물 드롭다운 선택 */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                         {loadingHouses ? (
-                            <div className="col-span-full py-16 text-center text-gray-300 font-medium">Updating list...</div>
+                            <div className="col-span-full py-16 text-center text-gray-300 font-medium">하우스 목록 불러오는 중...</div>
                         ) : (
-                            houses.map((h) => (
-                                <div key={h.id}
-                                    className={`group flex flex-col items-center justify-between p-5 rounded-[1.5rem] border-2 transition-all relative ${h.is_active ? 'bg-white border-red-50 shadow-md hover:shadow-red-100/50 hover:border-red-200' : 'bg-gray-50 border-transparent opacity-50 grayscale'}`}>
+                            houses.map((h) => {
+                                const cropInfo = farmCrops.find(c => c.crop_name === h.current_crop);
+                                return (
+                                    <div key={h.id}
+                                        className={`group flex flex-col items-center justify-between p-5 rounded-[1.5rem] border-2 transition-all relative ${h.is_active ? 'bg-white border-red-50 shadow-md hover:shadow-red-100/50 hover:border-red-200' : 'bg-gray-50 border-transparent opacity-50 grayscale'}`}>
 
-                                    <button onClick={() => deleteHouse(h.id)}
-                                        className="absolute top-2 right-2 text-gray-300 hover:text-red-500 transition-all p-1.5 opacity-0 group-hover:opacity-100 scale-75 hover:scale-100">
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
+                                        <button onClick={() => deleteHouse(h.id)}
+                                            className="absolute top-2 right-2 text-gray-300 hover:text-red-500 transition-all p-1.5 opacity-0 group-hover:opacity-100 scale-75 hover:scale-100">
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
 
-                                    <div className="flex flex-col items-center gap-1 cursor-pointer select-none" onClick={() => toggleHouse(h.id, h.is_active)}>
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-1 transition-colors ${h.is_active ? 'bg-red-50 text-red-600' : 'bg-gray-200 text-gray-400'}`}>
-                                            <Building2 className="w-5 h-5" />
-                                        </div>
-                                        <span className={`text-xl font-black ${h.is_active ? 'text-gray-900' : 'text-gray-400'}`}>{h.house_number}동</span>
+                                        <div className="flex flex-col items-center gap-2 w-full">
+                                            {/* 작물 아이콘 (선택된 작물이 있으면 해당 아이콘, 없으면 하우스 아이콘) */}
+                                            <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors cursor-pointer ${h.is_active ? (cropInfo ? 'bg-green-50' : 'bg-red-50 text-red-600') : 'bg-gray-200 text-gray-400'}`}
+                                                onClick={() => toggleHouse(h.id, h.is_active)}>
+                                                {cropInfo ? (
+                                                    <span className="text-2xl">{cropInfo.crop_icon}</span>
+                                                ) : (
+                                                    <Building2 className="w-6 h-6" />
+                                                )}
+                                            </div>
 
-                                        {/* 작물 이름 입력 필드 (동 번호 아래) */}
-                                        <div className="w-full px-2 mt-1">
-                                            <input
-                                                type="text"
+                                            {/* 동 번호 */}
+                                            <span className={`text-xl font-black ${h.is_active ? 'text-gray-900' : 'text-gray-400'}`}>{h.house_number}동</span>
+
+                                            {/* 작물 선택 드롭다운 */}
+                                            <select
                                                 value={h.current_crop || ""}
-                                                placeholder="작물 직접입력"
                                                 onClick={(e) => e.stopPropagation()}
                                                 onChange={async (e) => {
                                                     const val = e.target.value;
                                                     const updated = houses.map(item => item.id === h.id ? { ...item, current_crop: val } : item);
                                                     setHouses(updated);
-                                                    // 실시간 저장 처리
                                                     await supabase.from('farm_houses').update({ current_crop: val }).eq('id', h.id);
                                                 }}
-                                                className="w-full text-center bg-red-50 border-b-2 border-transparent text-[10px] font-black text-red-600 focus:border-red-400 focus:bg-white transition-all outline-none py-1.5 rounded-lg placeholder:text-red-200"
-                                            />
-                                        </div>
+                                                className={`w-full text-center text-[11px] font-black py-2 px-1 rounded-xl border-2 outline-none cursor-pointer transition-all appearance-none
+                                                ${h.current_crop
+                                                        ? 'bg-green-50 border-green-200 text-green-700'
+                                                        : 'bg-yellow-50 border-yellow-200 text-yellow-600 animate-pulse'}`}
+                                            >
+                                                <option value="">-- 작물 선택 --</option>
+                                                {farmCrops.map(crop => (
+                                                    <option key={crop.id} value={crop.crop_name}>
+                                                        {crop.crop_icon} {crop.crop_name}
+                                                    </option>
+                                                ))}
+                                                <option value="휴작중">💤 휴작중</option>
+                                            </select>
 
-                                        <span className={`mt-1 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-tighter ${h.is_active ? 'bg-red-500 text-white shadow-sm shadow-red-200' : 'bg-gray-300 text-gray-500'}`}>
-                                            {h.is_active ? 'Active' : 'Hidden'}
-                                        </span>
+                                            {/* 상태 배지 */}
+                                            <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-tighter cursor-pointer ${h.is_active ? 'bg-red-500 text-white shadow-sm shadow-red-200' : 'bg-gray-300 text-gray-500'}`}
+                                                onClick={() => toggleHouse(h.id, h.is_active)}>
+                                                {h.is_active ? 'Active' : 'Hidden'}
+                                            </span>
+                                        </div>
                                     </div>
-                                </div>
-                            ))
+                                );
+                            })
                         )}
                     </div>
 
