@@ -117,7 +117,7 @@ export default function AdminPage() {
     );
 }
 
-function FarmCard({ farm, onToggle }: { farm: Farm; onToggle: (id: string, current: boolean) => void }) {
+function FarmCard({ farm, onToggle }: { farm: Farm; onToggle: (id: string, current: boolean, email?: string) => void }) {
     return (
         <div className={`bg-white rounded-2xl border shadow-sm p-4 ${farm.is_active ? 'border-gray-100' : 'border-yellow-200 bg-yellow-50'}`}>
             <div className="flex items-start justify-between gap-4">
