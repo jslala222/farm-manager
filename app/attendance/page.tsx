@@ -43,7 +43,7 @@ export default function AttendancePage() {
 
         const { data: workerData } = await supabase.from('workers').select('*')
             .eq('farm_id', farm.id).eq('is_active', true).order('name');
-        const activeWorkers = workerData ?? [];
+        const activeWorkers: Worker[] = workerData ?? [];
         setWorkers(activeWorkers);
 
         const { data: attendanceData } = await supabase.from('attendance_records').select('*')
