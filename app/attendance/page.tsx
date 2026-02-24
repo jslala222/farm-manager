@@ -55,7 +55,7 @@ export default function AttendancePage() {
         const initialNotes: Record<string, string> = {};
         const initialHeadcounts: Record<string, string> = {};
 
-        activeWorkers.forEach((w: Worker) => {
+        activeWorkers.forEach((w: any) => {
             const record = attendanceData?.find(a => a.worker_id === w.id);
             initialPresence[w.id] = record ? record.is_present : false;
             initialWages[w.id] = record?.daily_wage?.toString() || "";
