@@ -90,11 +90,18 @@ export default function BulkSalesPage() {
                     delivery_method: 'direct', // B2B 기본값
                     recorded_at: selectedDate + 'T' + new Date().toTimeString().split(' ')[0]
                 };
-                if (editingRecordId) await supabase.from('sales_records').update(saleData).eq('id', editingRecordId);
-                else await supabase.from('sales_records').insert([saleData]);
+                let result;
+                if (editingRecordId) result = await supabase.from('sales_records').update(saleData).eq('id', editingRecordId);
+                else result = await supabase.from('sales_records').insert([saleData]);
+                if (result.error) throw result.error;
             }
-            handleResetAllStates(); await fetchHistory();
-        } catch (error: any) { alert("저장 실패: " + error.message); } finally { setSaving(false); }
+            handleResetAllStates();
+            setTimeout(() => fetchHistory(), 200);
+            alert("✅ 납품 기록이 저장되었습니다!");
+        } catch (error: any) {
+            console.error("저장 오류 상세:", JSON.stringify(error, null, 2));
+            alert("저장 실패: " + (error.message || "알 수 없는 오류"));
+        } finally { setSaving(false); }
     };
 
     const handleEdit = (record: any) => {
