@@ -101,7 +101,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
                                 <X className="w-6 h-6 text-gray-400" />
                             </button>
                         </div>
-                        <div className="h-[450px]">
+                        <div className="h-[400px]">
                             <DaumPostcode
                                 onComplete={handleComplete}
                                 style={{ height: '100%', width: '100%' }}

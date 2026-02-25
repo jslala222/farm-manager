@@ -53,7 +53,7 @@ export default function DiagPage() {
 
     return (
         <div className="p-8">
-            <h1 className="text-2xl font-bold mb-4">DB 연결 정밀 진단</h1>
+            <h1 className="text-xl font-bold mb-4">DB 연결 정밀 진단</h1>
             <div className="bg-white rounded-lg shadow p-6 space-y-4">
                 <div>
                     <h2 className="font-bold">환경 변수 상태</h2>

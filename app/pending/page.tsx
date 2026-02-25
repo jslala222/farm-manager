@@ -20,7 +20,7 @@ export default function PendingPage() {
                     <AlertCircle className="w-10 h-10 text-yellow-600" />
                 </div>
 
-                <h1 className="text-2xl font-black text-gray-900 mb-4">승인 대기 중</h1>
+                <h1 className="text-xl font-black text-gray-900 mb-4">승인 대기 중</h1>
 
                 <p className="text-gray-500 mb-8 leading-relaxed">
                     사장님(관리자)의 승인이 완료된 후에<br />

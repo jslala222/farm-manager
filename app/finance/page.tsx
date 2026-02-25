@@ -395,22 +395,22 @@ export default function FinancePage() {
 
                 {/* 헤더 */}
                 <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="p-3 bg-gray-900 rounded-2xl shadow-xl shadow-gray-200">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <div className="p-3 bg-gray-900 rounded-2xl shadow-xl shadow-gray-200 shrink-0">
                             <Calculator className="w-6 h-6 text-white" />
                         </div>
-                        <div>
-                            <h1 className="text-2xl font-black text-gray-900 tracking-tight">통합 결산</h1>
-                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">통합 재무 관리 대시보드</p>
+                        <div className="min-w-0">
+                            <h1 className="text-xl font-black text-gray-900 tracking-tight whitespace-nowrap">통합 결산</h1>
+                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">재무 대시보드</p>
                         </div>
                     </div>
 
-                    <div className="relative">
+                    <div className="relative shrink-0">
                         <input
                             type="month"
                             value={selectedMonth}
                             onChange={(e) => setSelectedMonth(e.target.value)}
-                            className="bg-white border-2 border-gray-100 rounded-xl px-4 py-2 text-sm font-black text-gray-700 outline-none focus:border-gray-900 transition-all shadow-sm"
+                            className="bg-white border-2 border-gray-100 rounded-xl px-3 py-2 text-sm font-black text-gray-700 outline-none focus:border-gray-900 transition-all shadow-sm"
                         />
                     </div>
                 </div>
@@ -440,70 +440,70 @@ export default function FinancePage() {
                     <div className="absolute bottom-0 left-0 w-32 h-32 bg-indigo-500/10 rounded-full -ml-16 -mb-16 blur-2xl"></div>
 
                     <div className="relative z-10 space-y-6">
-                        <div className="flex justify-between items-start">
-                            <div>
+                        <div className="flex justify-between items-start gap-2">
+                            <div className="min-w-0">
                                 <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">이번 달 예상 순이익</p>
-                                <h2 className="text-5xl font-black tracking-tighter text-white">
+                                <h2 className="text-4xl font-black tracking-tighter text-white truncate">
                                     {formatCurrency(netProfit)}
                                 </h2>
                             </div>
-                            <div className={`px-4 py-2 rounded-2xl font-bold text-sm flex items-center gap-1.5 shadow-lg
+                            <div className={`px-3 py-1.5 rounded-2xl font-bold text-xs flex items-center gap-1 shadow-lg shrink-0
                                 ${netProfit >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                                {netProfit >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                                {netProfit >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
                                 {profitMargin.toFixed(1)}%
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/10">
-                            <div>
+                        <div className="grid grid-cols-2 gap-3 pt-4 border-t border-white/10">
+                            <div className="min-w-0">
                                 <p className="text-gray-500 text-[9px] font-bold uppercase mb-1">총 매출액</p>
-                                <p className="text-xl font-black text-white">{formatCurrency(revenue)}</p>
+                                <p className="text-lg font-black text-white truncate">{formatCurrency(revenue)}</p>
                             </div>
-                            <div className="text-right">
+                            <div className="text-right min-w-0">
                                 <p className="text-gray-500 text-[9px] font-bold uppercase mb-1">총 지출액</p>
-                                <p className="text-xl font-black text-gray-300">{formatCurrency(laborCost + mealCost + expense + shippingCost)}</p>
+                                <p className="text-lg font-black text-gray-300 truncate">{formatCurrency(laborCost + mealCost + expense + shippingCost)}</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                     {/* 인건비 섹션 */}
-                    <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm space-y-2 relative group-hover:bg-blue-50/30 transition-colors">
-                        <div className="flex items-center gap-2 mb-2">
-                            <div className="p-2 bg-blue-50 rounded-lg"><Users className="w-4 h-4 text-blue-600" /></div>
-                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">순수 인건비</span>
+                    <div className="bg-white p-4 rounded-[2rem] border border-gray-100 shadow-sm space-y-1.5 relative overflow-hidden">
+                        <div className="flex items-center gap-1.5 mb-1">
+                            <div className="p-1.5 bg-blue-50 rounded-lg shrink-0"><Users className="w-3.5 h-3.5 text-blue-600" /></div>
+                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-wide truncate">순수 인건비</span>
                         </div>
-                        <p className="text-2xl font-black text-gray-900">{formatCurrency(laborCost)}</p>
-                        <p className="text-[10px] text-gray-400 font-bold break-keep">일당/월급/성과급 등</p>
+                        <p className="text-xl font-black text-gray-900 truncate">{formatCurrency(laborCost)}</p>
+                        <p className="text-[9px] text-gray-400 font-bold">일당/월급 등</p>
                     </div>
 
                     {/* 식대 섹션 */}
-                    <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm space-y-2 relative group-hover:bg-amber-50/30 transition-colors">
-                        <div className="flex items-center gap-2 mb-2">
-                            <div className="p-2 bg-amber-50 rounded-lg"><Utensils className="w-4 h-4 text-amber-600" /></div>
-                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">식대 및 새참비</span>
+                    <div className="bg-white p-4 rounded-[2rem] border border-gray-100 shadow-sm space-y-1.5 relative overflow-hidden">
+                        <div className="flex items-center gap-1.5 mb-1">
+                            <div className="p-1.5 bg-amber-50 rounded-lg shrink-0"><Utensils className="w-3.5 h-3.5 text-amber-600" /></div>
+                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-wide truncate">식대/새참비</span>
                         </div>
-                        <p className="text-2xl font-black text-gray-900">{formatCurrency(mealCost)}</p>
-                        <p className="text-[10px] text-gray-400 font-bold break-keep">식당 결제/새참 비용</p>
+                        <p className="text-xl font-black text-gray-900 truncate">{formatCurrency(mealCost)}</p>
+                        <p className="text-[9px] text-gray-400 font-bold">식당/새참 비용</p>
                     </div>
 
-                    <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm space-y-2 relative">
-                        <div className="flex items-center gap-2 mb-2">
-                            <div className="p-2 bg-pink-50 rounded-lg"><Truck className="w-4 h-4 text-pink-600" /></div>
-                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">택배 및 자재비</span>
+                    <div className="bg-white p-4 rounded-[2rem] border border-gray-100 shadow-sm space-y-1.5 relative overflow-hidden">
+                        <div className="flex items-center gap-1.5 mb-1">
+                            <div className="p-1.5 bg-pink-50 rounded-lg shrink-0"><Truck className="w-3.5 h-3.5 text-pink-600" /></div>
+                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-wide truncate">택배/자재비</span>
                         </div>
-                        <p className="text-2xl font-black text-gray-900">{formatCurrency(shippingCost)}</p>
-                        <p className="text-[10px] text-gray-400 font-bold break-keep">판매장부의 택배/자재비</p>
+                        <p className="text-xl font-black text-gray-900 truncate">{formatCurrency(shippingCost)}</p>
+                        <p className="text-[9px] text-gray-400 font-bold">택배/자재비</p>
                     </div>
 
-                    <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm space-y-2 relative">
-                        <div className="flex items-center gap-2 mb-2">
-                            <div className="p-2 bg-indigo-50 rounded-lg"><Download className="w-4 h-4 text-indigo-600" /></div>
-                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">기타 영농지출</span>
+                    <div className="bg-white p-4 rounded-[2rem] border border-gray-100 shadow-sm space-y-1.5 relative overflow-hidden">
+                        <div className="flex items-center gap-1.5 mb-1">
+                            <div className="p-1.5 bg-indigo-50 rounded-lg shrink-0"><Download className="w-3.5 h-3.5 text-indigo-600" /></div>
+                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-wide truncate">기타 영농지출</span>
                         </div>
-                        <p className="text-2xl font-black text-gray-900">{formatCurrency(expense)}</p>
-                        <p className="text-[10px] text-gray-400 font-bold break-keep">공과금/유류비/기타 영농비</p>
+                        <p className="text-xl font-black text-gray-900 truncate">{formatCurrency(expense)}</p>
+                        <p className="text-[9px] text-gray-400 font-bold">공과금/유류비</p>
                     </div>
                 </div>
 
@@ -563,15 +563,15 @@ export default function FinancePage() {
                         </h3>
                         <span className="text-[10px] font-black text-amber-600 bg-amber-100 px-2.5 py-1 rounded-full">{unsettledB2bCount}건 대기</span>
                     </div>
-                    <div className="p-6 space-y-6">
-                        <div className="flex items-end justify-between">
-                            <div>
+                    <div className="p-5 space-y-5">
+                        <div className="flex items-end justify-between gap-3">
+                            <div className="min-w-0">
                                 <p className="text-xs font-bold text-gray-400 mb-1">입금 대기 중인 금액</p>
-                                <h4 className="text-3xl font-black text-gray-900">{formatCurrency(unsettledB2B)}</h4>
+                                <h4 className="text-2xl font-black text-gray-900 truncate">{formatCurrency(unsettledB2B)}</h4>
                             </div>
-                            <div className="text-right">
+                            <div className="text-right shrink-0">
                                 <p className="text-xs font-bold text-green-600 mb-1">확정/입금된 금액</p>
-                                <p className="text-lg font-black text-gray-400">{formatCurrency(b2bRevenue - unsettledB2B)}</p>
+                                <p className="text-base font-black text-gray-400">{formatCurrency(b2bRevenue - unsettledB2B)}</p>
                             </div>
                         </div>
 
@@ -636,26 +636,26 @@ export default function FinancePage() {
                                                         isExpanded ? prev.filter(k => k !== pKey) : [...prev, pKey]
                                                     );
                                                 }}
-                                                className={`w-full text-left bg-white rounded-3xl border-2 p-8 shadow-sm flex items-center justify-between transition-all active:scale-95 ${isExpanded ? 'border-green-400 bg-green-50/30' : 'border-gray-100'}`}
+                                                className={`w-full text-left bg-white rounded-3xl border-2 p-5 shadow-sm flex items-center justify-between transition-all active:scale-95 ${isExpanded ? 'border-green-400 bg-green-50/30' : 'border-gray-100'}`}
                                             >
-                                                <div className="flex-1 space-y-2 pr-4">
-                                                    <div className="flex items-center gap-3 flex-wrap">
-                                                        <h4 className="text-2xl font-black text-gray-900 leading-tight">{partnerGroup.companyName}</h4>
-                                                        <span className={`text-xs font-black px-3 py-1 rounded-full ${isExpanded ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                                                <div className="flex-1 min-w-0 space-y-1.5 pr-3">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <h4 className="text-lg font-black text-gray-900 leading-tight truncate">{partnerGroup.companyName}</h4>
+                                                        <span className={`text-xs font-black px-2 py-0.5 rounded-full shrink-0 ${isExpanded ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
                                                             {partnerGroup.dailyGroups.length}건
                                                         </span>
                                                     </div>
-                                                    <p className="text-base text-gray-400 font-black">
-                                                        미정산 <span className="mx-3 inline-block"></span> 총 {partnerGroup.totalQty.toLocaleString()}{partnerGroup.unit}
+                                                    <p className="text-sm text-gray-400 font-black truncate">
+                                                        미정산 · 총 {partnerGroup.totalQty.toLocaleString()}{partnerGroup.unit}
                                                     </p>
                                                 </div>
-                                                <div className="flex items-center gap-6 shrink-0">
+                                                <div className="flex items-center gap-3 shrink-0">
                                                     <div className="text-right">
-                                                        <p className={`text-xs font-black uppercase tracking-widest mb-1 ${isExpanded ? 'text-green-600' : 'text-amber-600'}`}>미결산 합계</p>
-                                                        <p className="text-3xl font-black text-gray-900">{formatCurrency(partnerGroup.totalAmount)}</p>
+                                                        <p className={`text-[10px] font-black uppercase tracking-wide mb-0.5 ${isExpanded ? 'text-green-600' : 'text-amber-600'}`}>미결산</p>
+                                                        <p className="text-xl font-black text-gray-900 whitespace-nowrap">{formatCurrency(partnerGroup.totalAmount)}</p>
                                                     </div>
-                                                    <div className={`p-3 rounded-full transition-transform duration-300 ${isExpanded ? 'rotate-180 bg-green-100 text-green-600' : 'bg-gray-50 text-gray-300'}`}>
-                                                        <ChevronRight className={`w-6 h-6 ${isExpanded ? 'rotate-90' : ''}`} />
+                                                    <div className={`p-2 rounded-full transition-transform duration-300 ${isExpanded ? 'rotate-180 bg-green-100 text-green-600' : 'bg-gray-50 text-gray-300'}`}>
+                                                        <ChevronRight className={`w-5 h-5 ${isExpanded ? 'rotate-90' : ''}`} />
                                                     </div>
                                                 </div>
                                             </button>
@@ -817,7 +817,7 @@ export default function FinancePage() {
                         <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
                             <div className="p-8 bg-orange-500 text-white flex justify-between items-center shadow-lg">
                                 <div>
-                                    <h3 className="text-2xl font-black tracking-tighter">{selectedGroup.companyName} 정산</h3>
+                                    <h3 className="text-xl font-black tracking-tighter truncate">{selectedGroup.companyName} 정산</h3>
                                     <div className="flex items-center gap-2 mt-2">
                                         <span className="bg-white/20 px-2 py-1 rounded text-[11px] font-black uppercase tracking-wider text-orange-50 border border-white/20">납품일자</span>
                                         <p className="text-lg text-white font-black tracking-tight">{selectedGroup.date}</p>

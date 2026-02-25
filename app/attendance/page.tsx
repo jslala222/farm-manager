@@ -186,45 +186,45 @@ export default function AttendancePage() {
                     {groupWorkers.map(worker => (
                         <div key={worker.id} className={`p-4 rounded-[2rem] border-2 transition-all shadow-sm
                             ${presence[worker.id] ? 'bg-blue-50 border-blue-200 shadow-blue-50/50' : 'bg-white border-gray-100'}`}>
-                            <div className="flex items-center justify-between gap-4 mb-3">
+                            <div className="flex items-center gap-4 mb-3">
                                 <button onClick={() => toggle(worker.id)}
                                     className={`flex items-center gap-3 flex-1 text-left group`}>
-                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all active:scale-90
+                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all active:scale-90 shrink-0
                                         ${presence[worker.id] ? 'bg-blue-600 shadow-lg shadow-blue-200' : 'bg-gray-50'}`}>
                                         {presence[worker.id]
                                             ? <UserCheck className="w-6 h-6 text-white" />
                                             : <UserX className="w-6 h-6 text-gray-300" />}
                                     </div>
-                                    <div>
-                                        <p className={`text-lg font-black ${presence[worker.id] ? 'text-gray-900' : 'text-gray-400'}`}>{worker.name}</p>
+                                    <div className="min-w-0">
+                                        <p className={`text-lg font-black truncate ${presence[worker.id] ? 'text-gray-900' : 'text-gray-400'}`}>{worker.name}</p>
                                         <p className={`text-[10px] font-bold ${presence[worker.id] ? 'text-blue-500' : 'text-gray-300'}`}>
                                             {presence[worker.id] ? '출근 완료' : '결근/대기'}
                                         </p>
                                     </div>
                                 </button>
-                                {presence[worker.id] && role === 'part_time' && (
-                                    <div className="flex gap-2 shrink-0">
-                                        <div className="w-16">
-                                            <label className="block text-[8px] font-bold text-gray-400 mb-0.5 ml-1 uppercase tracking-tighter">Count</label>
-                                            <input type="number" placeholder="인원" value={headcounts[worker.id] || ""}
-                                                onChange={(e) => setHeadcounts({ ...headcounts, [worker.id]: e.target.value })}
-                                                className="w-full p-2 bg-white border border-blue-100 rounded-xl text-xs font-bold focus:ring-2 focus:ring-blue-500 outline-none h-9 text-center" />
-                                        </div>
-                                        <div className="w-20">
-                                            <label className="block text-[8px] font-bold text-gray-400 mb-0.5 ml-1 uppercase tracking-tighter">Hours</label>
-                                            <input type="number" placeholder="시간" value={hours[worker.id] || ""}
-                                                onChange={(e) => setHours({ ...hours, [worker.id]: e.target.value })}
-                                                className="w-full p-2 bg-white border border-blue-100 rounded-xl text-xs font-bold focus:ring-2 focus:ring-blue-500 outline-none h-9 text-center" />
-                                        </div>
-                                        <div className="w-28">
-                                            <label className="block text-[8px] font-bold text-gray-400 mb-0.5 ml-1 uppercase tracking-tighter">Wage</label>
-                                            <input type="text" placeholder="일당(원)" value={wages[worker.id] ? `${Number(wages[worker.id].replace(/[^\d]/g, '')).toLocaleString()}원` : ""}
-                                                onChange={(e) => setWages({ ...wages, [worker.id]: e.target.value.replace(/[^\d]/g, '') })}
-                                                className="w-full p-2 bg-white border border-blue-100 rounded-xl text-xs font-bold focus:ring-2 focus:ring-blue-500 outline-none h-9 text-right" />
-                                        </div>
-                                    </div>
-                                )}
                             </div>
+                            {presence[worker.id] && role === 'part_time' && (
+                                <div className="flex gap-2 mb-3">
+                                    <div className="flex-1">
+                                        <label className="block text-[8px] font-bold text-gray-400 mb-0.5 ml-1 uppercase tracking-tighter">인원</label>
+                                        <input type="number" placeholder="명" value={headcounts[worker.id] || ""}
+                                            onChange={(e) => setHeadcounts({ ...headcounts, [worker.id]: e.target.value })}
+                                            className="w-full p-2 bg-white border border-blue-100 rounded-xl text-xs font-bold focus:ring-2 focus:ring-blue-500 outline-none h-9 text-center" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <label className="block text-[8px] font-bold text-gray-400 mb-0.5 ml-1 uppercase tracking-tighter">시간</label>
+                                        <input type="number" placeholder="h" value={hours[worker.id] || ""}
+                                            onChange={(e) => setHours({ ...hours, [worker.id]: e.target.value })}
+                                            className="w-full p-2 bg-white border border-blue-100 rounded-xl text-xs font-bold focus:ring-2 focus:ring-blue-500 outline-none h-9 text-center" />
+                                    </div>
+                                    <div className="flex-[2]">
+                                        <label className="block text-[8px] font-bold text-gray-400 mb-0.5 ml-1 uppercase tracking-tighter">일당(원)</label>
+                                        <input type="text" placeholder="일당" value={wages[worker.id] ? `${Number(wages[worker.id].replace(/[^\d]/g, '')).toLocaleString()}원` : ""}
+                                            onChange={(e) => setWages({ ...wages, [worker.id]: e.target.value.replace(/[^\d]/g, '') })}
+                                            className="w-full p-2 bg-white border border-blue-100 rounded-xl text-xs font-bold focus:ring-2 focus:ring-blue-500 outline-none h-9 text-right" />
+                                    </div>
+                                </div>
+                            )}
                             {presence[worker.id] && (
                                 <div className="mt-2 relative animate-in slide-in-from-top-2">
                                     <input type="text" placeholder="특이사항 메모 (예: 오전 작업 / 병원 방문 등)" value={notes[worker.id] || ""}
@@ -247,7 +247,7 @@ export default function AttendancePage() {
                         <UserCheck className="w-6 h-6 text-blue-600" />
                     </div>
                     <div>
-                        <h1 className="text-2xl font-black text-gray-900 leading-tight tracking-tighter">출근 체크</h1>
+                        <h1 className="text-xl font-black text-gray-900 leading-tight tracking-tighter">출근 체크</h1>
                         <div className="relative mt-1">
                             <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)}
                                 className="pl-6 pr-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-black outline-none border border-blue-100 focus:bg-white transition-all uppercase tracking-widest" />
@@ -355,7 +355,7 @@ export default function AttendancePage() {
                         <div className="flex justify-between items-start mb-6">
                             <div>
                                 <p className="text-blue-100 text-xs font-bold uppercase tracking-widest mb-1">TOTAL ATTENDANCE</p>
-                                <h2 className="text-5xl font-black tracking-tighter">{totalPresent.toLocaleString()} <span className="text-lg font-medium opacity-70">명</span></h2>
+                                <h2 className="text-4xl font-black tracking-tighter">{totalPresent.toLocaleString()} <span className="text-base font-medium opacity-70">명</span></h2>
                             </div>
                             <div className="text-right">
                                 <p className="text-[10px] text-blue-100 font-bold uppercase opacity-60 mb-2">Role Breakdown</p>

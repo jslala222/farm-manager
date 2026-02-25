@@ -221,15 +221,15 @@ export default function ClientsPage() {
 
             <div className="p-4 max-w-2xl mx-auto space-y-6 animate-in fade-in duration-500">
                 {/* 헤더 */}
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-black text-gray-900 leading-tight">거래처/고객 관리</h1>
+                <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                        <h1 className="text-xl font-black text-gray-900 leading-tight whitespace-nowrap">거래처/고객 관리</h1>
                         <p className="text-xs text-indigo-600 font-bold mt-1 uppercase tracking-widest flex items-center gap-1">
-                            <Star className="w-3 h-3 fill-indigo-600" /> B2B Partner & B2C Customer
+                            <Star className="w-3 h-3 fill-indigo-600" /> B2B & B2C
                         </p>
                     </div>
                     <button onClick={() => handleOpenModal()}
-                        className="p-4 bg-indigo-600 text-white rounded-2xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 active:scale-95 transition-all">
+                        className="p-4 bg-indigo-600 text-white rounded-2xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 active:scale-95 transition-all shrink-0">
                         <Plus className="w-6 h-6" />
                     </button>
                 </div>
@@ -356,15 +356,15 @@ export default function ClientsPage() {
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-300">
                     <div className="bg-white rounded-[2.5rem] p-8 w-full max-w-xl shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto custom-scrollbar border border-white/20">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <h2 className="text-2xl font-black text-gray-900 leading-tight">
+                        <div className="flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                                <h2 className="text-xl font-black text-gray-900 leading-tight">
                                     {activeTab === 'business' ? 'B2B 파트너' : '개인 고객'} {editingItem ? '수정' : '등록'}
                                 </h2>
                                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.2em] mt-1">Management Profile</p>
                             </div>
-                            <div className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center shadow-inner ${activeTab === 'business' ? 'bg-indigo-50 text-indigo-500' : 'bg-green-50 text-green-500'}`}>
-                                {activeTab === 'business' ? <Building2 className="w-8 h-8" /> : <Users className="w-8 h-8" />}
+                            <div className={`w-14 h-14 rounded-[1.5rem] flex items-center justify-center shadow-inner shrink-0 ${activeTab === 'business' ? 'bg-indigo-50 text-indigo-500' : 'bg-green-50 text-green-500'}`}>
+                                {activeTab === 'business' ? <Building2 className="w-7 h-7" /> : <Users className="w-7 h-7" />}
                             </div>
                         </div>
 

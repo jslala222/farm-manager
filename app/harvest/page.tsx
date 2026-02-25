@@ -395,32 +395,32 @@ export default function HarvestPage() {
 
     return (
         <div className="p-4 md:p-6 pb-24 max-w-2xl mx-auto space-y-6 animate-in fade-in duration-500">
-            <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-3">
-                    <div className="p-3 bg-green-100 rounded-xl shadow-lg shadow-green-100">
+            <div className="flex flex-wrap items-center justify-between mb-2 gap-2">
+                <div className="flex items-center gap-3 min-w-0">
+                    <div className="p-3 bg-green-100 rounded-xl shadow-lg shadow-green-100 shrink-0">
                         <Sprout className="w-6 h-6 text-green-600" />
                     </div>
-                    <div>
-                        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">수확 관리</h1>
+                    <div className="min-w-0">
+                        <h1 className="text-xl font-bold text-gray-900 tracking-tight whitespace-nowrap">수확 관리</h1>
                         <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Harvest Tracking</p>
                     </div>
                 </div>
 
                 {/* 탭 전환 버튼 */}
-                <div className="flex bg-gray-100 p-1 rounded-xl">
+                <div className="flex bg-gray-100 p-1 rounded-xl shrink-0">
                     <button onClick={() => setActiveTab('record')}
-                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'record' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-400'}`}>
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'record' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-400'}`}>
                         수확하기
                     </button>
                     <button onClick={() => {
                         setActiveTab('history');
                         fetchAllDiaries();
                     }}
-                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'history' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-400'}`}>
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'history' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-400'}`}>
                         영농일지
                     </button>
                     <button onClick={() => setActiveTab('analysis')}
-                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'analysis' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-400'}`}>
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'analysis' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-400'}`}>
                         통계보기
                     </button>
                 </div>
@@ -1156,19 +1156,19 @@ export default function HarvestPage() {
                         </div>
                     )}
 
-                    <div className="bg-green-600 rounded-3xl p-6 text-white shadow-xl shadow-green-200 relative overflow-hidden">
+                    <div className="bg-green-600 rounded-3xl p-5 text-white shadow-xl shadow-green-200 relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
-                        <div className="flex justify-between items-start mb-4">
-                            <div>
+                        <div className="flex justify-between items-start mb-4 gap-2">
+                            <div className="min-w-0">
                                 <p className="text-green-100 text-xs font-bold uppercase tracking-widest mb-1">Total Harvest</p>
-                                <h2 className="text-4xl font-black tracking-tighter">{totalHarvest.toLocaleString()} <span className="text-lg font-medium opacity-70">Box</span></h2>
+                                <h2 className="text-3xl font-black tracking-tighter truncate">{totalHarvest.toLocaleString()} <span className="text-base font-medium opacity-70">Box</span></h2>
                             </div>
-                            <div className="text-right">
-                                <p className="text-xs text-green-100 font-bold uppercase opacity-60">Grade Breakdown</p>
-                                <div className="space-y-1 mt-1">
-                                    <p className="text-lg font-black">특/상: {gradeStats.sang}박스</p>
-                                    <p className="text-lg font-black">중: {gradeStats.jung}박스</p>
-                                    <p className="text-lg font-black text-green-200">하: {gradeStats.ha}박스</p>
+                            <div className="text-right shrink-0">
+                                <p className="text-[10px] text-green-100 font-bold uppercase opacity-60">Grade</p>
+                                <div className="space-y-0.5 mt-1">
+                                    <p className="text-sm font-black">특/상: {gradeStats.sang}박스</p>
+                                    <p className="text-sm font-black">중: {gradeStats.jung}박스</p>
+                                    <p className="text-sm font-black text-green-200">하: {gradeStats.ha}박스</p>
                                 </div>
                             </div>
                         </div>
@@ -1179,19 +1179,19 @@ export default function HarvestPage() {
                         <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
                             <BarChart3 className="w-4 h-4 text-gray-400" /> 동별 수확량
                         </h3>
-                        <div className="grid grid-cols-3 gap-3">
+                        <div className="grid grid-cols-3 gap-2">
                             {houses.map(h => {
                                 const count = houseStats[h.house_number] || 0;
                                 const gBreakdown = houseGradeStats[h.house_number] || { sang: 0, jung: 0, ha: 0 };
                                 return (
-                                    <div key={h.id} className={`p-5 rounded-[32px] border transition-all ${count > 0 ? 'bg-white border-green-100 shadow-sm' : 'bg-gray-50 border-gray-100 opacity-50'}`}>
-                                        <div className="flex justify-between items-start mb-3">
+                                    <div key={h.id} className={`p-3 rounded-[24px] border transition-all ${count > 0 ? 'bg-white border-green-100 shadow-sm' : 'bg-gray-50 border-gray-100 opacity-50'}`}>
+                                        <div className="flex justify-between items-start mb-2">
                                             <div className="text-xs font-black text-gray-400 uppercase tracking-tighter">{h.house_number}동</div>
-                                            <div className="text-[10px] font-black text-green-600 bg-green-50 px-2 py-0.5 rounded-lg">TOTAL</div>
+                                            <div className="text-[9px] font-black text-green-600 bg-green-50 px-1.5 py-0.5 rounded-lg">TOT</div>
                                         </div>
-                                        <div className={`text-4xl font-black mb-4 tracking-tighter ${count > 0 ? 'text-gray-900' : 'text-gray-300'}`}>
+                                        <div className={`text-2xl font-black mb-2 tracking-tighter truncate ${count > 0 ? 'text-gray-900' : 'text-gray-300'}`}>
                                             {count.toLocaleString()}
-                                            <span className="text-xs font-medium ml-1 opacity-40">Box</span>
+                                            <span className="text-[10px] font-medium ml-0.5 opacity-40">B</span>
                                         </div>
                                         <div className="space-y-2 pt-3 border-t border-gray-50">
                                             <div className="flex justify-between items-center">

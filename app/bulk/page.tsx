@@ -117,20 +117,19 @@ export default function BulkSalesPage() {
         <div className="min-h-screen pb-24 bg-slate-50/30">
             <div className="max-w-2xl mx-auto p-3 md:p-6 space-y-4">
 
-                <div className="flex items-center justify-between px-1">
-                    <div className="flex flex-col">
-                        <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                            납품 (B2B) <Building2 className="w-5 h-5 text-indigo-500" />
+                <div className="flex items-center justify-between px-1 gap-2">
+                    <div className="flex flex-col min-w-0">
+                        <h1 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-1.5 whitespace-nowrap">
+                            납품 (B2B) <Building2 className="w-4 h-4 text-indigo-500" />
                         </h1>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="text-[10px] font-black text-white bg-indigo-500 px-2 py-0.5 rounded-full shadow-sm">
-                                {new Date(selectedDate).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })}
+                        <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
+                            <span className="text-[10px] font-black text-white bg-indigo-500 px-2 py-0.5 rounded-full shadow-sm whitespace-nowrap">
+                                {new Date(selectedDate).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })}
                             </span>
-                            <span className="text-[8px] text-slate-300 font-bold uppercase tracking-widest leading-none">Bulk Delivery</span>
                         </div>
                     </div>
                     <button onClick={() => setShowCalendar(!showCalendar)}
-                        className={`h-11 px-5 rounded-2xl font-black text-xs flex items-center gap-2 transition-all shadow-md border-2
+                        className={`h-10 px-4 rounded-2xl font-black text-xs flex items-center gap-1.5 transition-all shadow-md border-2 shrink-0
                         ${showCalendar ? 'bg-indigo-600 text-white border-indigo-700' : 'bg-white text-indigo-600 border-indigo-100 hover:bg-indigo-50'}`}>
                         <CalendarIcon className="w-4 h-4" /> {showCalendar ? '닫기' : '날짜변경'}
                     </button>

@@ -81,7 +81,7 @@ export default function LoginPage() {
                     <div className="inline-flex items-center justify-center w-12 h-12 bg-red-100 rounded-xl mb-3">
                         <Sprout className="w-6 h-6 text-red-600" />
                     </div>
-                    <h1 className="text-2xl font-bold">농장관리</h1>
+                    <h1 className="text-xl font-bold">농장관리</h1>
                     <p className="text-gray-500 text-sm">로그인 후 사용 가능합니다</p>
                 </div>
 

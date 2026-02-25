@@ -169,15 +169,15 @@ export default function SalesPage() {
             <div className="max-w-2xl mx-auto p-3 md:p-6 space-y-4">
 
                 {/* [초압축 고정 헤더] */}
-                <div className="flex items-center justify-between px-1">
-                    <div>
-                        <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                            판매 / 출하 <ShoppingCart className="w-5 h-5 text-emerald-500" />
+                <div className="flex items-center justify-between px-1 gap-2">
+                    <div className="min-w-0">
+                        <h1 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-1.5 whitespace-nowrap">
+                            판매 / 출하 <ShoppingCart className="w-4 h-4 text-emerald-500" />
                         </h1>
-                        <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest leading-none mt-0.5">Sales & Delivery System</p>
+                        <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest leading-none mt-0.5">Sales & Delivery</p>
                     </div>
                     <button onClick={() => setShowCalendar(!showCalendar)}
-                        className={`h-10 px-4 rounded-xl font-black text-xs flex items-center gap-2 transition-all shadow-sm border
+                        className={`h-10 px-4 rounded-xl font-black text-xs flex items-center gap-1.5 transition-all shadow-sm border shrink-0
                         ${showCalendar ? 'bg-emerald-600 text-white border-emerald-700' : 'bg-white text-emerald-600 border-emerald-100 hover:bg-emerald-50'}`}>
                         <CalendarIcon className="w-4 h-4" /> {showCalendar ? '닫기' : '달력'}
                     </button>

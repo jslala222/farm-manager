@@ -81,7 +81,7 @@ export default function RegisterPage() {
                     <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-2xl mb-4">
                         <CheckCircle className="w-8 h-8 text-green-600" />
                     </div>
-                    <h1 className="text-2xl font-bold text-gray-900 mb-2">신청 완료!</h1>
+                    <h1 className="text-xl font-bold text-gray-900 mb-2">신청 완료!</h1>
                     <p className="text-gray-500 mb-6">
                         농장 등록 신청이 완료되었습니다.<br />
                         관리자 승인 후 로그인이 가능합니다.
@@ -102,7 +102,7 @@ export default function RegisterPage() {
                     <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-2xl mb-4">
                         <Sprout className="w-8 h-8 text-red-600" />
                     </div>
-                    <h1 className="text-2xl font-bold text-gray-900">농장 등록 신청</h1>
+                    <h1 className="text-xl font-bold text-gray-900">농장 등록 신청</h1>
                     <p className="text-gray-500 mt-1 text-sm">관리자 승인 후 사용 가능합니다</p>
                 </div>
 
@@ -165,8 +165,8 @@ export default function RegisterPage() {
                                             className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none transition-all" />
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-12 gap-3 items-end">
-                                    <div className="col-span-9">
+                                <div className="flex gap-3 items-end">
+                                    <div className="flex-1 min-w-0">
                                         <AddressSearch
                                             label="농장 주소"
                                             value={form.address}
@@ -179,7 +179,7 @@ export default function RegisterPage() {
                                             placeholder="농장 위치를 검색하거나 입력하세요"
                                         />
                                     </div>
-                                    <div className="col-span-3 space-y-2">
+                                    <div className="w-20 space-y-2 shrink-0">
                                         <label className="text-[10px] font-bold text-gray-400 uppercase tracking-tight ml-1">우편번호</label>
                                         <input type="text" value={form.postal_code}
                                             onChange={(e) => setForm({ ...form, postal_code: e.target.value })}

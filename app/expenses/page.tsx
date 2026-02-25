@@ -183,11 +183,11 @@ export default function ExpensesPage() {
     return (
         <div className="p-4 md:p-6 pb-24 md:pb-6 max-w-2xl mx-auto space-y-6">
             {/* 헤더 서비스 상태 */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2">
+            <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                    <h1 className="text-xl font-black text-gray-900 tracking-tight flex items-center gap-2 whitespace-nowrap">
                         지출 관리
-                        <Receipt className="w-5 h-5 text-red-500" />
+                        <Receipt className="w-4 h-4 text-red-500 shrink-0" />
                     </h1>
                     <div className="flex flex-col gap-1 mt-1">
                         {(loading || isFetching) && (
@@ -212,7 +212,7 @@ export default function ExpensesPage() {
                 </div>
 
                 <button onClick={() => setIsAdding(!isAdding)}
-                    className={`px-5 py-2.5 rounded-2xl font-black flex items-center gap-2 transition-all shadow-lg active:scale-95 ${isAdding ? 'bg-gray-100 text-gray-500' : 'bg-red-600 text-white shadow-red-200'
+                    className={`px-5 py-2.5 rounded-2xl font-black flex items-center gap-2 transition-all shadow-lg active:scale-95 shrink-0 ${isAdding ? 'bg-gray-100 text-gray-500' : 'bg-red-600 text-white shadow-red-200'
                         }`}>
                     {isAdding ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
                     {isAdding ? '취소' : '지출 기록'}
@@ -364,29 +364,29 @@ export default function ExpensesPage() {
                     <div className="bg-white border-4 border-red-500 rounded-[2.5rem] p-6 space-y-5 shadow-2xl shadow-red-100/50 relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-full -mr-16 -mt-16 opacity-50"></div>
 
-                        <div className="flex items-center justify-between border-b border-red-100 pb-4 relative z-10">
-                            <p className="text-[12px] font-black text-red-600 uppercase tracking-widest flex items-center gap-2">
-                                <span className="w-2 h-2 bg-red-500 rounded-full animate-ping"></span>
-                                {monthlySummary.month}월 지출 실시간 리포트
+                        <div className="flex items-center justify-between border-b border-red-100 pb-3 relative z-10 gap-2">
+                            <p className="text-[11px] font-black text-red-600 uppercase tracking-wide flex items-center gap-1.5 min-w-0">
+                                <span className="w-2 h-2 bg-red-500 rounded-full animate-ping shrink-0"></span>
+                                <span className="truncate">{monthlySummary.month}월 지출 리포트</span>
                             </p>
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2 shrink-0">
                                 <span className="text-xs font-black text-gray-400 bg-gray-100 px-2 py-1 rounded-lg">{monthlySummary.count}건</span>
-                                <span className="text-xl font-black text-red-600">{formatCurrency(monthlySummary.total)}</span>
+                                <span className="text-lg font-black text-red-600 whitespace-nowrap">{formatCurrency(monthlySummary.total)}</span>
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-3 gap-3 relative z-10">
-                            <div className="bg-red-50/80 p-3 rounded-2xl border border-red-100 transition-transform hover:scale-[1.02]">
-                                <p className="text-[10px] font-black text-red-400 mb-1 flex items-center gap-1">🚜 농작</p>
-                                <p className="text-sm font-black text-gray-900 tracking-tighter">{formatCurrency(monthlySummary.stats['농작관리'])}</p>
+                        <div className="grid grid-cols-3 gap-2 relative z-10">
+                            <div className="bg-red-50/80 p-2.5 rounded-2xl border border-red-100 overflow-hidden">
+                                <p className="text-[10px] font-black text-red-400 mb-1">🚜 농작</p>
+                                <p className="text-xs font-black text-gray-900 tracking-tighter truncate">{formatCurrency(monthlySummary.stats['농작관리'])}</p>
                             </div>
-                            <div className="bg-orange-50/80 p-3 rounded-2xl border border-orange-100 transition-transform hover:scale-[1.02]">
-                                <p className="text-[10px] font-black text-orange-400 mb-1 flex items-center gap-1">💰 인건</p>
-                                <p className="text-sm font-black text-gray-900 tracking-tighter">{formatCurrency(monthlySummary.stats['인건비'])}</p>
+                            <div className="bg-orange-50/80 p-2.5 rounded-2xl border border-orange-100 overflow-hidden">
+                                <p className="text-[10px] font-black text-orange-400 mb-1">💰 인건</p>
+                                <p className="text-xs font-black text-gray-900 tracking-tighter truncate">{formatCurrency(monthlySummary.stats['인건비'])}</p>
                             </div>
-                            <div className="bg-sky-50/80 p-3 rounded-2xl border border-sky-100 transition-transform hover:scale-[1.02]">
-                                <p className="text-[10px] font-black text-sky-400 mb-1 flex items-center gap-1">🏠 가계</p>
-                                <p className="text-sm font-black text-gray-900 tracking-tighter">{formatCurrency(monthlySummary.stats['가계생활'])}</p>
+                            <div className="bg-sky-50/80 p-2.5 rounded-2xl border border-sky-100 overflow-hidden">
+                                <p className="text-[10px] font-black text-sky-400 mb-1">🏠 가계</p>
+                                <p className="text-xs font-black text-gray-900 tracking-tighter truncate">{formatCurrency(monthlySummary.stats['가계생활'])}</p>
                             </div>
                         </div>
                     </div>
@@ -416,27 +416,27 @@ export default function ExpensesPage() {
                         </div>
                     ) : filteredExpenses.length > 0 ? (
                         filteredExpenses.map((exp: Expenditure) => (
-                            <div key={exp.id} className="group bg-white rounded-3xl border border-gray-100 p-5 shadow-sm hover:shadow-xl hover:shadow-gray-200/50 transition-all flex items-center justify-between animate-in fade-in slide-in-from-bottom-2 duration-300">
-                                <div className="flex items-center gap-5">
-                                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-inner transition-colors ${exp.main_category === '농작관리' ? 'bg-red-50 text-red-500' : exp.main_category === '인건비' ? 'bg-orange-50 text-orange-500' : 'bg-sky-50 text-sky-500'
+                            <div key={exp.id} className="group bg-white rounded-3xl border border-gray-100 p-4 shadow-sm hover:shadow-xl hover:shadow-gray-200/50 transition-all flex items-center justify-between animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                <div className="flex items-center gap-3 min-w-0 flex-1">
+                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner transition-colors shrink-0 ${exp.main_category === '농작관리' ? 'bg-red-50 text-red-500' : exp.main_category === '인건비' ? 'bg-orange-50 text-orange-500' : 'bg-sky-50 text-sky-500'
                                         }`}>
-                                        {exp.main_category === '농작관리' ? <Tag size={24} /> : exp.main_category === '인건비' ? <Users size={24} /> : <Heart size={24} />}
+                                        {exp.main_category === '농작관리' ? <Tag size={20} /> : exp.main_category === '인건비' ? <Users size={20} /> : <Heart size={20} />}
                                     </div>
-                                    <div>
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <p className="text-xl font-black text-gray-900 tracking-tight">{formatCurrency(exp.amount)}</p>
-                                            <span className={`text-[10px] px-2 py-0.5 rounded-lg font-black ${exp.main_category === '농작관리' ? 'bg-red-50 text-red-600' : exp.main_category === '인건비' ? 'bg-orange-50 text-orange-600' : 'bg-sky-50 text-sky-600'
+                                    <div className="min-w-0 flex-1">
+                                        <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
+                                            <p className="text-lg font-black text-gray-900 tracking-tight">{formatCurrency(exp.amount)}</p>
+                                            <span className={`text-[10px] px-1.5 py-0.5 rounded-lg font-black shrink-0 ${exp.main_category === '농작관리' ? 'bg-red-50 text-red-600' : exp.main_category === '인건비' ? 'bg-orange-50 text-orange-600' : 'bg-sky-50 text-sky-600'
                                                 }`}>
                                                 {exp.sub_category || exp.category}
                                             </span>
-                                            <span className="text-[10px] bg-gray-50 text-gray-400 px-1.5 py-0.5 rounded border border-gray-100 font-bold">
+                                            <span className="text-[10px] bg-gray-50 text-gray-400 px-1.5 py-0.5 rounded border border-gray-100 font-bold shrink-0">
                                                 {exp.payment_method || '카드'}
                                             </span>
                                         </div>
-                                        <div className="flex items-center gap-2 text-sm text-gray-500">
-                                            <p className="font-bold">{exp.notes || '메모 없음'}</p>
-                                            <span className="text-gray-200">|</span>
-                                            <div className="flex items-center gap-1 text-[10px] font-bold text-gray-400">
+                                        <div className="flex items-center gap-1.5 text-xs text-gray-500 min-w-0">
+                                            <p className="font-bold truncate">{exp.notes || '메모 없음'}</p>
+                                            <span className="text-gray-200 shrink-0">|</span>
+                                            <div className="flex items-center gap-1 text-[10px] font-bold text-gray-400 shrink-0">
                                                 <CalendarIcon size={10} />
                                                 {exp.expense_date}
                                             </div>

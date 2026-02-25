@@ -479,17 +479,17 @@ export default function WorkersPage() {
 
     return (
         <div className="p-4 md:p-6 pb-24 max-w-2xl mx-auto space-y-6 animate-in fade-in duration-500">
-            <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-3">
-                    <div className="p-3 bg-red-600 rounded-xl shadow-lg shadow-red-200">
+            <div className="flex items-center justify-between mb-2 gap-2">
+                <div className="flex items-center gap-3 min-w-0">
+                    <div className="p-3 bg-red-600 rounded-xl shadow-lg shadow-red-200 shrink-0">
                         <Users className="w-6 h-6 text-white" />
                     </div>
-                    <div>
-                        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">인력 현황 관리</h1>
+                    <div className="min-w-0">
+                        <h1 className="text-xl font-bold text-gray-900 tracking-tight whitespace-nowrap">인력 현황 관리</h1>
                         <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Worker Management</p>
                     </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 shrink-0">
                     <button
                         onClick={() => {
                             fetchWorkers();
@@ -756,8 +756,8 @@ export default function WorkersPage() {
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-                        <table className="w-full text-left border-collapse">
+                    <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-x-auto">
+                        <table className="w-full text-left border-collapse min-w-[320px]">
                             <thead>
                                 <tr className="bg-gray-50 border-b border-gray-100">
                                     <th className="p-4 text-[10px] font-black text-gray-400 uppercase">근로자</th>

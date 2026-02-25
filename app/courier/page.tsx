@@ -218,19 +218,19 @@ export default function CourierSalesPage() {
         <div className="min-h-screen pb-24 bg-slate-50/30">
             <div className="max-w-2xl mx-auto p-3 md:p-6 space-y-4">
 
-                <div className="flex items-center justify-between px-1">
-                    <div className="flex items-center gap-3">
-                        <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                            택배 (B2C) <Truck className="w-5 h-5 text-rose-500" />
+                <div className="flex items-center justify-between px-1 gap-2">
+                    <div className="flex flex-wrap items-center gap-2 min-w-0">
+                        <h1 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-1.5 whitespace-nowrap">
+                            택배 (B2C) <Truck className="w-4 h-4 text-rose-500" />
                         </h1>
-                        <div className="bg-rose-500 text-white px-3 py-1.5 rounded-full shadow-lg shadow-rose-100 flex items-center gap-1.5 animate-in zoom-in-50 duration-500">
-                            <span className="text-[11px] font-black whitespace-nowrap">
+                        <div className="bg-rose-500 text-white px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1">
+                            <span className="text-[10px] font-black whitespace-nowrap">
                                 {new Date(selectedDate).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })}
                             </span>
                         </div>
                     </div>
                     <button onClick={() => setShowCalendar(!showCalendar)}
-                        className={`h-11 px-5 rounded-2xl font-black text-xs flex items-center gap-2 transition-all shadow-md border-2
+                        className={`h-10 px-4 rounded-2xl font-black text-xs flex items-center gap-1.5 transition-all shadow-md border-2 shrink-0
                         ${showCalendar ? 'bg-rose-600 text-white border-rose-700' : 'bg-white text-rose-600 border-rose-100 hover:bg-rose-50'}`}>
                         <CalendarIcon className="w-4 h-4" /> {showCalendar ? '닫기' : '날짜변경'}
                     </button>

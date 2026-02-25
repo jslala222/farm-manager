@@ -348,7 +348,7 @@ export default function SettingsPage() {
                         <Home className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                        <h1 className="text-2xl font-black text-gray-900 tracking-tight">농장 설정</h1>
+                        <h1 className="text-xl font-black text-gray-900 tracking-tight">농장 설정</h1>
                         <p className="text-sm text-gray-400 font-medium">Farm Settings & Management</p>
                     </div>
                 </div>
@@ -413,8 +413,8 @@ export default function SettingsPage() {
                         {field("사업자 등록 번호", "business_number", "text", "000-00-00000")}
                     </div>
 
-                    <div className="grid grid-cols-12 gap-3 items-end">
-                        <div className="col-span-9">
+                    <div className="flex gap-3 items-end">
+                        <div className="flex-1 min-w-0">
                             <AddressSearch
                                 label="배송/농장 주소"
                                 value={farm.address || ""}
@@ -427,7 +427,7 @@ export default function SettingsPage() {
                                 placeholder="도로명 주소를 입력하세요"
                             />
                         </div>
-                        <div className="col-span-3 space-y-2">
+                        <div className="w-20 space-y-2 shrink-0">
                             <label className="text-[10px] font-bold text-gray-400 uppercase tracking-tight ml-1">우편번호</label>
                             <input value={farm.postal_code || ""}
                                 onChange={(e) => setFarm({ ...farm, postal_code: e.target.value })}

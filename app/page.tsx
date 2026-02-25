@@ -36,7 +36,7 @@ export default function Home() {
         <div className="bg-red-50 p-6 rounded-[2.5rem] mb-6 shadow-inner">
           <Sprout className="w-12 h-12 text-red-600 animate-bounce-slow" />
         </div>
-        <h2 className="text-2xl font-black text-gray-900 mb-3">농장 정보가 없습니다</h2>
+        <h2 className="text-xl font-black text-gray-900 mb-3">농장 정보가 없습니다</h2>
         <p className="text-gray-500 mb-8 max-w-xs mx-auto leading-relaxed">
           시스템을 사용하려면 먼저 농장을 등록해야 합니다.<br />
           아래 버튼을 눌러 첫 농장을 설정해 주세요.
@@ -86,7 +86,7 @@ export default function Home() {
     <div className="p-4 md:p-6 pb-24 md:pb-6">
       {/* 헤더 */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">{farm?.farm_name ?? "관리 시스템"}</h1>
+        <h1 className="text-xl font-bold text-gray-900">{farm?.farm_name ?? "관리 시스템"}</h1>
         <p className="text-gray-500 text-sm mt-1">{todayDate}</p>
       </div>
 
@@ -102,9 +102,9 @@ export default function Home() {
               <div className={`${item.bg} p-2 rounded-xl`}><item.icon className={`w-5 h-5 text-${item.color}-600`} /></div>
               <span className="text-sm font-medium text-gray-500">{item.label}</span>
             </div>
-            <p className="text-3xl font-bold text-gray-900">
+            <p className="text-2xl font-bold text-gray-900">
               {loading ? "—" : item.val.toLocaleString()}
-              <span className="text-base font-normal text-gray-400 ml-1">{item.unit}</span>
+              <span className="text-sm font-normal text-gray-400 ml-1">{item.unit}</span>
             </p>
           </div>
         ))}
@@ -120,7 +120,7 @@ export default function Home() {
             { href: "/attendance", label: "출근 체크", icon: Users, color: "blue" },
           ].map(({ href, label, icon: Icon, color }) => (
             <a key={href} href={href}
-              className={`bg-white rounded-2xl border border-gray-100 shadow-xl shadow-gray-200/50 p-6 flex flex-col items-center gap-3 hover:translate-y-[-4px] active:translate-y-0 transition-all active:scale-95 group`}>
+              className={`bg-white rounded-2xl border border-gray-100 shadow-xl shadow-gray-200/50 p-4 flex flex-col items-center gap-3 hover:translate-y-[-4px] active:translate-y-0 transition-all active:scale-95 group`}>
               <div className={`p-4 bg-${color}-50 rounded-2xl group-hover:bg-${color}-100 transition-colors`}>
                 <Icon className={`w-8 h-8 text-${color}-500`} />
               </div>
