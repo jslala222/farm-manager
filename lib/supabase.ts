@@ -115,7 +115,7 @@ export interface HarvestRecord {
 export interface SalesRecord {
     id: string;
     farm_id: string;
-    sale_type: 'nonghyup' | 'jam' | 'etc';
+    sale_type: 'b2b' | 'b2c' | 'etc';
     quantity: number;
     price: number | null;
     customer_name: string | null;
@@ -127,7 +127,7 @@ export interface SalesRecord {
     client_id?: string; // Legacy
     partner_id?: string; // B2B
     customer_id?: string; // B2C
-    delivery_method?: 'direct' | 'courier' | 'nonghyup';
+    delivery_method?: 'direct' | 'courier';
     shipping_cost?: number;
     shipping_fee_type?: string; // 선불 / 착불
     packaging_cost?: number;

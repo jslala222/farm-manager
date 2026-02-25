@@ -390,8 +390,8 @@ export default function FinancePage() {
     const profitMargin = revenue > 0 ? (netProfit / revenue) * 100 : 0;
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-24 md:pb-12">
-            <div className="max-w-2xl mx-auto p-4 space-y-6 animate-in fade-in duration-500">
+        <div className="min-h-screen bg-gray-50 pb-20 md:pb-12">
+            <div className="max-w-2xl mx-auto p-4 space-y-3 animate-in fade-in duration-500">
 
                 {/* 헤더 */}
                 <div className="flex items-center justify-between">
@@ -417,7 +417,7 @@ export default function FinancePage() {
 
                 {/* DB 오류 알림 및 복구 버튼 (Zero-Touch) */}
                 {dbError && (
-                    <div className="bg-amber-50 border-2 border-amber-200 p-6 rounded-[2rem] space-y-4 animate-in slide-in-from-top-4 duration-500">
+                    <div className="bg-amber-50 border-2 border-amber-200 p-3 rounded-[2rem] space-y-4 animate-in slide-in-from-top-4 duration-500">
                         <div className="flex items-start gap-4">
                             <div className="p-3 bg-amber-100 rounded-2xl text-amber-600"><AlertTriangle className="w-6 h-6" /></div>
                             <div>
@@ -435,11 +435,11 @@ export default function FinancePage() {
                 )}
 
                 {/* 메인 수익성 카드 */}
-                <div className="bg-gray-900 rounded-[2.5rem] p-8 text-white shadow-2xl shadow-gray-200 relative overflow-hidden group">
+                <div className="bg-gray-900 rounded-[2.5rem] p-4 text-white shadow-2xl shadow-gray-200 relative overflow-hidden group">
                     <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -mr-24 -mt-24 blur-3xl group-hover:bg-white/10 transition-all duration-700"></div>
                     <div className="absolute bottom-0 left-0 w-32 h-32 bg-indigo-500/10 rounded-full -ml-16 -mb-16 blur-2xl"></div>
 
-                    <div className="relative z-10 space-y-6">
+                    <div className="relative z-10 space-y-3">
                         <div className="flex justify-between items-start gap-2">
                             <div className="min-w-0">
                                 <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">이번 달 예상 순이익</p>
@@ -508,7 +508,7 @@ export default function FinancePage() {
                 </div>
 
                 {/* [bkit 판매 달력 토글] */}
-                <div className="bg-white rounded-[2rem] border-2 border-green-100 p-6 flex flex-col gap-4 shadow-sm mb-6">
+                <div className="bg-white rounded-[2rem] border-2 border-green-100 p-3 flex flex-col gap-4 shadow-sm mb-6">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <div className="p-2 bg-green-50 rounded-xl">
@@ -557,11 +557,11 @@ export default function FinancePage() {
 
                 {/* B2B 미결산 관리 섹션 */}
                 <section className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden mb-6">
-                    <div className="p-6 bg-amber-50/50 border-b border-gray-50 flex items-center justify-between">
+                    <div className="p-3 bg-amber-50/50 border-b border-gray-50 flex items-center justify-between">
                         <h3 className="text-sm font-black text-amber-900 flex items-center gap-2">
                             <Building2 className="w-4 h-4" /> B2B 미결산 리포트
                         </h3>
-                        <span className="text-[10px] font-black text-amber-600 bg-amber-100 px-2.5 py-1 rounded-full">{unsettledB2bCount}건 대기</span>
+                        <span className="text-[10px] font-black text-amber-600 bg-amber-100 px-2.5 py-1 rounded-full">{unsettledRecords.reduce((acc: number, p: any) => acc + p.dailyGroups.length, 0)}건 대기</span>
                     </div>
                     <div className="p-5 space-y-5">
                         <div className="flex items-end justify-between gap-3">
@@ -596,7 +596,7 @@ export default function FinancePage() {
                         onClick={() => setFinanceTab('b2b')}
                         className={`flex-1 py-3 rounded-xl text-xs font-black transition-all ${financeTab === 'b2b' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400'}`}
                     >
-                        B2B 납품 정산 ({unsettledB2bCount})
+                        B2B 납품 정산 ({unsettledRecords.reduce((acc: number, p: any) => acc + p.dailyGroups.length, 0)})
                     </button>
                     <button
                         onClick={() => setFinanceTab('b2c')}
@@ -671,7 +671,7 @@ export default function FinancePage() {
                                                                 setActualSettleAmount("");
                                                                 setIsSettleModalOpen(true);
                                                             }}
-                                                            className="w-full text-left bg-white rounded-[2rem] border-2 border-gray-50 p-6 shadow-sm flex items-center justify-between hover:border-green-300 transition-all active:scale-[0.98]"
+                                                            className="w-full text-left bg-white rounded-[2rem] border-2 border-gray-50 p-3 shadow-sm flex items-center justify-between hover:border-green-300 transition-all active:scale-[0.98]"
                                                         >
                                                             <div className="flex gap-6 items-center">
                                                                 <div className="w-16 h-16 bg-white rounded-2xl flex flex-col items-center justify-center border-2 border-green-100 shadow-sm">
@@ -762,7 +762,7 @@ export default function FinancePage() {
                 </section>
 
                 {/* 판매 채널별 매출 비중 */}
-                <section className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm p-6 space-y-6">
+                <section className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm p-3 space-y-3">
                     <h3 className="text-sm font-black text-gray-800 flex items-center gap-2">
                         <BarChart3 className="w-4 h-4 text-gray-400" /> 판매 채널별 매출
                     </h3>
@@ -791,7 +791,7 @@ export default function FinancePage() {
                 </section>
 
                 {/* 기타 지출 상세 */}
-                <section className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm p-6 space-y-4">
+                <section className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm p-3 space-y-4">
                     <div className="flex justify-between items-center">
                         <h3 className="text-sm font-black text-gray-800 flex items-center gap-2">
                             <ArrowDownCircle className="w-4 h-4 text-red-400" /> 일반 기타 지출
@@ -815,7 +815,7 @@ export default function FinancePage() {
                 {isSettleModalOpen && selectedGroup && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
                         <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-                            <div className="p-8 bg-orange-500 text-white flex justify-between items-center shadow-lg">
+                            <div className="p-4 bg-orange-500 text-white flex justify-between items-center shadow-lg">
                                 <div>
                                     <h3 className="text-xl font-black tracking-tighter truncate">{selectedGroup.companyName} 정산</h3>
                                     <div className="flex items-center gap-2 mt-2">

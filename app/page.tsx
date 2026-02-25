@@ -32,8 +32,8 @@ export default function Home() {
   // 농장이 없는 경우 (신규 유저)
   if (initialized && !farm && !loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[70vh] p-6 text-center">
-        <div className="bg-red-50 p-6 rounded-[2.5rem] mb-6 shadow-inner">
+      <div className="flex flex-col items-center justify-center min-h-[70vh] p-3 text-center">
+        <div className="bg-red-50 p-3 rounded-[2.5rem] mb-6 shadow-inner">
           <Sprout className="w-12 h-12 text-red-600 animate-bounce-slow" />
         </div>
         <h2 className="text-xl font-black text-gray-900 mb-3">농장 정보가 없습니다</h2>
@@ -83,7 +83,7 @@ export default function Home() {
 
 
   return (
-    <div className="p-4 md:p-6 pb-24 md:pb-6">
+    <div className="p-4 md:p-3 pb-20 md:pb-6">
       {/* 헤더 */}
       <div className="mb-6">
         <h1 className="text-xl font-bold text-gray-900">{farm?.farm_name ?? "관리 시스템"}</h1>

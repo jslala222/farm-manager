@@ -240,7 +240,7 @@ export default function AttendancePage() {
     };
 
     return (
-        <div className="p-4 md:p-6 pb-32 max-w-2xl mx-auto space-y-8 animate-in fade-in duration-500">
+        <div className="p-4 md:p-3 pb-32 max-w-2xl mx-auto space-y-8 animate-in fade-in duration-500">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <div className="p-3 bg-blue-100 rounded-2xl shadow-sm">
@@ -275,7 +275,7 @@ export default function AttendancePage() {
 
                     {loading ? <div className="text-center py-24 text-gray-300 animate-pulse font-black text-lg">데이터 동기화 중...</div> : (
                         <>
-                            <div className="bg-white rounded-[3rem] border border-gray-100 shadow-2xl shadow-gray-50 p-8">
+                            <div className="bg-white rounded-[3rem] border border-gray-100 shadow-2xl shadow-gray-50 p-4">
                                 {renderGroup("💼 가족/식구", 'family')}
                                 {renderGroup("🤝 일반직원", 'staff')}
                                 {renderGroup("🌏 외국인 근로자", 'foreign')}
@@ -348,9 +348,9 @@ export default function AttendancePage() {
                     )}
                 </>
             ) : (
-                <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+                <div className="space-y-3 animate-in slide-in-from-bottom-4 duration-500">
                     {/* 상단 통합 카드 (수확 통계 스타일) */}
-                    <div className="bg-blue-600 rounded-[2.5rem] p-8 text-white shadow-2xl shadow-blue-200 relative overflow-hidden">
+                    <div className="bg-blue-600 rounded-[2.5rem] p-4 text-white shadow-2xl shadow-blue-200 relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
                         <div className="flex justify-between items-start mb-6">
                             <div>
@@ -376,19 +376,19 @@ export default function AttendancePage() {
                             <h3 className="text-lg font-black text-gray-800">유형별 출근 현황</h3>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-md transition-all text-center">
+                            <div className="bg-white p-3 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-md transition-all text-center">
                                 <p className="text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">💼 가족/식구</p>
                                 <p className="text-3xl font-black text-blue-600">{roleStats.family}</p>
                             </div>
-                            <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-md transition-all text-center">
+                            <div className="bg-white p-3 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-md transition-all text-center">
                                 <p className="text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">🤝 일반직원</p>
                                 <p className="text-3xl font-black text-gray-900">{roleStats.staff}</p>
                             </div>
-                            <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-md transition-all text-center">
+                            <div className="bg-white p-3 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-md transition-all text-center">
                                 <p className="text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">🌏 외국인</p>
                                 <p className="text-3xl font-black text-gray-900">{roleStats.foreign}</p>
                             </div>
-                            <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-md transition-all text-center">
+                            <div className="bg-white p-3 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-md transition-all text-center">
                                 <p className="text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">⏳ 알바/단기</p>
                                 <p className="text-3xl font-black text-blue-600">{roleStats.part_time}</p>
                             </div>
@@ -397,7 +397,7 @@ export default function AttendancePage() {
 
                     {/* 날짜별 추이 (수확 날짜별 추이 대응) */}
                     <section className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
-                        <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-gray-50/30">
+                        <div className="p-3 border-b border-gray-50 flex items-center justify-between bg-gray-50/30">
                             <h3 className="text-base font-black text-gray-800 flex items-center gap-2">
                                 <CalendarDays className="w-5 h-5 text-gray-400" />
                                 날짜별 출근 추이

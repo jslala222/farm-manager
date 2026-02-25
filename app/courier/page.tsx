@@ -157,7 +157,7 @@ export default function CourierSalesPage() {
                 shipping_cost: finalShipping,
                 shipping_fee_type: shippingFeeType,
                 crop_name: cropName, sale_unit: saleUnit,
-                sale_type: 'etc', // [필수] 기본 판매 타입 지정
+                sale_type: 'b2c',
                 delivery_method: 'courier', is_settled: paymentStatus === 'completed', payment_status: paymentStatus, payment_method: paymentMethod,
                 recorded_at: selectedDate + 'T' + new Date().toTimeString().split(' ')[0]
             };
@@ -215,8 +215,8 @@ export default function CourierSalesPage() {
     const handleDelete = async (id: string) => { if (!confirm("삭제하시겠습니까?")) return; const { error } = await supabase.from('sales_records').delete().eq('id', id); if (!error) fetchHistory(); };
 
     return (
-        <div className="min-h-screen pb-24 bg-slate-50/30">
-            <div className="max-w-2xl mx-auto p-3 md:p-6 space-y-4">
+        <div className="min-h-screen pb-20 bg-slate-50/30">
+            <div className="max-w-2xl mx-auto p-3 md:p-3 space-y-4">
 
                 <div className="flex items-center justify-between px-1 gap-2">
                     <div className="flex flex-wrap items-center gap-2 min-w-0">
@@ -276,7 +276,7 @@ export default function CourierSalesPage() {
                     </div>
                 </div>
 
-                <div className="bg-white rounded-[2rem] shadow-xl border border-rose-100 p-5 space-y-6">
+                <div className="bg-white rounded-[2rem] shadow-xl border border-rose-100 p-5 space-y-3">
                     <div className="space-y-4">
                         <div className="space-y-3">
                             <label className="text-[10px] font-black text-rose-500 uppercase px-1">주문자 정보</label>

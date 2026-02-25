@@ -76,7 +76,7 @@ export default function LoginPage() {
 
     return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-            <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+            <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-4 border border-gray-100">
                 <div className="text-center mb-8">
                     <div className="inline-flex items-center justify-center w-12 h-12 bg-red-100 rounded-xl mb-3">
                         <Sprout className="w-6 h-6 text-red-600" />

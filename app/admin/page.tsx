@@ -52,7 +52,7 @@ export default function AdminPage() {
     const pendingFarms = farms.filter(f => !f.is_active);
 
     return (
-        <div className="p-4 md:p-6 pb-24 md:pb-6 max-w-4xl mx-auto">
+        <div className="p-4 md:p-3 pb-20 md:pb-6 max-w-4xl mx-auto">
             <div className="mb-6">
                 <h1 className="text-xl font-bold text-gray-900">관리자 대시보드</h1>
                 <p className="text-gray-500 text-sm mt-1">전체 농장 현황 및 승인 관리</p>

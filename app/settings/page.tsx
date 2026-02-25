@@ -340,7 +340,7 @@ export default function SettingsPage() {
     }
 
     return (
-        <div className="p-4 md:p-8 pb-32 max-w-2xl mx-auto space-y-10 animate-in fade-in duration-700">
+        <div className="p-4 md:p-4 pb-32 max-w-2xl mx-auto space-y-10 animate-in fade-in duration-700">
             {/* 상단 헤더 */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -377,7 +377,7 @@ export default function SettingsPage() {
             )}
 
             {/* 기본 정보 섹션 */}
-            <section className="bg-white rounded-[2rem] shadow-xl shadow-gray-100/50 border border-gray-100 p-6 md:p-10 space-y-8 relative overflow-hidden">
+            <section className="bg-white rounded-[2rem] shadow-xl shadow-gray-100/50 border border-gray-100 p-3 md:p-10 space-y-8 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-red-50/50 rounded-full -mr-16 -mt-16 blur-3xl"></div>
 
                 <h2 className="text-xl font-bold text-gray-800 flex items-center gap-3 relative">
@@ -452,7 +452,7 @@ export default function SettingsPage() {
 
             {/* [bkit 엔터프라이즈] 재배 작물 관리 섹션 */}
             {storeFarm?.id && (
-                <section className="bg-white rounded-[2rem] shadow-xl shadow-gray-100/30 border border-gray-100 p-6 md:p-10 space-y-8 animate-in slide-in-from-bottom-8 duration-700">
+                <section className="bg-white rounded-[2rem] shadow-xl shadow-gray-100/30 border border-gray-100 p-3 md:p-10 space-y-8 animate-in slide-in-from-bottom-8 duration-700">
                     <div className="flex items-center justify-between gap-4">
                         <h2 className="text-xl font-bold text-gray-800 flex items-center gap-3">
                             <span className="w-2 h-7 bg-green-400 rounded-full"></span>
@@ -540,7 +540,7 @@ export default function SettingsPage() {
 
             {/* 하우스 동 관리 섹션 (등록 후 노출) */}
             {storeFarm?.id && (
-                <section className="bg-white rounded-[2rem] shadow-xl shadow-gray-100/30 border border-gray-100 p-6 md:p-10 space-y-8 animate-in slide-in-from-bottom-8 duration-700">
+                <section className="bg-white rounded-[2rem] shadow-xl shadow-gray-100/30 border border-gray-100 p-3 md:p-10 space-y-8 animate-in slide-in-from-bottom-8 duration-700">
                     <div className="flex items-center justify-between gap-4">
                         <h2 className="text-xl font-bold text-gray-800 flex items-center gap-3">
                             <span className="w-2 h-7 bg-red-400 rounded-full"></span>

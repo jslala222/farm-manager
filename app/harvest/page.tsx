@@ -394,7 +394,7 @@ export default function HarvestPage() {
     const gradeColor = (g: string) => ({ sang: 'text-red-600 bg-red-50', jung: 'text-orange-600 bg-orange-50', ha: 'text-yellow-600 bg-yellow-50' }[g] ?? 'text-gray-600 bg-gray-50');
 
     return (
-        <div className="p-4 md:p-6 pb-24 max-w-2xl mx-auto space-y-6 animate-in fade-in duration-500">
+        <div className="p-4 md:p-3 pb-20 max-w-2xl mx-auto space-y-3 animate-in fade-in duration-500">
             <div className="flex flex-wrap items-center justify-between mb-2 gap-2">
                 <div className="flex items-center gap-3 min-w-0">
                     <div className="p-3 bg-green-100 rounded-xl shadow-lg shadow-green-100 shrink-0">
@@ -438,7 +438,7 @@ export default function HarvestPage() {
 
             {activeTab === 'record' ? (
                 /* === 기록 뷰 (전문가 대안: 클린 UI) === */
-                <div className="space-y-6 animate-in slide-in-from-left-4 duration-300">
+                <div className="space-y-3 animate-in slide-in-from-left-4 duration-300">
                     {/* 상단: 오늘의 하우스 컨디션 요약 (사장님 요청 대안) */}
                     {Object.keys(houseNotes).length > 0 && (
                         <div className="bg-blue-50/50 rounded-3xl border border-blue-100 p-5 space-y-4">
@@ -476,7 +476,7 @@ export default function HarvestPage() {
 
                     {/* 날짜 선택 및 수기 기록 폼 통합 카드 */}
                     <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden">
-                        <div className="p-6 space-y-8">
+                        <div className="p-3 space-y-8">
                             {/* 섹션 1: 날짜 및 하우스 */}
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between px-1">
@@ -614,7 +614,7 @@ export default function HarvestPage() {
                                                     const val = e.target.value.replace(/[^0-9]/g, '');
                                                     setQuantity(val === '' ? 0 : parseInt(val));
                                                 }}
-                                                className="w-full p-6 bg-white border-2 border-green-100 rounded-[2rem] text-4xl font-black text-center text-green-600 outline-none focus:border-green-500 transition-all shadow-sm"
+                                                className="w-full p-3 bg-white border-2 border-green-100 rounded-[2rem] text-4xl font-black text-center text-green-600 outline-none focus:border-green-500 transition-all shadow-sm"
                                             />
                                             <span className="absolute right-6 top-1/2 -translate-y-1/2 text-sm font-black text-green-200">BOX</span>
                                         </div>
@@ -639,7 +639,7 @@ export default function HarvestPage() {
                     {isDiaryModalOpen && (
                         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
                             <div className="bg-white w-full max-w-sm rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-10 duration-500">
-                                <div className="p-8 pb-4 flex items-center justify-between">
+                                <div className="p-4 pb-4 flex items-center justify-between">
                                     <div>
                                         <h3 className="text-xl font-black text-gray-900 flex items-center gap-2">
                                             <NotebookPen className="w-6 h-6 text-blue-500" />
@@ -651,7 +651,7 @@ export default function HarvestPage() {
                                         <X className="w-5 h-5 text-gray-400" />
                                     </button>
                                 </div>
-                                <div className="p-8 space-y-6">
+                                <div className="p-4 space-y-3">
                                     <div className="space-y-3">
                                         <label className="text-[11px] font-black text-gray-400 uppercase tracking-tighter ml-1">오늘의 하우스 컨실션 및 특이사항</label>
                                         <textarea
@@ -665,7 +665,7 @@ export default function HarvestPage() {
                                                 }
                                             }}
                                             placeholder="하우스 온도, 과실 발육 상태, 알박기 작업 등 사장님께 필요한 중요 내용을 기록하세요..."
-                                            className="w-full p-6 bg-gray-50 border-none rounded-[32px] text-lg font-bold h-48 outline-none focus:ring-4 focus:ring-blue-50 transition-all resize-none shadow-inner"
+                                            className="w-full p-3 bg-gray-50 border-none rounded-[32px] text-lg font-bold h-48 outline-none focus:ring-4 focus:ring-blue-50 transition-all resize-none shadow-inner"
                                         />
                                     </div>
                                     <div className="flex gap-4">
@@ -696,7 +696,7 @@ export default function HarvestPage() {
                     {isArchiveOpen && (
                         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
                             <div className="bg-gray-50 w-full max-w-md h-[80vh] rounded-[40px] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
-                                <div className="p-8 bg-white border-b border-gray-100 flex items-center justify-between shrink-0">
+                                <div className="p-4 bg-white border-b border-gray-100 flex items-center justify-between shrink-0">
                                     <div>
                                         <h3 className="text-xl font-black text-gray-900 flex items-center gap-2">
                                             <History className="w-6 h-6 text-blue-600" />
@@ -724,7 +724,7 @@ export default function HarvestPage() {
                                     </div>
                                 </div>
 
-                                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                                <div className="flex-1 overflow-y-auto p-3 space-y-3">
                                     {loading ? (
                                         <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
                                             <RefreshCcw className="w-8 h-8 animate-spin opacity-20" />
@@ -779,7 +779,7 @@ export default function HarvestPage() {
                                         ))
                                     )}
                                 </div>
-                                <div className="p-6 bg-white border-t border-gray-100 shrink-0">
+                                <div className="p-3 bg-white border-t border-gray-100 shrink-0">
                                     <button
                                         onClick={() => setIsArchiveOpen(false)}
                                         className="w-full py-4 bg-gray-900 text-white text-sm font-black rounded-[24px] shadow-xl shadow-gray-100"
@@ -795,7 +795,7 @@ export default function HarvestPage() {
                     {isHouseHistoryOpen && (
                         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
                             <div className="bg-white w-full max-w-sm h-[70vh] rounded-[48px] shadow-2xl overflow-hidden flex flex-col animate-in slide-in-from-bottom-20 duration-500">
-                                <div className="p-8 pb-4 flex items-center justify-between shrink-0">
+                                <div className="p-4 pb-4 flex items-center justify-between shrink-0">
                                     <div>
                                         <h3 className="text-xl font-black text-gray-900 flex items-center gap-2">
                                             <History className="w-6 h-6 text-green-600" />
@@ -808,7 +808,7 @@ export default function HarvestPage() {
                                     </button>
                                 </div>
 
-                                <div className="flex-1 overflow-y-auto p-8 space-y-6">
+                                <div className="flex-1 overflow-y-auto p-4 space-y-3">
                                     {loading ? (
                                         <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
                                             <RefreshCcw className="w-8 h-8 animate-spin opacity-20" />
@@ -846,7 +846,7 @@ export default function HarvestPage() {
                                         ))
                                     )}
                                 </div>
-                                <div className="p-8 pt-0 shrink-0">
+                                <div className="p-4 pt-0 shrink-0">
                                     <button
                                         onClick={() => setIsHouseHistoryOpen(false)}
                                         className="w-full py-5 bg-gray-900 text-white text-xs font-black rounded-3xl shadow-xl shadow-gray-200"
@@ -935,7 +935,7 @@ export default function HarvestPage() {
                 </div>
             ) : activeTab === 'history' ? (
                 /* === 전체 기록 뷰 (아카이브 통합) === */
-                <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+                <div className="space-y-3 animate-in slide-in-from-right-4 duration-300">
                     <div className="bg-white border-b border-gray-100 flex items-center justify-between p-2 rounded-2xl shadow-sm">
                         <div>
                             <h3 className="text-sm font-black text-gray-900 flex items-center gap-2 px-2 py-1">
@@ -955,7 +955,7 @@ export default function HarvestPage() {
                         </select>
                     </div>
 
-                    <div className="space-y-6">
+                    <div className="space-y-3">
                         {loading ? (
                             <div className="flex flex-col items-center justify-center py-12 text-gray-400 gap-2">
                                 <RefreshCcw className="w-8 h-8 animate-spin opacity-20" />
@@ -1006,7 +1006,7 @@ export default function HarvestPage() {
                 </div>
             ) : (
                 /* === 통계 뷰 === */
-                <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+                <div className="space-y-3 animate-in slide-in-from-right-4 duration-300">
                     <div className="flex bg-gray-100 p-1 rounded-xl overflow-x-auto scrollbar-hide gap-1">
                         {(['today', 'custom', 'week', 'month'] as const).map((p) => (
                             <button key={p}

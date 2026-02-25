@@ -106,7 +106,7 @@ export default function RegisterPage() {
                     <p className="text-gray-500 mt-1 text-sm">관리자 승인 후 사용 가능합니다</p>
                 </div>
 
-                <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4">
                     <form onSubmit={handleSubmit} className="space-y-5">
                         {/* 계정 정보 */}
                         <div>

@@ -332,7 +332,7 @@ export default function WorkersPage() {
 
         if (isEditing) {
             return (
-                <div key={worker.id} className="bg-white rounded-2xl border-2 border-red-200 p-6 shadow-xl animate-in fade-in zoom-in-95 duration-200 space-y-4">
+                <div key={worker.id} className="bg-white rounded-2xl border-2 border-red-200 p-3 shadow-xl animate-in fade-in zoom-in-95 duration-200 space-y-4">
                     <div className="flex items-center gap-2 mb-1">
                         <Edit2 className="w-4 h-4 text-red-500" />
                         <span className="text-sm font-bold text-red-600">정보 수정</span>
@@ -478,7 +478,7 @@ export default function WorkersPage() {
     };
 
     return (
-        <div className="p-4 md:p-6 pb-24 max-w-2xl mx-auto space-y-6 animate-in fade-in duration-500">
+        <div className="p-4 md:p-3 pb-20 max-w-2xl mx-auto space-y-3 animate-in fade-in duration-500">
             <div className="flex items-center justify-between mb-2 gap-2">
                 <div className="flex items-center gap-3 min-w-0">
                     <div className="p-3 bg-red-600 rounded-xl shadow-lg shadow-red-200 shrink-0">
@@ -509,7 +509,7 @@ export default function WorkersPage() {
             </div>
 
             {errorMsg && (
-                <div className="bg-amber-50 border-2 border-amber-100 p-6 rounded-[2rem] space-y-4 animate-in slide-in-from-top-4 duration-500">
+                <div className="bg-amber-50 border-2 border-amber-100 p-3 rounded-[2rem] space-y-4 animate-in slide-in-from-top-4 duration-500">
                     <div className="flex items-start gap-4">
                         <div className="p-3 bg-amber-100 rounded-2xl text-amber-600"><AlertTriangle className="w-6 h-6" /></div>
                         <div className="flex-1">
@@ -535,7 +535,7 @@ export default function WorkersPage() {
             )}
 
             {isAdding && (
-                <div className="bg-white rounded-3xl border border-red-100 shadow-xl p-6 space-y-6 animate-in slide-in-from-top-6 duration-300">
+                <div className="bg-white rounded-3xl border border-red-100 shadow-xl p-3 space-y-3 animate-in slide-in-from-top-6 duration-300">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div className="space-y-2">
                             <label className="block text-[10px] font-bold text-gray-400 ml-1 uppercase">Name</label>
@@ -658,7 +658,7 @@ export default function WorkersPage() {
             )}
 
             {activeSubTab === 'attendance' && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     {/* 날짜 선택기 */}
                     <div className="bg-white p-4 rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between">
                         <button onClick={() => {
@@ -737,7 +737,7 @@ export default function WorkersPage() {
             )}
 
             {activeSubTab === 'payroll' && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                <div className="space-y-3 animate-in fade-in slide-in-from-right-4 duration-500">
                     {/* 월 선택기 */}
                     <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between">
                         <div className="flex items-center gap-3">

@@ -7,18 +7,11 @@ import { SalesRecord } from "./supabase";
 export const settlementService = {
     // 1. 거래 유형 판별 (B2B vs B2C)
     isB2B: (record: SalesRecord): boolean => {
-        return (
-            record.delivery_method === 'nonghyup' ||
-            !!record.partner_id ||
-            record.sale_type === 'nonghyup'
-        );
+        return record.sale_type === 'b2b' || !!record.partner_id;
     },
 
     isB2C: (record: SalesRecord): boolean => {
-        return (
-            record.delivery_method === 'courier' ||
-            (record.sale_type === 'etc' && !!record.customer_id)
-        );
+        return record.sale_type === 'b2c' || record.delivery_method === 'courier';
     },
 
     // 2. 정산 상태 판별 (라벨링)

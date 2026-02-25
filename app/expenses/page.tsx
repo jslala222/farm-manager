@@ -181,7 +181,7 @@ export default function ExpensesPage() {
     }, [selectedDate]);
 
     return (
-        <div className="p-4 md:p-6 pb-24 md:pb-6 max-w-2xl mx-auto space-y-6">
+        <div className="p-4 md:p-3 pb-20 md:pb-6 max-w-2xl mx-auto space-y-3">
             {/* 헤더 서비스 상태 */}
             <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
@@ -253,7 +253,7 @@ export default function ExpensesPage() {
 
             {/* 입력 폼 */}
             {isAdding && (
-                <div className="bg-white rounded-[2.5rem] border border-red-100 shadow-2xl shadow-red-100/50 p-6 space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
+                <div className="bg-white rounded-[2.5rem] border border-red-100 shadow-2xl shadow-red-100/50 p-3 space-y-3 animate-in fade-in slide-in-from-top-4 duration-500">
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-[11px] font-black text-gray-400 mb-2 ml-1 uppercase tracking-widest">지출 일자</label>
@@ -361,7 +361,7 @@ export default function ExpensesPage() {
                         </div>
                     </div>
                     {/* 당월 요약 (사장님 요청: 파란색) */}
-                    <div className="bg-white border-4 border-red-500 rounded-[2.5rem] p-6 space-y-5 shadow-2xl shadow-red-100/50 relative overflow-hidden">
+                    <div className="bg-white border-4 border-red-500 rounded-[2.5rem] p-3 space-y-5 shadow-2xl shadow-red-100/50 relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-full -mr-16 -mt-16 opacity-50"></div>
 
                         <div className="flex items-center justify-between border-b border-red-100 pb-3 relative z-10 gap-2">

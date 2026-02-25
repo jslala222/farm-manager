@@ -219,7 +219,7 @@ export default function ClientsPage() {
         <div className="min-h-screen bg-gray-50 pb-20">
             <NavBar />
 
-            <div className="p-4 max-w-2xl mx-auto space-y-6 animate-in fade-in duration-500">
+            <div className="p-4 max-w-2xl mx-auto space-y-3 animate-in fade-in duration-500">
                 {/* 헤더 */}
                 <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0">
@@ -266,7 +266,7 @@ export default function ClientsPage() {
                                 <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-100 text-gray-300 font-black">등록된 거래처가 없습니다.</div>
                             ) : (
                                 filteredPartners.map(partner => (
-                                    <div key={partner.id} className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
+                                    <div key={partner.id} className="bg-white p-3 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
                                         <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-50 opacity-20 rounded-full -mr-12 -mt-12 group-hover:scale-110 transition-transform"></div>
                                         <div className="flex items-start justify-between relative z-10">
                                             <div className="flex items-start gap-4">
@@ -311,7 +311,7 @@ export default function ClientsPage() {
                                 <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-100 text-gray-300 font-black">등록된 개인 고객이 없습니다.</div>
                             ) : (
                                 filteredCustomers.map(customer => (
-                                    <div key={customer.id} className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all group">
+                                    <div key={customer.id} className="bg-white p-3 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all group">
                                         <div className="flex items-start justify-between">
                                             <div className="flex items-start gap-4">
                                                 <div className="w-14 h-14 rounded-2xl bg-green-50 text-green-600 flex items-center justify-center shrink-0 shadow-inner">
@@ -355,7 +355,7 @@ export default function ClientsPage() {
             {/* 모달 UI */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-300">
-                    <div className="bg-white rounded-[2.5rem] p-8 w-full max-w-xl shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto custom-scrollbar border border-white/20">
+                    <div className="bg-white rounded-[2.5rem] p-4 w-full max-w-xl shadow-2xl space-y-3 max-h-[90vh] overflow-y-auto custom-scrollbar border border-white/20">
                         <div className="flex items-center justify-between gap-3">
                             <div className="min-w-0">
                                 <h2 className="text-xl font-black text-gray-900 leading-tight">

@@ -119,6 +119,7 @@ export default function SalesPage() {
                     const saleData = {
                         farm_id: farm.id, partner_id: selectedClientId, crop_name: cropName, sale_unit: saleUnit, quantity: Number(g.qty), grade: g.grade,
                         is_settled: paymentStatus === 'completed', payment_status: paymentStatus, payment_method: paymentMethod,
+                        sale_type: 'b2b',
                         recorded_at: selectedDate + 'T' + new Date().toTimeString().split(' ')[0]
                     };
                     if (editingRecordId) await supabase.from('sales_records').update(saleData).eq('id', editingRecordId);
@@ -131,6 +132,7 @@ export default function SalesPage() {
                     recipient_name: recipientName, recipient_phone: recipientPhone, address: recipientAddress, detail_address: recipientDetailAddress,
                     delivery_note: deliveryNote, quantity: Number(courierBoxCount), price: Number(courierTotalPrice), crop_name: cropName, sale_unit: saleUnit,
                     delivery_method: 'courier', is_settled: paymentStatus === 'completed', payment_status: paymentStatus, payment_method: paymentMethod,
+                    sale_type: 'b2c',
                     recorded_at: selectedDate + 'T' + new Date().toTimeString().split(' ')[0]
                 };
                 if (editingRecordId) await supabase.from('sales_records').update(courierData).eq('id', editingRecordId);
@@ -165,8 +167,8 @@ export default function SalesPage() {
     const handleDelete = async (id: string) => { if (!confirm("삭제하시겠습니까?")) return; const { error } = await supabase.from('sales_records').delete().eq('id', id); if (!error) fetchHistory(); };
 
     return (
-        <div className="min-h-screen pb-24 bg-slate-50/30">
-            <div className="max-w-2xl mx-auto p-3 md:p-6 space-y-4">
+        <div className="min-h-screen pb-20 bg-slate-50/30">
+            <div className="max-w-2xl mx-auto p-3 md:p-3 space-y-4">
 
                 {/* [초압축 고정 헤더] */}
                 <div className="flex items-center justify-between px-1 gap-2">
@@ -239,7 +241,7 @@ export default function SalesPage() {
                 {/* [메인 입력 영역] */}
                 <div className="bg-white rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden">
                     <div className={`h-1.5 w-full ${activeTab === 'bulk' ? 'bg-indigo-500' : 'bg-rose-500'}`} />
-                    <div className="p-5 space-y-6">
+                    <div className="p-5 space-y-3">
                         {activeTab === 'bulk' ? (
                             <div className="space-y-5 animate-in fade-in duration-300">
                                 <div className="space-y-2">
