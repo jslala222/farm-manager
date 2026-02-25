@@ -443,7 +443,7 @@ export default function FinancePage() {
                         <div className="flex justify-between items-start gap-2">
                             <div className="min-w-0">
                                 <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">이번 달 예상 순이익</p>
-                                <h2 className="text-4xl font-black tracking-tighter text-white truncate">
+                                <h2 className="text-2xl font-black tracking-tighter text-white break-all">
                                     {formatCurrency(netProfit)}
                                 </h2>
                             </div>
@@ -457,11 +457,11 @@ export default function FinancePage() {
                         <div className="grid grid-cols-2 gap-3 pt-4 border-t border-white/10">
                             <div className="min-w-0">
                                 <p className="text-gray-500 text-[9px] font-bold uppercase mb-1">총 매출액</p>
-                                <p className="text-lg font-black text-white truncate">{formatCurrency(revenue)}</p>
+                                <p className="text-sm font-black text-white break-all">{formatCurrency(revenue)}</p>
                             </div>
                             <div className="text-right min-w-0">
                                 <p className="text-gray-500 text-[9px] font-bold uppercase mb-1">총 지출액</p>
-                                <p className="text-lg font-black text-gray-300 truncate">{formatCurrency(laborCost + mealCost + expense + shippingCost)}</p>
+                                <p className="text-sm font-black text-gray-300 break-all">{formatCurrency(laborCost + mealCost + expense + shippingCost)}</p>
                             </div>
                         </div>
                     </div>
@@ -474,7 +474,7 @@ export default function FinancePage() {
                             <div className="p-1.5 bg-blue-50 rounded-lg shrink-0"><Users className="w-3.5 h-3.5 text-blue-600" /></div>
                             <span className="text-[9px] font-black text-gray-400 uppercase tracking-wide truncate">순수 인건비</span>
                         </div>
-                        <p className="text-xl font-black text-gray-900 truncate">{formatCurrency(laborCost)}</p>
+                        <p className="text-sm font-black text-gray-900 break-all">{formatCurrency(laborCost)}</p>
                         <p className="text-[9px] text-gray-400 font-bold">일당/월급 등</p>
                     </div>
 
@@ -484,7 +484,7 @@ export default function FinancePage() {
                             <div className="p-1.5 bg-amber-50 rounded-lg shrink-0"><Utensils className="w-3.5 h-3.5 text-amber-600" /></div>
                             <span className="text-[9px] font-black text-gray-400 uppercase tracking-wide truncate">식대/새참비</span>
                         </div>
-                        <p className="text-xl font-black text-gray-900 truncate">{formatCurrency(mealCost)}</p>
+                        <p className="text-sm font-black text-gray-900 break-all">{formatCurrency(mealCost)}</p>
                         <p className="text-[9px] text-gray-400 font-bold">식당/새참 비용</p>
                     </div>
 
@@ -493,7 +493,7 @@ export default function FinancePage() {
                             <div className="p-1.5 bg-pink-50 rounded-lg shrink-0"><Truck className="w-3.5 h-3.5 text-pink-600" /></div>
                             <span className="text-[9px] font-black text-gray-400 uppercase tracking-wide truncate">택배/자재비</span>
                         </div>
-                        <p className="text-xl font-black text-gray-900 truncate">{formatCurrency(shippingCost)}</p>
+                        <p className="text-sm font-black text-gray-900 break-all">{formatCurrency(shippingCost)}</p>
                         <p className="text-[9px] text-gray-400 font-bold">택배/자재비</p>
                     </div>
 
@@ -502,7 +502,7 @@ export default function FinancePage() {
                             <div className="p-1.5 bg-indigo-50 rounded-lg shrink-0"><Download className="w-3.5 h-3.5 text-indigo-600" /></div>
                             <span className="text-[9px] font-black text-gray-400 uppercase tracking-wide truncate">기타 영농지출</span>
                         </div>
-                        <p className="text-xl font-black text-gray-900 truncate">{formatCurrency(expense)}</p>
+                        <p className="text-sm font-black text-gray-900 break-all">{formatCurrency(expense)}</p>
                         <p className="text-[9px] text-gray-400 font-bold">공과금/유류비</p>
                     </div>
                 </div>
@@ -567,7 +567,7 @@ export default function FinancePage() {
                         <div className="flex items-end justify-between gap-3">
                             <div className="min-w-0">
                                 <p className="text-xs font-bold text-gray-400 mb-1">입금 대기 중인 금액</p>
-                                <h4 className="text-2xl font-black text-gray-900 truncate">{formatCurrency(unsettledB2B)}</h4>
+                                <h4 className="text-xl font-black text-gray-900 break-all">{formatCurrency(unsettledB2B)}</h4>
                             </div>
                             <div className="text-right shrink-0">
                                 <p className="text-xs font-bold text-green-600 mb-1">확정/입금된 금액</p>

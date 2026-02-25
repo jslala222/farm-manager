@@ -160,14 +160,14 @@ export default function NavBar() {
             {/* 모바일 상단 헤더 */}
             <nav className="md:hidden bg-white border-b border-gray-100 sticky top-0 z-50">
                 <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
-                    <div className="flex items-center gap-2" onClick={() => window.location.href = '/'}>
-                        <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center shadow-lg shadow-red-100 text-white font-black text-xl">
+                    <div className="flex items-center gap-2 min-w-0 overflow-hidden" onClick={() => window.location.href = '/'}>
+                        <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center shadow-lg shadow-red-100 text-white font-black text-xl shrink-0">
                             {farm?.farm_name?.[0] || 'N'}
                         </div>
-                        <h1 className="text-lg font-black text-gray-900 tracking-tight">
+                        <h1 className="text-sm font-black text-gray-900 tracking-tight whitespace-nowrap truncate">
                             {farm?.farm_name || "농장관리"}
                         </h1>
-                        <div className="ml-1 scale-75 origin-left">
+                        <div className="scale-75 origin-left shrink-0">
                             <DbStatus />
                         </div>
                     </div>
