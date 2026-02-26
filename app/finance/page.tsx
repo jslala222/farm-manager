@@ -559,7 +559,7 @@ export default function FinancePage() {
                 <section className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden mb-6">
                     <div className="p-3 bg-amber-50/50 border-b border-gray-50 flex items-center justify-between">
                         <h3 className="text-sm font-black text-amber-900 flex items-center gap-2">
-                            <Building2 className="w-4 h-4" /> B2B 미결산 리포트
+                            <Building2 className="w-4 h-4" /> 거래처 미결재 리포트
                         </h3>
                         <span className="text-[10px] font-black text-amber-600 bg-amber-100 px-2.5 py-1 rounded-full">{unsettledRecords.reduce((acc: number, p: any) => acc + p.dailyGroups.length, 0)}건 대기</span>
                     </div>
@@ -596,13 +596,13 @@ export default function FinancePage() {
                         onClick={() => setFinanceTab('b2b')}
                         className={`flex-1 py-3 rounded-xl text-xs font-black transition-all ${financeTab === 'b2b' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400'}`}
                     >
-                        B2B 납품 정산 ({unsettledRecords.reduce((acc: number, p: any) => acc + p.dailyGroups.length, 0)})
+                        거래처 미결재 ({unsettledRecords.reduce((acc: number, p: any) => acc + p.dailyGroups.length, 0)})
                     </button>
                     <button
                         onClick={() => setFinanceTab('b2c')}
                         className={`flex-1 py-3 rounded-xl text-xs font-black transition-all ${financeTab === 'b2c' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400'}`}
                     >
-                        택배 입금 관리 ({unsettledB2cRecords.length})
+                        택배거래 미결재 ({unsettledB2cRecords.length})
                     </button>
                 </div>
 
@@ -611,7 +611,7 @@ export default function FinancePage() {
                     <div className="flex items-center justify-between px-2">
                         <h3 className="text-sm font-black text-gray-800 flex items-center gap-2">
                             <ArrowRightLeft className="w-4 h-4 text-amber-500" />
-                            {financeTab === 'b2b' ? 'B2B 정산 대기 상세' : '택배 입금 대기 내역'}
+                            {financeTab === 'b2b' ? '거래처 미결재 상세' : '택배거래 미결재 내역'}
                         </h3>
                         <span className="text-[10px] font-bold text-gray-400">날짜순 정렬</span>
                     </div>
