@@ -145,6 +145,7 @@ export default function FinancePage() {
             let unsettledCount = 0;
             let settledCount = 0;
             const uRecords: any[] = [];
+            const newUnsettledB2c: any[] = []; // [수정] 배열에 수집 후 한 번에 업데이트
 
             salesData?.forEach((rec: any) => {
                 const recDate = rec.recorded_at.split('T')[0];
@@ -158,7 +159,7 @@ export default function FinancePage() {
                     unsettledCount++;
                     uRecords.push(rec);
                 } else if (settlementService.isB2C(rec) && !rec.is_settled) {
-                    setUnsettledB2cRecords(prev => [...prev, rec]);
+                    newUnsettledB2c.push(rec); // [수정] 로컬 배열에 푸시
                 }
 
                 // 2. 상단 대시보드 통계는 '선택된 월'의 데이터만 합산
@@ -220,6 +221,8 @@ export default function FinancePage() {
             setUnsettledB2B(unsettledAmt);
             setUnsettledB2bCount(unsettledCount);
             setSettledB2bCount(settledCount);
+            setUnsettledB2cRecords(newUnsettledB2c); // [수정] 한 번에 업데이트 적용
+
             // [bkit 정밀 2단계 그룹화] 거래처(Partner) -> 날짜(Date)
             const partnerMap = new Map();
 
@@ -744,16 +747,20 @@ export default function FinancePage() {
                                                         <span className="text-slate-400 font-bold">택배비 ({rec.shipping_fee_type || '선불'})</span>
                                                         <span className="text-slate-600 font-black">{formatCurrency(rec.shipping_cost || 0)}</span>
                                                     </div>
+                                                    <div className="flex justify-between items-center text-[11px]">
+                                                        <span className="text-slate-400 font-bold">결제 수단</span>
+                                                        <span className="text-slate-600 font-black">{rec.payment_method || '미지정'}</span>
+                                                    </div>
                                                     <div className="flex justify-between items-center pt-1 border-t border-slate-200 mt-1">
-                                                        <span className="text-pink-500 font-black text-xs">총 입금액</span>
-                                                        <span className="text-pink-600 font-black text-lg">{formatCurrency((rec.price || 0) + (rec.shipping_cost || 0))}</span>
+                                                        <span className="text-pink-500 font-black text-xs">총 입금액(상품가)</span>
+                                                        <span className="text-pink-600 font-black text-lg">{formatCurrency(rec.price || 0)}</span>
                                                     </div>
                                                 </div>
                                             </div>
                                             <button
                                                 onClick={async () => {
                                                     if (!confirm("입금 확인 처리를 하시겠습니까?")) return;
-                                                    const { error } = await supabase.from('sales_records').update({ is_settled: true }).eq('id', rec.id);
+                                                    const { error } = await supabase.from('sales_records').update({ is_settled: true, payment_status: 'completed' }).eq('id', rec.id);
                                                     if (!error) fetchFinanceData();
                                                 }}
                                                 className="bg-pink-600 text-white px-4 py-2 rounded-xl text-[10px] font-black shadow-lg shadow-pink-100 active:scale-95 transition-all"

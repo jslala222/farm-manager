@@ -396,7 +396,10 @@ export default function B2CSettledPage() {
                                                     <span className="text-[9px] bg-yellow-50 text-yellow-600 border border-yellow-200 px-1.5 py-0.5 rounded-full font-black">VIP</span>
                                                 )}
                                                 <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg ${isSettled ? `${methodCfg.bg} ${methodCfg.color}` : 'bg-amber-100 text-amber-600'}`}>
-                                                    {isSettled ? method : '미정산'}
+                                                    {isSettled ? '완료' : '미정산'}
+                                                </span>
+                                                <span className="text-[10px] font-black bg-slate-100 text-slate-500 px-2 py-0.5 rounded-lg">
+                                                    {method}
                                                 </span>
                                             </div>
                                             <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-gray-400 font-bold">
