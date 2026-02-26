@@ -18,7 +18,8 @@ import {
     Calculator,
     RefreshCcw,
     AlignLeft,
-    Truck
+    Truck,
+    CheckCircle
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { useEffect, useState } from "react";
@@ -30,6 +31,7 @@ const navItems = [
     { href: "/finance", label: "통합 결산", icon: Calculator },
     { href: "/harvest", label: "수확 관리", icon: Sprout },
     { href: "/bulk", label: "납품(B2B)", icon: Building2 },
+    { href: "/settled", label: "정산완료", icon: CheckCircle },
     { href: "/courier", label: "택배(B2C)", icon: Truck },
     { href: "/expenses", label: "지출 관리", icon: Receipt },
     { href: "/workers", label: "인력 관리", icon: Users },
