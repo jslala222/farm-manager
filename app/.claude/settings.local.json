@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/User/Desktop/제미나이 3/연습/claude/projects_001/farm-manager/**)",
+      "Bash(npm run dev)",
+      "Bash(taskkill /F /PID 25904)",
+      "Bash(taskkill //F //PID 25904)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\User\\Desktop\\제미나이 3\\연습\\claude\\projects_001\\farm-manager\\.next\\dev"
+    ]
+  }
+}

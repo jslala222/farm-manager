@@ -23,7 +23,7 @@ const getSupabaseClient = () => {
             lock: async (name, acquireTimeout, fn) => {
                 // LockManager를 지원하지 않는 환경이거나 타임아웃 없이 바로 실행
                 if (typeof navigator === 'undefined' || !navigator.locks) {
-                    return fn(null);
+                    return fn();
                 }
                 try {
                     return await navigator.locks.request(
@@ -31,16 +31,16 @@ const getSupabaseClient = () => {
                         { ifAvailable: true },
                         async (lock) => {
                             if (lock) {
-                                return fn(lock);
+                                return fn();
                             }
                             // 잠금 획득 실패 시 잠금 없이 바로 실행 (에러 방지)
                             console.warn('⚠️ [farm] Auth lock 획득 실패, 잠금 없이 실행합니다.');
-                            return fn(null);
+                            return fn();
                         }
                     );
                 } catch (e) {
                     console.warn('⚠️ [farm] LockManager 에러, 잠금 없이 실행합니다.', e);
-                    return fn(null);
+                    return fn();
                 }
             },
         },

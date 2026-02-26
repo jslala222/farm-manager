@@ -234,15 +234,14 @@ export default function FinancePage() {
                         partnerId: rec.partner_id,
                         companyName: displayName,
                         totalAmount: 0,
-                        totalQty: 0,
-                        unit: rec.sale_unit || '박스',
+                        qtyByUnit: {},
                         dailyGroups: new Map()
                     });
                 }
-
                 const pGroup = partnerMap.get(pKey);
                 pGroup.totalAmount += price;
-                pGroup.totalQty += (rec.quantity || 0);
+                const recUnit = rec.sale_unit || '박스';
+                pGroup.qtyByUnit[recUnit] = (pGroup.qtyByUnit[recUnit] || 0) + (rec.quantity || 0);
 
                 if (!pGroup.dailyGroups.has(date)) {
                     pGroup.dailyGroups.set(date, {
@@ -646,7 +645,7 @@ export default function FinancePage() {
                                                         </span>
                                                     </div>
                                                     <p className="text-sm text-gray-400 font-black truncate">
-                                                        미정산 · 총 {partnerGroup.totalQty.toLocaleString()}{partnerGroup.unit}
+                                                        미정산 · 총 {Object.entries(partnerGroup.qtyByUnit || {}).map(([u, q]) => `${(q as number).toLocaleString()}${u}`).join(', ')}
                                                     </p>
                                                 </div>
                                                 <div className="flex items-center gap-3 shrink-0">
@@ -679,7 +678,15 @@ export default function FinancePage() {
                                                                     <span className="text-xl font-black text-green-600">{dateGroup.date.split('-')[2]}</span>
                                                                 </div>
                                                                 <div>
-                                                                    <p className="text-lg font-black text-gray-900">{dateGroup.records.length}개 품목 • {dateGroup.records.reduce((s: number, r: any) => s + (r.quantity || 0), 0).toLocaleString()}{partnerGroup.unit}</p>
+                                                                    <p className="text-lg font-black text-gray-900">
+                                                                        {dateGroup.records.length}개 품목 • {
+                                                                            Object.entries(dateGroup.records.reduce((acc: any, r: any) => {
+                                                                                const u = r.sale_unit || '박스';
+                                                                                acc[u] = (acc[u] || 0) + (r.quantity || 0);
+                                                                                return acc;
+                                                                            }, {})).map(([u, q]) => `${(q as number).toLocaleString()}${u}`).join(', ')
+                                                                        }
+                                                                    </p>
                                                                     <div className="flex flex-wrap gap-2 mt-2">
                                                                         {dateGroup.records.slice(0, 3).map((r: any, rIdx: number) => {
                                                                             const cropIcon = r.crop_name === '딸기' ? '🍓' : r.crop_name === '고구마' ? '🍠' : r.crop_name === '감자' ? '🥔' : '📦';

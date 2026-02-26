@@ -7,6 +7,25 @@ import { supabase, SalesRecord, Partner } from "@/lib/supabase";
 import { formatCurrency } from "@/lib/utils";
 import CalendarComponent from "@/components/Calendar";
 
+const getCropIcon = (cropName: string) => {
+    if (!cropName) return '📦';
+    if (cropName.includes('딸기')) return '🍓';
+    if (cropName.includes('감자')) return '🥔';
+    if (cropName.includes('고구마')) return '🍠';
+    if (cropName.includes('토마토')) return '🍅';
+    if (cropName.includes('사과')) return '🍎';
+    if (cropName.includes('포도') || cropName.includes('샤인머스캣')) return '🍇';
+    if (cropName.includes('배')) return '🍐';
+    if (cropName.includes('복숭아')) return '🍑';
+    if (cropName.includes('오이')) return '🥒';
+    if (cropName.includes('상추')) return '🥬';
+    if (cropName.includes('당근')) return '🥕';
+    if (cropName.includes('고추')) return '🌶️';
+    if (cropName.includes('마늘')) return '🧄';
+    if (cropName.includes('양파')) return '🧅';
+    return '📦';
+};
+
 export default function BulkSalesPage() {
     const { farm, initialized } = useAuthStore();
     const [partners, setPartners] = useState<Partner[]>([]);
@@ -299,17 +318,19 @@ export default function BulkSalesPage() {
     const groupedHistory = useMemo(() => {
         // partner → date → transaction(recorded_at 기준) → records
         const partnerMap = new Map<string, {
-            partnerId: string | null; companyName: string; totalQty: number; totalAmount: number;
+            partnerId: string | null; companyName: string; totalAmount: number;
+            qtyByUnit: Record<string, number>;
             dailyMap: Map<string, Map<string, any[]>>;
         }>();
         history.forEach(rec => {
             const displayName = (rec as any).partner?.company_name || rec.customer_name || '미지정';
             const pKey = rec.partner_id || `no-id-${displayName}`;
             if (!partnerMap.has(pKey)) {
-                partnerMap.set(pKey, { partnerId: rec.partner_id || null, companyName: displayName, totalQty: 0, totalAmount: 0, dailyMap: new Map() });
+                partnerMap.set(pKey, { partnerId: rec.partner_id || null, companyName: displayName, totalAmount: 0, qtyByUnit: {}, dailyMap: new Map() });
             }
             const pGroup = partnerMap.get(pKey)!;
-            pGroup.totalQty += rec.quantity || 0;
+            const recUnit = rec.sale_unit || '박스';
+            pGroup.qtyByUnit[recUnit] = (pGroup.qtyByUnit[recUnit] || 0) + (rec.quantity || 0);
             pGroup.totalAmount += rec.price || 0;
             const date = rec.recorded_at.split('T')[0];
             if (!pGroup.dailyMap.has(date)) pGroup.dailyMap.set(date, new Map());
@@ -319,16 +340,24 @@ export default function BulkSalesPage() {
             dayMap.get(txKey)!.push(rec);
         });
         return Array.from(partnerMap.values()).map(p => ({
-            partnerId: p.partnerId, companyName: p.companyName, totalQty: p.totalQty, totalAmount: p.totalAmount,
+            partnerId: p.partnerId, companyName: p.companyName, qtyByUnit: p.qtyByUnit, totalAmount: p.totalAmount,
             dailyGroups: Array.from(p.dailyMap.entries())
                 .map(([date, txMap]) => ({
                     date,
-                    transactions: Array.from(txMap.values()).map(records => ({
-                        txKey: records[0].recorded_at,
-                        records,
-                        unit: records[0].sale_unit || '박스',
-                        totalQty: records.reduce((s, r) => s + (r.quantity || 0), 0),
-                    }))
+                    transactions: Array.from(txMap.values()).map(records => {
+                        const cropName = records[0].crop_name || '';
+                        const txQtyByUnit = records.reduce((acc: any, r: any) => {
+                            const u = r.sale_unit || '박스';
+                            acc[u] = (acc[u] || 0) + (r.quantity || 0);
+                            return acc;
+                        }, {});
+                        return {
+                            txKey: records[0].recorded_at,
+                            records,
+                            cropName,
+                            qtyByUnit: txQtyByUnit,
+                        };
+                    })
                 }))
                 .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
         }));
@@ -573,22 +602,37 @@ export default function BulkSalesPage() {
                                     {modalPaymentStatus === 'completed' ? '정산 완료' : '미정산 (외상)'}
                                 </button>
                             </div>
-                            {/* 저장/취소 */}
+                            {/* 저장/취소/삭제 */}
                             <div className="flex gap-2 pt-1">
                                 <button onClick={() => { setEditModal({ open: false, records: [], companyName: '' }); setCompoundSourceIds([]); }}
                                     className="flex-1 py-3 rounded-2xl bg-slate-100 text-slate-500 font-black text-sm">
                                     취소
                                 </button>
+                                <button onClick={() => {
+                                    if (confirm("정말 삭제하시겠습니까? 삭제하시면 되돌릴 수 없으니, 자세히 확인 후 삭제하기 바랍니다.")) {
+                                        // 모든 모달 레코드 삭제 처리
+                                        Promise.all(editModal.records.map(rec => supabase.from('sales_records').delete().eq('id', rec.id)))
+                                            .then(() => {
+                                                setEditModal({ open: false, records: [], companyName: '' });
+                                                setCompoundSourceIds([]);
+                                                fetchHistory();
+                                            })
+                                            .catch((err) => alert("삭제 중 오류가 발생했습니다: " + err.message));
+                                    }
+                                }}
+                                    className="flex-1 py-3 rounded-2xl bg-rose-50 text-rose-500 font-black text-sm hover:bg-rose-100 transition-all">
+                                    삭제하기
+                                </button>
                                 <button onClick={handleModalSave} disabled={modalSaving}
-                                    className={`flex-[2] py-3 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg transition-all ${modalSaving ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}>
+                                    className={`flex-[1.5] py-3 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg transition-all ${modalSaving ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}>
                                     {modalSaving ? (
                                         <>
                                             <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
-                                            저장 중...
+                                            저장 중
                                         </>
                                     ) : (
                                         <>
-                                            <Save className="w-4 h-4" /> 저장
+                                            <Save className="w-4 h-4" /> 저장하기
                                         </>
                                     )}
                                 </button>
@@ -638,7 +682,7 @@ export default function BulkSalesPage() {
                                 }}
                                 className={`flex-1 flex flex-col items-center justify-center py-3 rounded-2xl border-2 transition-all gap-1 min-w-0 relative
                                     ${cropName === crop.crop_name ? 'bg-indigo-50 border-indigo-500 shadow-sm ring-2 ring-indigo-100 z-10' : 'bg-white border-slate-50 opacity-40 hover:opacity-100'}`}>
-                                <span className="text-3xl leading-none mb-1">{crop.crop_icon || '📦'}</span>
+                                <span className="text-3xl leading-none mb-1">{getCropIcon(crop.crop_name)}</span>
                                 <span className="text-[10px] font-black text-slate-800 tracking-tighter truncate w-full text-center px-1">{crop.crop_name}</span>
 
                                 {/* 선택 표시 인디케이터 (삼각형) */}
@@ -743,7 +787,7 @@ export default function BulkSalesPage() {
                                                         <span className="text-slate-200">|</span>
                                                         <span className="text-amber-500">미결산</span>
                                                         <span className="text-slate-200">|</span>
-                                                        <span className="text-slate-500">{pGroup.totalQty}{history.find(r => (r.partner_id || '') === (pGroup.partnerId || ''))?.sale_unit || '박스'}</span>
+                                                        <span className="text-slate-500 truncate">{Object.entries(pGroup.qtyByUnit || {}).map(([u, q]) => `${(q as number).toLocaleString()}${u}`).join(', ')}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -776,29 +820,32 @@ export default function BulkSalesPage() {
                                                                         className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2 border border-slate-100 cursor-pointer hover:border-indigo-200 hover:bg-indigo-50/30 transition-all group">
                                                                         {/* 물품 정보 */}
                                                                         <div className="flex items-center gap-2 text-xs min-w-0 flex-1">
+                                                                            <span className="text-sm font-black text-slate-700 flex-shrink-0 whitespace-nowrap w-24">{getCropIcon(tx.cropName)} {tx.cropName}</span>
                                                                             <span className="font-black text-indigo-500 whitespace-nowrap">
                                                                                 {tx.records.map(r => `${r.grade}:${r.quantity}`).join(', ')}
                                                                             </span>
                                                                             <span className="text-slate-300">|</span>
-                                                                            <span className="font-bold text-slate-500 whitespace-nowrap">{tx.totalQty}{tx.unit}</span>
+                                                                            <span className="font-bold text-slate-500 whitespace-nowrap">
+                                                                                {Object.entries(tx.qtyByUnit || {}).map(([u, q]) => `${(q as number).toLocaleString()}${u}`).join(', ')}
+                                                                            </span>
                                                                         </div>
-                                                                        {/* 삭제 버튼 */}
-                                                                        <div className="flex items-center gap-1 shrink-0">
-                                                                            {tx.records.map(rec => (
-                                                                                <button key={rec.id}
-                                                                                    onClick={e => { e.stopPropagation(); handleDelete(rec.id); }}
-                                                                                    className="p-1.5 rounded-lg text-slate-200 hover:text-red-400 hover:bg-red-50 transition-all">
-                                                                                    <Trash2 className="w-3 h-3" />
-                                                                                </button>
-                                                                            ))}
-                                                                            <Edit2 className="w-3 h-3 text-slate-200 group-hover:text-indigo-400 ml-1 transition-all" />
+                                                                        {/* 삭제 버튼 공간 (제거됨 - 수정모드 아이콘만 남김) */}
+                                                                        <div className="flex items-center gap-1 shrink-0 px-2">
+                                                                            <Edit2 className="w-3 h-3 text-slate-200 group-hover:text-indigo-400 transition-all" />
                                                                         </div>
                                                                     </div>
                                                                 ))}
 
                                                                 {/* 날짜별 합계 */}
                                                                 <div className="mt-2 pt-2 text-right text-[10px] font-bold text-slate-400 border-t border-dashed border-slate-200">
-                                                                    총 {dGroup.transactions.reduce((sum, tx) => sum + tx.totalQty, 0)} {dGroup.transactions[0]?.unit || '박스'}
+                                                                    총 {
+                                                                        Object.entries(dGroup.transactions.reduce((acc: any, tx: any) => {
+                                                                            Object.entries(tx.qtyByUnit || {}).forEach(([u, q]) => {
+                                                                                acc[u] = (acc[u] || 0) + (q as number);
+                                                                            });
+                                                                            return acc;
+                                                                        }, {})).map(([u, q]) => `${(q as number).toLocaleString()}${u}`).join(', ') || '0박스'
+                                                                    }
                                                                 </div>
                                                             </div>
                                                         </div>

@@ -55,6 +55,8 @@ export default function HarvestPage() {
     const [editGrade, setEditGrade] = useState<'sang' | 'jung' | 'ha'>('sang');
     const [editQuantity, setEditQuantity] = useState<number>(0);
     const [editDate, setEditDate] = useState("");
+    // 수확 기록 수정 팝업 모달
+    const [harvestEditModal, setHarvestEditModal] = useState<HarvestRecord | null>(null);
 
     // Analysis State
     const [statsPeriod, setStatsPeriod] = useState<'today' | 'week' | 'month' | 'custom'>('today');
@@ -896,7 +898,9 @@ export default function HarvestPage() {
                                         );
                                     }
                                     return (
-                                        <div key={item.id} className="bg-white rounded-2xl border border-gray-50 p-2.5 px-4 shadow-sm flex items-center justify-between group animate-in slide-in-from-bottom-2 duration-300">
+                                        <button key={item.id}
+                                            onClick={() => setHarvestEditModal(item)}
+                                            className="w-full text-left bg-white rounded-2xl border border-gray-50 p-2.5 px-4 shadow-sm flex items-center justify-between animate-in slide-in-from-bottom-2 duration-300 active:scale-[0.98] hover:border-green-200 transition-all">
                                             <div className="flex items-center gap-4 flex-1">
                                                 <div className="flex items-center gap-2 min-w-[60px]">
                                                     <span className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">House</span>
@@ -922,11 +926,8 @@ export default function HarvestPage() {
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-1 ml-4">
-                                                <button onClick={() => startEdit(item)} className="p-1.5 text-gray-300 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all"><Edit2 className="w-3.5 h-3.5" /></button>
-                                                <button onClick={() => handleDelete(item.id)} className="p-1.5 text-gray-200 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
-                                            </div>
-                                        </div>
+                                            <Edit2 className="w-3.5 h-3.5 text-gray-200 ml-4 shrink-0" />
+                                        </button>
                                     );
                                 })
                             )}
@@ -1243,6 +1244,111 @@ export default function HarvestPage() {
                     )}
                 </div>
             )}
-        </div>
+        {/* ===== 수확 기록 수정 팝업 모달 ===== */}
+        {harvestEditModal && (
+
+            <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center p-4">
+                <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setHarvestEditModal(null)} />
+                <div className="relative bg-white rounded-[2.5rem] w-full max-w-md shadow-2xl shadow-black/20 p-5 space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-300">
+                    {/* 헤더 */}
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h2 className="text-base font-black text-gray-900">
+                                {harvestEditModal.house_number}동 · {gradeLabel(harvestEditModal.grade)} {harvestEditModal.quantity}박스
+                            </h2>
+                            <p className="text-xs text-gray-400 font-bold mt-0.5">
+                                {new Date(harvestEditModal.recorded_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}
+                            </p>
+                        </div>
+                        <button onClick={() => setHarvestEditModal(null)} className="p-2 rounded-full hover:bg-gray-100 text-gray-400">
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
+
+                    {/* 수정 폼 */}
+                    <div className="space-y-3">
+                        {/* 동 / 등급 */}
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label className="text-[10px] font-black text-gray-400 block mb-1.5 ml-1">동 선택</label>
+                                <select
+                                    value={editHouse || harvestEditModal.house_number}
+                                    onChange={(e) => setEditHouse(Number(e.target.value))}
+                                    className="w-full p-3 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-black outline-none">
+                                    {houses.map(h => <option key={h.id} value={h.house_number}>{h.house_number}동</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black text-gray-400 block mb-1.5 ml-1">등급</label>
+                                <select
+                                    value={editGrade || harvestEditModal.grade}
+                                    onChange={(e) => setEditGrade(e.target.value as any)}
+                                    className="w-full p-3 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-black outline-none">
+                                    <option value="sang">특/상</option>
+                                    <option value="jung">중</option>
+                                    <option value="ha">하</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* 수량 */}
+                        <div>
+                            <label className="text-[10px] font-black text-gray-400 block mb-1.5 ml-1">수량 (BOX)</label>
+                            <div className="flex items-center gap-3 bg-gray-50 border border-gray-100 rounded-2xl p-3">
+                                <button onClick={() => setEditQuantity(Math.max(1, (editQuantity || harvestEditModal.quantity) - 1))}
+                                    className="w-10 h-10 flex items-center justify-center bg-white rounded-xl shadow-sm">
+                                    <Minus className="w-4 h-4" />
+                                </button>
+                                <input type="number" min="1"
+                                    value={editQuantity || harvestEditModal.quantity}
+                                    onChange={(e) => setEditQuantity(Number(e.target.value))}
+                                    className="flex-1 text-center text-2xl font-black text-gray-900 bg-transparent outline-none" />
+                                <button onClick={() => setEditQuantity((editQuantity || harvestEditModal.quantity) + 1)}
+                                    className="w-10 h-10 flex items-center justify-center bg-green-500 text-white rounded-xl shadow-sm">
+                                    <Plus className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* 날짜 */}
+                        <div>
+                            <label className="text-[10px] font-black text-gray-400 block mb-1.5 ml-1">날짜</label>
+                            <input type="date"
+                                value={editDate || harvestEditModal.recorded_at.split('T')[0]}
+                                onChange={(e) => setEditDate(e.target.value)}
+                                className="w-full p-3 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-black outline-none" />
+                        </div>
+                    </div>
+
+                    {/* 버튼들 */}
+                    <div className="grid grid-cols-2 gap-3">
+                        <button
+                            onClick={async () => {
+                                if (!confirm('이 기록을 삭제하시겠습니까?')) return;
+                                await handleDelete(harvestEditModal.id);
+                                setHarvestEditModal(null);
+                            }}
+                            className="py-4 rounded-2xl border-2 border-red-100 bg-red-50 text-red-500 font-black text-sm flex items-center justify-center gap-2 hover:bg-red-100 transition-all active:scale-95">
+                            <Trash2 className="w-4 h-4" /> 삭제
+                        </button>
+                        <button
+                            onClick={async () => {
+                                setEditingId(harvestEditModal.id);
+                                setEditHouse(editHouse || harvestEditModal.house_number);
+                                setEditGrade(editGrade || harvestEditModal.grade);
+                                setEditQuantity(editQuantity || harvestEditModal.quantity);
+                                setEditDate(editDate || harvestEditModal.recorded_at.split('T')[0]);
+                                await handleUpdate();
+                                setHarvestEditModal(null);
+                            }}
+                            className="py-4 rounded-2xl bg-green-600 text-white font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-green-200 hover:bg-green-700 transition-all active:scale-95">
+                            <Save className="w-4 h-4" /> 수정 저장
+                        </button>
+                    </div>
+                </div>
+            </div>
+        
+        )}
+    </div>
     );
 }

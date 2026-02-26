@@ -19,7 +19,8 @@ import {
     RefreshCcw,
     AlignLeft,
     Truck,
-    CheckCircle
+    CheckCircle,
+    Package2
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { useEffect, useState } from "react";
@@ -31,13 +32,15 @@ const navItems = [
     { href: "/finance", label: "통합 결산", icon: Calculator },
     { href: "/harvest", label: "수확 관리", icon: Sprout },
     { href: "/bulk", label: "납품(B2B)", icon: Building2 },
-    { href: "/settled", label: "정산완료", icon: CheckCircle },
     { href: "/courier", label: "택배(B2C)", icon: Truck },
     { href: "/expenses", label: "지출 관리", icon: Receipt },
+    { href: "/settled", label: "정산완료(거래처)", icon: CheckCircle },
+    { href: "/b2c-settled", label: "정산완료(택배거래)", icon: Package2 },
     { href: "/workers", label: "인력 관리", icon: Users },
     { href: "/clients", label: "거래처/고객", icon: Building2 },
     { href: "/settings", label: "설정", icon: Settings },
 ];
+
 
 export default function NavBar() {
     const pathname = usePathname();
