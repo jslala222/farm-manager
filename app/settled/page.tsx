@@ -1,8 +1,8 @@
 "use client";
-// app/settled/page.tsx - 정산완료 내역 페이지 (거래처별 엑셀표 형식)
+// app/settled/page.tsx - 정산완료 내역 페이지 (거래처별 엑셀표 + 수정/삭제)
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { CheckCircle, ChevronDown, ChevronRight, Download, RefreshCcw, Calendar } from 'lucide-react';
+import { CheckCircle, ChevronDown, ChevronRight, Download, RefreshCcw, Calendar, Edit2, Trash2, X, Save } from 'lucide-react';
 import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
 
@@ -24,19 +24,34 @@ interface SettledRecord {
     payment_method: string | null;
     crop_name: string | null;
     sale_unit: string | null;
-    harvest_note: string | null;  // 차액 사유
-    delivery_note: string | null; // 메모
+    harvest_note: string | null;
+    delivery_note: string | null;
     partner?: { company_name: string } | null;
 }
+
+// 수정 모달 상태 초기값
+const emptyEdit = {
+    open: false,
+    rec: null as SettledRecord | null,
+    settled_amount: '',
+    payment_method: '카드',
+    harvest_note: '',
+    delivery_note: '',
+};
+
+const PAYMENT_METHODS = ['카드', '현금', '계좌이체'];
+const DEDUCTION_REASONS = ['조합공제', '운임공제', '품질하락', '시세조정', '선불차감', '기타'];
 
 export default function SettledPage() {
     const { farm, initialized } = useAuthStore();
     const [records, setRecords] = useState<SettledRecord[]>([]);
     const [loading, setLoading] = useState(false);
+    const [saving, setSaving] = useState(false);
     const [range, setRange] = useState(getDefaultRange);
     const [expandedPartners, setExpandedPartners] = useState<string[]>([]);
+    const [edit, setEdit] = useState(emptyEdit);
 
-    // 데이터 불러오기
+    // ────── 데이터 불러오기 ──────
     const fetchData = useCallback(async () => {
         if (!farm?.id) return;
         setLoading(true);
@@ -61,12 +76,62 @@ export default function SettledPage() {
     }, [farm?.id, range]);
 
     useEffect(() => {
-        if (initialized && farm?.id) {
-            fetchData();
-        }
+        if (initialized && farm?.id) fetchData();
     }, [initialized, farm?.id, fetchData]);
 
-    // 거래처별로 그룹화
+    // ────── 수정 모달 열기 ──────
+    const openEdit = (rec: SettledRecord) => {
+        setEdit({
+            open: true,
+            rec,
+            settled_amount: rec.settled_amount ? rec.settled_amount.toLocaleString() : '',
+            payment_method: rec.payment_method || '카드',
+            harvest_note: rec.harvest_note || '',
+            delivery_note: rec.delivery_note || '',
+        });
+    };
+
+    // ────── 수정 저장 ──────
+    const handleSave = async () => {
+        if (!edit.rec) return;
+        setSaving(true);
+        try {
+            const settledNum = edit.settled_amount ? Number(edit.settled_amount.replace(/,/g, '')) : null;
+            const { error } = await supabase
+                .from('sales_records')
+                .update({
+                    settled_amount: settledNum,
+                    payment_method: edit.payment_method,
+                    harvest_note: edit.harvest_note || null,
+                    delivery_note: edit.delivery_note || null,
+                })
+                .eq('id', edit.rec.id);
+
+            if (error) throw error;
+            setEdit(emptyEdit);
+            fetchData();
+        } catch (e: any) {
+            alert('저장 실패: ' + e.message);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // ────── 삭제 ──────
+    const handleDelete = async (rec: SettledRecord) => {
+        const partnerName = (rec.partner as any)?.company_name || '미지정';
+        const dateStr = new Date(rec.recorded_at).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
+        if (!confirm(`[${partnerName}] ${dateStr} ${rec.grade || ''} ${rec.quantity}${rec.sale_unit || '박스'} 항목을 삭제하시겠습니까?`)) return;
+
+        const { error } = await supabase.from('sales_records').delete().eq('id', rec.id);
+        if (!error) {
+            fetchData();
+        } else {
+            alert('삭제 실패: ' + error.message);
+        }
+    };
+
+    // ────── 거래처별 그룹화 ──────
     const grouped = useMemo(() => {
         const map = new Map<string, {
             partnerName: string;
@@ -111,7 +176,7 @@ export default function SettledPage() {
                 r.sale_unit || '',
                 r.price ?? '',
                 r.settled_amount ?? '',
-                diff || '',
+                r.price && r.settled_amount ? diff : '',
                 r.harvest_note || '',
                 r.payment_method || '',
                 r.delivery_note || '',
@@ -135,6 +200,130 @@ export default function SettledPage() {
 
     return (
         <div className="min-h-screen bg-slate-50/40 pb-20">
+
+            {/* ── 수정 모달 ── */}
+            {edit.open && edit.rec && (
+                <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm"
+                    onClick={() => setEdit(emptyEdit)}>
+                    <div className="bg-white w-full max-w-md rounded-t-[2rem] shadow-2xl flex flex-col max-h-[90vh]"
+                        onClick={e => e.stopPropagation()}>
+
+                        {/* 헤더 */}
+                        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
+                            <div>
+                                <p className="text-[10px] font-black text-slate-400 uppercase">정산 내역 수정</p>
+                                <p className="text-sm font-black text-slate-900">
+                                    {(edit.rec.partner as any)?.company_name || '미지정'} ·{' '}
+                                    {new Date(edit.rec.recorded_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })} ·{' '}
+                                    {edit.rec.grade} {edit.rec.quantity}{edit.rec.sale_unit}
+                                </p>
+                            </div>
+                            <button onClick={() => setEdit(emptyEdit)}
+                                className="p-2 rounded-xl bg-slate-100 text-slate-400">
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        {/* 폼 */}
+                        <div className="p-5 space-y-4 overflow-y-auto flex-1">
+
+                            {/* 예상금액 (읽기전용) */}
+                            {edit.rec.price && (
+                                <div className="bg-slate-50 rounded-2xl p-3">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase mb-1">예상금액 (참고)</p>
+                                    <p className="text-sm font-black text-slate-600 text-right">{edit.rec.price.toLocaleString()}원</p>
+                                </div>
+                            )}
+
+                            {/* 정산금액 입력 */}
+                            <div className="bg-slate-50 rounded-2xl p-4">
+                                <p className="text-[9px] font-black text-slate-400 uppercase mb-2">정산금액</p>
+                                <div className="flex items-center gap-2">
+                                    <input type="text" inputMode="numeric"
+                                        value={edit.settled_amount}
+                                        onChange={e => setEdit(prev => ({
+                                            ...prev,
+                                            settled_amount: e.target.value.replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                                        }))}
+                                        placeholder="0"
+                                        className="flex-1 bg-transparent text-2xl font-black text-slate-800 outline-none text-right" />
+                                    <span className="text-sm font-black text-slate-400">원</span>
+                                </div>
+                                {/* 차액 미리보기 */}
+                                {edit.rec.price && edit.settled_amount && (
+                                    (() => {
+                                        const settledNum = Number(edit.settled_amount.replace(/,/g, ''));
+                                        const diff = settledNum - edit.rec.price!;
+                                        return (
+                                            <p className={`text-right text-xs font-black mt-1 ${diff < 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                                                차액 {diff > 0 ? '+' : ''}{diff.toLocaleString()}원
+                                            </p>
+                                        );
+                                    })()
+                                )}
+                            </div>
+
+                            {/* 결제수단 */}
+                            <div>
+                                <p className="text-[9px] font-black text-slate-400 uppercase mb-2">결제수단</p>
+                                <div className="flex gap-1.5 p-1.5 bg-slate-100 rounded-2xl">
+                                    {PAYMENT_METHODS.map(m => (
+                                        <button key={m} onClick={() => setEdit(prev => ({ ...prev, payment_method: m }))}
+                                            className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all
+                                            ${edit.payment_method === m ? 'bg-emerald-500 text-white shadow-sm' : 'text-slate-400'}`}>
+                                            {m}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* 차액 사유 */}
+                            <div>
+                                <p className="text-[9px] font-black text-slate-400 uppercase mb-2">차액 사유 <span className="normal-case font-bold text-slate-300">(선택)</span></p>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {DEDUCTION_REASONS.map(r => (
+                                        <button key={r}
+                                            onClick={() => setEdit(prev => ({ ...prev, harvest_note: prev.harvest_note === r ? '' : r }))}
+                                            className={`px-3 py-1.5 rounded-xl text-xs font-black border transition-all
+                                            ${edit.harvest_note === r
+                                                    ? 'bg-rose-500 text-white border-rose-500'
+                                                    : 'bg-white text-slate-500 border-slate-200 hover:border-rose-200'}`}>
+                                            {r}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* 메모 */}
+                            <div className="bg-slate-50 rounded-2xl p-3">
+                                <p className="text-[9px] font-black text-slate-400 uppercase mb-2">메모 <span className="normal-case font-bold text-slate-300">(선택)</span></p>
+                                <input type="text" value={edit.delivery_note}
+                                    onChange={e => setEdit(prev => ({ ...prev, delivery_note: e.target.value }))}
+                                    placeholder="예: 운임 공제 후 입금"
+                                    className="w-full bg-transparent text-sm font-bold text-slate-700 outline-none placeholder:text-slate-300" />
+                            </div>
+                        </div>
+
+                        {/* 하단 저장 버튼 */}
+                        <div className="flex gap-2 p-5 pt-3 border-t border-slate-100 shrink-0">
+                            <button onClick={() => setEdit(emptyEdit)}
+                                className="flex-1 py-3.5 rounded-2xl bg-slate-100 text-slate-500 font-black text-sm">
+                                취소
+                            </button>
+                            <button onClick={handleSave} disabled={saving}
+                                className={`flex-[2] py-3.5 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg transition-all
+                                ${saving ? 'bg-emerald-400 cursor-not-allowed' : 'bg-emerald-500 hover:bg-emerald-600'} text-white`}>
+                                {saving
+                                    ? <><span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />저장 중...</>
+                                    : <><Save className="w-4 h-4" />저장</>
+                                }
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── 본문 ── */}
             <div className="max-w-4xl mx-auto px-3 py-4 space-y-4">
 
                 {/* 헤더 */}
@@ -144,7 +333,7 @@ export default function SettledPage() {
                             <CheckCircle className="w-5 h-5 text-emerald-500" />
                             정산완료
                         </h1>
-                        <p className="text-[11px] text-slate-400 font-medium mt-0.5">거래처별 정산 완료 내역</p>
+                        <p className="text-[11px] text-slate-400 font-medium mt-0.5">거래처별 정산 완료 내역 · 행 클릭 후 수정/삭제</p>
                     </div>
                     <div className="flex items-center gap-2">
                         <button onClick={fetchData} disabled={loading}
@@ -196,7 +385,7 @@ export default function SettledPage() {
                     </div>
                 )}
 
-                {/* 거래처별 아코디언 테이블 */}
+                {/* 빈 상태 */}
                 {!loading && grouped.length === 0 && (
                     <div className="bg-white rounded-2xl border-2 border-dashed border-slate-100 py-16 text-center">
                         <CheckCircle className="w-8 h-8 text-slate-200 mx-auto mb-3" />
@@ -204,26 +393,26 @@ export default function SettledPage() {
                     </div>
                 )}
 
+                {/* 거래처별 아코디언 테이블 */}
                 {!loading && grouped.map(group => {
                     const isExpanded = expandedPartners.includes(group.partnerName);
                     const diff = group.totalSettled - group.totalExpected;
                     return (
                         <div key={group.partnerName} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                            {/* 거래처 헤더 (클릭 시 펼치기) */}
-                            <button
-                                onClick={() => togglePartner(group.partnerName)}
-                                className="w-full px-4 py-3.5 flex items-center gap-3 hover:bg-slate-50/50 transition-all"
-                            >
+
+                            {/* 거래처 헤더 */}
+                            <button onClick={() => togglePartner(group.partnerName)}
+                                className="w-full px-4 py-3.5 flex items-center gap-3 hover:bg-slate-50/50 transition-all text-left">
                                 <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
                                     <CheckCircle className="w-4 h-4 text-emerald-500" />
                                 </div>
-                                <div className="flex-1 text-left min-w-0">
+                                <div className="flex-1 min-w-0">
                                     <p className="text-sm font-black text-slate-900 truncate">{group.partnerName}</p>
                                     <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                                         <span className="text-[10px] font-bold text-slate-400">{group.rows.length}건</span>
-                                        <span className="text-[10px] font-bold text-slate-300">|</span>
+                                        <span className="text-[10px] text-slate-300">|</span>
                                         <span className="text-[10px] font-bold text-indigo-500">예상 {group.totalExpected.toLocaleString()}원</span>
-                                        <span className="text-[10px] font-bold text-slate-300">|</span>
+                                        <span className="text-[10px] text-slate-300">|</span>
                                         <span className="text-[10px] font-bold text-emerald-600">정산 {group.totalSettled.toLocaleString()}원</span>
                                         {diff !== 0 && (
                                             <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-lg ${diff < 0 ? 'bg-rose-50 text-rose-500' : 'bg-emerald-50 text-emerald-600'}`}>
@@ -238,23 +427,29 @@ export default function SettledPage() {
                                 }
                             </button>
 
-                            {/* 상세 테이블 (펼쳤을 때) */}
+                            {/* 상세 테이블 */}
                             {isExpanded && (
                                 <div className="border-t border-slate-100 overflow-x-auto">
-                                    <table className="w-full text-xs min-w-[560px]">
+                                    <table className="w-full text-xs min-w-[620px]">
                                         <thead>
                                             <tr className="bg-slate-50 border-b border-slate-100">
-                                                {['날짜', '등급', '수량', '예상금액', '정산금액', '차액', '결제', '사유'].map(h => (
-                                                    <th key={h} className="px-3 py-2.5 text-[10px] font-black text-slate-400 text-right first:text-left">{h}</th>
+                                                {['날짜', '등급', '수량', '예상금액', '정산금액', '차액', '결제', '사유', ''].map((h, i) => (
+                                                    <th key={i} className="px-3 py-2.5 text-[10px] font-black text-slate-400 text-right first:text-left last:text-center">
+                                                        {h}
+                                                    </th>
                                                 ))}
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {group.rows.map((rec, idx) => {
-                                                const rowDiff = (rec.settled_amount ?? 0) - (rec.price ?? 0);
+                                                const rowDiff = (rec.settled_amount !== null && rec.price !== null)
+                                                    ? rec.settled_amount - rec.price
+                                                    : null;
+                                                const missingSettled = rec.settled_amount === null;
                                                 return (
                                                     <tr key={rec.id}
-                                                        className={`border-b border-slate-50 hover:bg-slate-50/50 transition-all ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'}`}>
+                                                        className={`border-b border-slate-50 transition-all ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'}
+                                                        ${missingSettled ? 'bg-amber-50/60' : ''}`}>
                                                         {/* 날짜 */}
                                                         <td className="px-3 py-2.5 font-bold text-slate-600 whitespace-nowrap">
                                                             {new Date(rec.recorded_at).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit', weekday: 'short' })}
@@ -273,17 +468,21 @@ export default function SettledPage() {
                                                         <td className="px-3 py-2.5 text-right font-bold text-slate-600">
                                                             {rec.price ? rec.price.toLocaleString() + '원' : '-'}
                                                         </td>
-                                                        {/* 정산금액 */}
-                                                        <td className="px-3 py-2.5 text-right font-black text-emerald-600">
-                                                            {rec.settled_amount ? rec.settled_amount.toLocaleString() + '원' : '-'}
+                                                        {/* 정산금액 — 없으면 주황 강조 */}
+                                                        <td className="px-3 py-2.5 text-right font-black">
+                                                            {rec.settled_amount != null
+                                                                ? <span className="text-emerald-600">{rec.settled_amount.toLocaleString()}원</span>
+                                                                : <span className="text-amber-500 text-[10px] font-black bg-amber-100 px-1.5 py-0.5 rounded-lg">미입력</span>
+                                                            }
                                                         </td>
                                                         {/* 차액 */}
                                                         <td className="px-3 py-2.5 text-right font-black">
-                                                            {rec.price && rec.settled_amount ? (
-                                                                <span className={rowDiff < 0 ? 'text-rose-500' : rowDiff > 0 ? 'text-emerald-500' : 'text-slate-400'}>
+                                                            {rowDiff !== null
+                                                                ? <span className={rowDiff < 0 ? 'text-rose-500' : rowDiff > 0 ? 'text-emerald-500' : 'text-slate-400'}>
                                                                     {rowDiff > 0 ? '+' : ''}{rowDiff.toLocaleString()}원
                                                                 </span>
-                                                            ) : <span className="text-slate-300">-</span>}
+                                                                : <span className="text-slate-300">-</span>
+                                                            }
                                                         </td>
                                                         {/* 결제수단 */}
                                                         <td className="px-3 py-2.5 text-right">
@@ -294,6 +493,23 @@ export default function SettledPage() {
                                                         {/* 차액사유 */}
                                                         <td className="px-3 py-2.5 text-right font-medium text-slate-400 text-[10px]">
                                                             {rec.harvest_note || '-'}
+                                                        </td>
+                                                        {/* 수정/삭제 버튼 */}
+                                                        <td className="px-2 py-2.5 text-center">
+                                                            <div className="flex items-center justify-center gap-1">
+                                                                <button
+                                                                    onClick={() => openEdit(rec)}
+                                                                    className="p-1.5 rounded-lg text-slate-300 hover:text-indigo-500 hover:bg-indigo-50 transition-all"
+                                                                    title="수정">
+                                                                    <Edit2 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDelete(rec)}
+                                                                    className="p-1.5 rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-all"
+                                                                    title="삭제">
+                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 );
@@ -311,7 +527,7 @@ export default function SettledPage() {
                                                         {diff > 0 ? '+' : ''}{diff.toLocaleString()}원
                                                     </span>
                                                 </td>
-                                                <td colSpan={2} />
+                                                <td colSpan={3} />
                                             </tr>
                                         </tfoot>
                                     </table>
