@@ -33,6 +33,7 @@ interface SettledRecord {
 const emptyEdit = {
     open: false,
     rec: null as SettledRecord | null,
+    price: '',
     settled_amount: '',
     payment_method: '카드',
     harvest_note: '',
@@ -84,8 +85,9 @@ export default function SettledPage() {
         setEdit({
             open: true,
             rec,
+            price: rec.price ? rec.price.toLocaleString() : '',
             settled_amount: rec.settled_amount ? rec.settled_amount.toLocaleString() : '',
-            payment_method: rec.payment_method || '카드',
+            payment_method: rec.payment_method || '계좌이체',
             harvest_note: rec.harvest_note || '',
             delivery_note: rec.delivery_note || '',
         });
@@ -96,22 +98,38 @@ export default function SettledPage() {
         if (!edit.rec) return;
         setSaving(true);
         try {
+            const priceNum = edit.price ? Number(edit.price.replace(/,/g, '')) : null;
             const settledNum = edit.settled_amount ? Number(edit.settled_amount.replace(/,/g, '')) : null;
-            const { error } = await supabase
+
+            // 10초 안에 응답 없으면 타임아웃 처리
+            const updateQuery = supabase
                 .from('sales_records')
                 .update({
+                    price: priceNum,
                     settled_amount: settledNum,
-                    payment_method: edit.payment_method,
+                    payment_method: edit.payment_method || null,
                     harvest_note: edit.harvest_note || null,
                     delivery_note: edit.delivery_note || null,
                 })
-                .eq('id', edit.rec.id);
+                .eq('id', edit.rec.id)
+                .select();
 
-            if (error) throw error;
+            const timeout = new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error('저장 시간 초과 (10초). 네트워크를 확인해주세요.')), 10000)
+            );
+
+            const { error } = await Promise.race([updateQuery, timeout]) as any;
+
+            if (error) {
+                console.error('Supabase update error:', error);
+                throw new Error(error.message || JSON.stringify(error));
+            }
+
             setEdit(emptyEdit);
             fetchData();
         } catch (e: any) {
-            alert('저장 실패: ' + e.message);
+            console.error('handleSave 에러:', e);
+            alert('저장 실패: ' + (e?.message || '알 수 없는 오류'));
         } finally {
             setSaving(false);
         }
@@ -227,17 +245,25 @@ export default function SettledPage() {
                         {/* 폼 */}
                         <div className="p-5 space-y-4 overflow-y-auto flex-1">
 
-                            {/* 예상금액 (읽기전용) */}
-                            {edit.rec.price && (
-                                <div className="bg-slate-50 rounded-2xl p-3">
-                                    <p className="text-[9px] font-black text-slate-400 uppercase mb-1">예상금액 (참고)</p>
-                                    <p className="text-sm font-black text-slate-600 text-right">{edit.rec.price.toLocaleString()}원</p>
+                            {/* 예상금액 입력 */}
+                            <div className="bg-slate-50 rounded-2xl p-4">
+                                <p className="text-[9px] font-black text-slate-400 uppercase mb-2">예상금액 <span className="normal-case font-bold text-slate-300">(단가×수량)</span></p>
+                                <div className="flex items-center gap-2">
+                                    <input type="text" inputMode="numeric"
+                                        value={edit.price}
+                                        onChange={e => setEdit(prev => ({
+                                            ...prev,
+                                            price: e.target.value.replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                                        }))}
+                                        placeholder="0"
+                                        className="flex-1 bg-transparent text-xl font-black text-slate-600 outline-none text-right" />
+                                    <span className="text-sm font-black text-slate-400">원</span>
                                 </div>
-                            )}
+                            </div>
 
                             {/* 정산금액 입력 */}
                             <div className="bg-slate-50 rounded-2xl p-4">
-                                <p className="text-[9px] font-black text-slate-400 uppercase mb-2">정산금액</p>
+                                <p className="text-[9px] font-black text-slate-400 uppercase mb-2">정산금액 <span className="normal-case font-bold text-slate-300">(실제 받은 금액)</span></p>
                                 <div className="flex items-center gap-2">
                                     <input type="text" inputMode="numeric"
                                         value={edit.settled_amount}
@@ -250,17 +276,16 @@ export default function SettledPage() {
                                     <span className="text-sm font-black text-slate-400">원</span>
                                 </div>
                                 {/* 차액 미리보기 */}
-                                {edit.rec.price && edit.settled_amount && (
-                                    (() => {
-                                        const settledNum = Number(edit.settled_amount.replace(/,/g, ''));
-                                        const diff = settledNum - edit.rec.price!;
-                                        return (
-                                            <p className={`text-right text-xs font-black mt-1 ${diff < 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
-                                                차액 {diff > 0 ? '+' : ''}{diff.toLocaleString()}원
-                                            </p>
-                                        );
-                                    })()
-                                )}
+                                {edit.price && edit.settled_amount && (() => {
+                                    const priceNum = Number(edit.price.replace(/,/g, ''));
+                                    const settledNum = Number(edit.settled_amount.replace(/,/g, ''));
+                                    const diff = settledNum - priceNum;
+                                    return (
+                                        <p className={`text-right text-xs font-black mt-1 ${diff < 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                                            차액 {diff > 0 ? '+' : ''}{diff.toLocaleString()}원
+                                        </p>
+                                    );
+                                })()}
                             </div>
 
                             {/* 결제수단 */}
