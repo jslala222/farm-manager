@@ -277,3 +277,23 @@ export interface Customer {
     special_notes: string | null;
     created_at: string;
 }
+
+// ============================================
+// 일일 인력 현황 (알바/용역 지급)
+// ============================================
+export interface LaborCost {
+    id: string;
+    farm_id: string;
+    work_date: string;
+    source: '인력사무소' | '개별직접';
+    agency_name: string | null;
+    grade: string;
+    headcount: number;
+    daily_wage: number;
+    tip: number;
+    payment_method: '현금' | '계좌이체' | '카드';
+    work_type: string | null;
+    notes: string | null;
+    expenditure_id: string | null;
+    created_at: string;
+}

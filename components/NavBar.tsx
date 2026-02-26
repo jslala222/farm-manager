@@ -20,7 +20,8 @@ import {
     AlignLeft,
     Truck,
     CheckCircle,
-    Package2
+    Package2,
+    ClipboardList
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { useEffect, useState } from "react";
@@ -36,6 +37,7 @@ const navItems = [
     { href: "/expenses", label: "지출 관리", icon: Receipt },
     { href: "/settled", label: "정산완료(거래처)", icon: CheckCircle },
     { href: "/b2c-settled", label: "정산완료(택배거래)", icon: Package2 },
+    { href: "/labor", label: "일일 현황", icon: ClipboardList },
     { href: "/workers", label: "인력 관리", icon: Users },
     { href: "/clients", label: "거래처/고객", icon: Building2 },
     { href: "/settings", label: "설정", icon: Settings },
