@@ -1,16 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Sprout, Users, TrendingUp, Package, AlertCircle } from "lucide-react";
+import { Sprout, Users, TrendingUp, Package } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
-import { formatCurrency } from "@/lib/utils";
+
+type HarvestItem = { crop: string; unit: string; qty: number };
+type SalesItem = { unit: string; qty: number };
 
 export default function Home() {
-  const { farm, profile, initialized } = useAuthStore();
-  const [todayHarvest, setTodayHarvest] = useState(0);
-  const [todayWorkers, setTodayWorkers] = useState(0);
-  const [todaySales, setTodaySales] = useState(0);
+  const { farm, initialized } = useAuthStore();
+  const [harvestItems, setHarvestItems] = useState<HarvestItem[]>([]);
+  const [salesItems, setSalesItems] = useState<SalesItem[]>([]);
+  const [staffCount, setStaffCount] = useState(0);   // 직원/식구
+  const [laborCount, setLaborCount] = useState(0);   // 알바/용역 headcount 합
   const [loading, setLoading] = useState(true);
 
   const today = new Date().toISOString().split('T')[0];
@@ -53,27 +56,62 @@ export default function Home() {
     setLoading(true);
 
     try {
-      console.log("[Dashboard] Fetching today data for farm:", farm.id);
-      const [harvestRes, attendanceRes, salesRes] = await Promise.all([
-        supabase.from('harvest_records').select('quantity')
+      const [harvestRes, cropsRes, attendanceRes, salesRes, laborRes] = await Promise.all([
+        // 수확: crop_name 별 수량
+        supabase.from('harvest_records').select('quantity, crop_name')
           .eq('farm_id', farm.id)
           .gte('recorded_at', `${today}T00:00:00`)
           .lte('recorded_at', `${today}T23:59:59`),
+        // 작물별 기본 단위 조회
+        supabase.from('farm_crops').select('crop_name, default_unit')
+          .eq('farm_id', farm.id).eq('is_active', true),
+        // 출근: 직원/식구
         supabase.from('attendance_records').select('worker_name')
           .eq('farm_id', farm.id).eq('work_date', today).eq('is_present', true),
-        supabase.from('sales_records').select('quantity')
+        // 출하: sale_unit 별 수량
+        supabase.from('sales_records').select('quantity, sale_unit')
           .eq('farm_id', farm.id)
           .gte('recorded_at', `${today}T00:00:00`)
           .lte('recorded_at', `${today}T23:59:59`),
+        // 알바/용역 headcount 합산
+        supabase.from('labor_costs').select('headcount')
+          .eq('farm_id', farm.id).eq('work_date', today),
       ]);
 
-      if (harvestRes.error) console.error("[Dashboard] Harvest error:", harvestRes.error);
-      if (attendanceRes.error) console.error("[Dashboard] Attendance error:", attendanceRes.error);
-      if (salesRes.error) console.error("[Dashboard] Sales error:", salesRes.error);
+      // 작물 단위 맵
+      const cropUnitMap: Record<string, string> = {};
+      (cropsRes.data ?? []).forEach(c => {
+        cropUnitMap[c.crop_name] = c.default_unit || '박스';
+      });
 
-      setTodayHarvest(harvestRes.data?.reduce((s, r) => s + (r.quantity || 0), 0) ?? 0);
-      setTodayWorkers(attendanceRes.data?.length ?? 0);
-      setTodaySales(salesRes.data?.reduce((s, r) => s + Number(r.quantity || 0), 0) ?? 0);
+      // 수확 → crop_name 별 합산
+      const harvestMap: Record<string, number> = {};
+      (harvestRes.data ?? []).forEach(r => {
+        const crop = r.crop_name || '수확물';
+        harvestMap[crop] = (harvestMap[crop] || 0) + (r.quantity || 0);
+      });
+      setHarvestItems(
+        Object.entries(harvestMap).map(([crop, qty]) => ({
+          crop,
+          unit: cropUnitMap[crop] || '박스',
+          qty,
+        }))
+      );
+
+      // 출하 → sale_unit 별 합산
+      const salesMap: Record<string, number> = {};
+      (salesRes.data ?? []).forEach(r => {
+        const unit = r.sale_unit || '박스';
+        salesMap[unit] = (salesMap[unit] || 0) + Number(r.quantity || 0);
+      });
+      setSalesItems(
+        Object.entries(salesMap).map(([unit, qty]) => ({ unit, qty }))
+      );
+
+      // 출근
+      setStaffCount((attendanceRes.data ?? []).length);
+      setLaborCount((laborRes.data ?? []).reduce((s, r) => s + (r.headcount || 0), 0));
+
     } catch (err) {
       console.error("[Dashboard] Unexpected error:", err);
     } finally {
@@ -81,6 +119,7 @@ export default function Home() {
     }
   };
 
+  const totalWorkers = staffCount + laborCount;
 
   return (
     <div className="p-4 md:p-3 pb-20 md:pb-6">
@@ -92,22 +131,92 @@ export default function Home() {
 
       {/* 오늘 현황 카드 */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        {[
-          { label: "오늘 수확", val: todayHarvest, unit: "박스", icon: Sprout, color: "red", bg: "bg-red-100" },
-          { label: "오늘 출하", val: todaySales, unit: "박스", icon: Package, color: "green", bg: "bg-green-100" },
-          { label: "오늘 출근", val: todayWorkers, unit: "명", icon: Users, color: "blue", bg: "bg-blue-100" },
-        ].map((item) => (
-          <div key={item.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-all">
-            <div className="flex items-center gap-3 mb-3">
-              <div className={`${item.bg} p-2 rounded-xl`}><item.icon className={`w-5 h-5 text-${item.color}-600`} /></div>
-              <span className="text-sm font-medium text-gray-700">{item.label}</span>
+
+        {/* ── 오늘 수확 ── */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-all">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="bg-red-100 p-2 rounded-xl">
+              <Sprout className="w-5 h-5 text-red-600" />
             </div>
-            <p className="text-2xl font-bold text-gray-900">
-              {loading ? "—" : item.val.toLocaleString()}
-              <span className="text-sm font-normal text-gray-700 ml-1">{item.unit}</span>
-            </p>
+            <span className="text-sm font-medium text-gray-700">오늘 수확</span>
           </div>
-        ))}
+          {loading ? (
+            <p className="text-2xl font-bold text-gray-900">—</p>
+          ) : harvestItems.length === 0 ? (
+            <p className="text-2xl font-bold text-gray-900">
+              0 <span className="text-sm font-normal text-gray-700">박스</span>
+            </p>
+          ) : (
+            <div className="space-y-0.5">
+              {harvestItems.map(item => (
+                <p key={item.crop} className="font-bold text-gray-900">
+                  <span className="text-2xl">{item.qty.toLocaleString()}</span>
+                  <span className="text-sm font-normal text-gray-700 ml-1">{item.unit}</span>
+                  {harvestItems.length > 1 && (
+                    <span className="text-xs text-gray-600 ml-1.5">({item.crop})</span>
+                  )}
+                </p>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── 오늘 출하 ── */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-all">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="bg-green-100 p-2 rounded-xl">
+              <Package className="w-5 h-5 text-green-600" />
+            </div>
+            <span className="text-sm font-medium text-gray-700">오늘 출하</span>
+          </div>
+          {loading ? (
+            <p className="text-2xl font-bold text-gray-900">—</p>
+          ) : salesItems.length === 0 ? (
+            <p className="text-2xl font-bold text-gray-900">
+              0 <span className="text-sm font-normal text-gray-700">박스</span>
+            </p>
+          ) : (
+            <div className="space-y-0.5">
+              {salesItems.map(item => (
+                <p key={item.unit} className="font-bold text-gray-900">
+                  <span className="text-2xl">{item.qty.toLocaleString()}</span>
+                  <span className="text-sm font-normal text-gray-700 ml-1">{item.unit}</span>
+                </p>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── 오늘 출근 ── */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-all">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="bg-blue-100 p-2 rounded-xl">
+              <Users className="w-5 h-5 text-blue-600" />
+            </div>
+            <span className="text-sm font-medium text-gray-700">오늘 출근</span>
+          </div>
+          {loading ? (
+            <p className="text-2xl font-bold text-gray-900">—</p>
+          ) : (
+            <div>
+              <p className="text-2xl font-bold text-gray-900">
+                {totalWorkers.toLocaleString()}
+                <span className="text-sm font-normal text-gray-700 ml-1">명</span>
+              </p>
+              {totalWorkers > 0 && (staffCount > 0 || laborCount > 0) && (
+                <div className="flex gap-2 mt-1 flex-wrap">
+                  {staffCount > 0 && (
+                    <span className="text-xs font-bold text-blue-600">직원 {staffCount}명</span>
+                  )}
+                  {laborCount > 0 && (
+                    <span className="text-xs font-bold text-orange-600">알바 {laborCount}명</span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
       </div>
 
       {/* 빠른 기록 */}
