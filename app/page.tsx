@@ -37,7 +37,7 @@ export default function Home() {
           <Sprout className="w-12 h-12 text-red-600 animate-bounce-slow" />
         </div>
         <h2 className="text-xl font-black text-gray-900 mb-3">농장 정보가 없습니다</h2>
-        <p className="text-gray-500 mb-8 max-w-xs mx-auto leading-relaxed">
+        <p className="text-gray-700 mb-8 max-w-xs mx-auto leading-relaxed">
           시스템을 사용하려면 먼저 농장을 등록해야 합니다.<br />
           아래 버튼을 눌러 첫 농장을 설정해 주세요.
         </p>
@@ -87,7 +87,7 @@ export default function Home() {
       {/* 헤더 */}
       <div className="mb-6">
         <h1 className="text-xl font-bold text-gray-900">{farm?.farm_name ?? "관리 시스템"}</h1>
-        <p className="text-gray-500 text-sm mt-1">{todayDate}</p>
+        <p className="text-gray-700 text-sm mt-1">{todayDate}</p>
       </div>
 
       {/* 오늘 현황 카드 */}
@@ -100,11 +100,11 @@ export default function Home() {
           <div key={item.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-all">
             <div className="flex items-center gap-3 mb-3">
               <div className={`${item.bg} p-2 rounded-xl`}><item.icon className={`w-5 h-5 text-${item.color}-600`} /></div>
-              <span className="text-sm font-medium text-gray-500">{item.label}</span>
+              <span className="text-sm font-medium text-gray-700">{item.label}</span>
             </div>
             <p className="text-2xl font-bold text-gray-900">
               {loading ? "—" : item.val.toLocaleString()}
-              <span className="text-sm font-normal text-gray-400 ml-1">{item.unit}</span>
+              <span className="text-sm font-normal text-gray-700 ml-1">{item.unit}</span>
             </p>
           </div>
         ))}

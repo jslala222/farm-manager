@@ -238,12 +238,12 @@ export default function ClientsPage() {
                 <div className="flex bg-white rounded-2x border border-gray-100 shadow-sm p-1.5 rounded-[1.25rem]">
                     <button onClick={() => setActiveTab('business')}
                         className={`flex-1 py-3.5 rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-2
-                        ${activeTab === 'business' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`}>
+                        ${activeTab === 'business' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-700 hover:bg-gray-50'}`}>
                         <Building2 className="w-4 h-4" /> B2B 거래처
                     </button>
                     <button onClick={() => setActiveTab('individual')}
                         className={`flex-1 py-3.5 rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-2
-                        ${activeTab === 'individual' ? 'bg-green-600 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`}>
+                        ${activeTab === 'individual' ? 'bg-green-600 text-white shadow-lg' : 'text-gray-700 hover:bg-gray-50'}`}>
                         <Users className="w-4 h-4" /> B2C 개인고객
                     </button>
                 </div>
@@ -253,17 +253,17 @@ export default function ClientsPage() {
                     <input type="text" placeholder={activeTab === 'business' ? "상호명, 연락처 검색..." : "고객명, 연락처 검색..."}
                         value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full pl-12 pr-4 py-4 bg-white border border-gray-100 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-50 text-sm font-bold shadow-sm transition-all" />
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-300 group-focus-within:text-indigo-500 transition-colors" />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-600 group-focus-within:text-indigo-500 transition-colors" />
                 </div>
 
                 {/* 리스트 영역 */}
                 {loading ? (
-                    <div className="text-center py-20 text-gray-400 font-bold animate-pulse">데이터를 불러오고 있습니다...</div>
+                    <div className="text-center py-20 text-gray-700 font-bold animate-pulse">데이터를 불러오고 있습니다...</div>
                 ) : (
                     <div className="space-y-4">
                         {activeTab === 'business' ? (
                             filteredPartners.length === 0 ? (
-                                <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-100 text-gray-300 font-black">등록된 거래처가 없습니다.</div>
+                                <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-100 text-gray-600 font-black">등록된 거래처가 없습니다.</div>
                             ) : (
                                 filteredPartners.map(partner => (
                                     <div key={partner.id} className="bg-white p-3 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
@@ -279,19 +279,19 @@ export default function ClientsPage() {
                                                         <span className="text-[11px] font-black bg-rose-100 text-rose-700 px-2 py-1 rounded-lg uppercase tracking-wider border border-rose-200">{partner.settlement_type}</span>
                                                     </div>
                                                     <div className="space-y-2">
-                                                        <p className="text-sm text-gray-500 font-bold flex items-center gap-1.5">
+                                                        <p className="text-sm text-gray-700 font-bold flex items-center gap-1.5">
                                                             <Phone className="w-4 h-4" /> {partner.manager_contact ? formatPhone(partner.manager_contact) : '없음'}
-                                                            <span className="text-gray-300 mx-1">|</span>
-                                                            <Users className="w-4 h-4 text-gray-400" /> {partner.manager_name || '담당자미정'}
+                                                            <span className="text-gray-600 mx-1">|</span>
+                                                            <Users className="w-4 h-4 text-gray-700" /> {partner.manager_name || '담당자미정'}
                                                         </p>
                                                         {partner.delivery_address && (
-                                                            <p className="text-xs text-gray-400 font-medium flex items-start gap-1.5 max-w-xs leading-relaxed">
+                                                            <p className="text-xs text-gray-700 font-medium flex items-start gap-1.5 max-w-xs leading-relaxed">
                                                                 <MapPin className="w-4 h-4 mt-0.5 shrink-0" /> <span className="line-clamp-2">{partner.delivery_address}</span>
                                                             </p>
                                                         )}
                                                         {partner.special_notes && (
                                                             <div className="mt-3 p-4 bg-gray-50 rounded-2xl relative">
-                                                                <NotebookText className="w-4 h-4 text-gray-300 absolute top-3 right-3" />
+                                                                <NotebookText className="w-4 h-4 text-gray-600 absolute top-3 right-3" />
                                                                 <p className="text-xs text-gray-600 font-medium leading-relaxed italic line-clamp-2">“{partner.special_notes}”</p>
                                                             </div>
                                                         )}
@@ -299,8 +299,8 @@ export default function ClientsPage() {
                                                 </div>
                                             </div>
                                             <div className="flex flex-col gap-2">
-                                                <button onClick={() => handleOpenModal(partner)} className="p-2.5 bg-gray-50 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"><Edit className="w-4 h-4" /></button>
-                                                <button onClick={() => handleDelete(partner.id)} className="p-2.5 bg-gray-50 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"><Trash2 className="w-4 h-4" /></button>
+                                                <button onClick={() => handleOpenModal(partner)} className="p-2.5 bg-gray-50 text-gray-700 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"><Edit className="w-4 h-4" /></button>
+                                                <button onClick={() => handleDelete(partner.id)} className="p-2.5 bg-gray-50 text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"><Trash2 className="w-4 h-4" /></button>
                                             </div>
                                         </div>
                                     </div>
@@ -308,7 +308,7 @@ export default function ClientsPage() {
                             )
                         ) : (
                             filteredCustomers.length === 0 ? (
-                                <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-100 text-gray-300 font-black">등록된 개인 고객이 없습니다.</div>
+                                <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-100 text-gray-600 font-black">등록된 개인 고객이 없습니다.</div>
                             ) : (
                                 filteredCustomers.map(customer => (
                                     <div key={customer.id} className="bg-white p-3 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all group">
@@ -323,11 +323,11 @@ export default function ClientsPage() {
                                                         {customer.is_vip && <span className="text-xs font-black bg-yellow-100 text-yellow-700 px-2 py-1 rounded-lg flex items-center gap-1"><Star className="w-3.5 h-3.5 fill-yellow-700" /> 단골</span>}
                                                     </div>
                                                     <div className="space-y-2">
-                                                        <p className="text-sm text-gray-500 font-bold flex items-center gap-1.5">
+                                                        <p className="text-sm text-gray-700 font-bold flex items-center gap-1.5">
                                                             <Phone className="w-4 h-4" /> {customer.contact ? formatPhone(customer.contact) : '없음'}
                                                         </p>
                                                         {customer.address && (
-                                                            <p className="text-xs text-gray-400 font-medium flex items-start gap-1.5 max-w-xs leading-relaxed">
+                                                            <p className="text-xs text-gray-700 font-medium flex items-start gap-1.5 max-w-xs leading-relaxed">
                                                                 <MapPin className="w-4 h-4 mt-0.5 shrink-0" /> <span className="line-clamp-2">{customer.address}</span>
                                                             </p>
                                                         )}
@@ -340,8 +340,8 @@ export default function ClientsPage() {
                                                 </div>
                                             </div>
                                             <div className="flex flex-col gap-2">
-                                                <button onClick={() => handleOpenModal(customer)} className="p-2.5 bg-gray-50 text-gray-400 hover:text-green-600 hover:bg-green-100 rounded-xl transition-all"><Edit className="w-4 h-4" /></button>
-                                                <button onClick={() => handleDelete(customer.id)} className="p-2.5 bg-gray-50 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"><Trash2 className="w-4 h-4" /></button>
+                                                <button onClick={() => handleOpenModal(customer)} className="p-2.5 bg-gray-50 text-gray-700 hover:text-green-600 hover:bg-green-100 rounded-xl transition-all"><Edit className="w-4 h-4" /></button>
+                                                <button onClick={() => handleDelete(customer.id)} className="p-2.5 bg-gray-50 text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"><Trash2 className="w-4 h-4" /></button>
                                             </div>
                                         </div>
                                     </div>
@@ -361,7 +361,7 @@ export default function ClientsPage() {
                                 <h2 className="text-xl font-black text-gray-900 leading-tight">
                                     {activeTab === 'business' ? 'B2B 파트너' : '개인 고객'} {editingItem ? '수정' : '등록'}
                                 </h2>
-                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.2em] mt-1">Management Profile</p>
+                                <p className="text-[10px] text-gray-700 font-bold uppercase tracking-[0.2em] mt-1">Management Profile</p>
                             </div>
                             <div className={`w-14 h-14 rounded-[1.5rem] flex items-center justify-center shadow-inner shrink-0 ${activeTab === 'business' ? 'bg-indigo-50 text-indigo-500' : 'bg-green-50 text-green-500'}`}>
                                 {activeTab === 'business' ? <Building2 className="w-7 h-7" /> : <Users className="w-7 h-7" />}
@@ -373,48 +373,48 @@ export default function ClientsPage() {
                                 <div className="grid grid-cols-1 gap-5">
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <label className="text-xs font-black text-gray-400 uppercase tracking-tight ml-1">상호명 (필수)</label>
+                                            <label className="text-xs font-black text-gray-700 uppercase tracking-tight ml-1">상호명 (필수)</label>
                                             <input type="text" value={partnerFormData.company_name} onChange={(e) => setPartnerFormData({ ...partnerFormData, company_name: e.target.value })}
-                                                placeholder="예: 논산농협" className="w-full p-3 sm:p-5 bg-white border-2 border-gray-200 rounded-[1.25rem] text-base font-black focus:bg-white focus:border-indigo-600 outline-none transition-all placeholder:text-gray-300 shadow-sm" />
+                                                placeholder="예: 논산농협" className="w-full p-3 sm:p-5 bg-white border-2 border-gray-200 rounded-[1.25rem] text-base font-black focus:bg-white focus:border-indigo-600 outline-none transition-all placeholder:text-gray-600 shadow-sm" />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-xs font-black text-gray-400 uppercase tracking-tight ml-1">사업자번호</label>
+                                            <label className="text-xs font-black text-gray-700 uppercase tracking-tight ml-1">사업자번호</label>
                                             <input type="text" value={partnerFormData.business_number || ""} onChange={(e) => setPartnerFormData({ ...partnerFormData, business_number: formatBusinessNumber(e.target.value) })}
-                                                placeholder="000-00-00000" className="w-full p-3 sm:p-5 bg-white border-2 border-gray-200 rounded-[1.25rem] text-base font-black focus:bg-white focus:border-indigo-600 outline-none transition-all placeholder:text-gray-300 shadow-sm" />
+                                                placeholder="000-00-00000" className="w-full p-3 sm:p-5 bg-white border-2 border-gray-200 rounded-[1.25rem] text-base font-black focus:bg-white focus:border-indigo-600 outline-none transition-all placeholder:text-gray-600 shadow-sm" />
                                         </div>
                                     </div>
 
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <label className="text-xs font-black text-gray-400 uppercase tracking-tight ml-1">대표자명</label>
+                                            <label className="text-xs font-black text-gray-700 uppercase tracking-tight ml-1">대표자명</label>
                                             <input type="text" value={partnerFormData.ceo_name || ""} onChange={(e) => setPartnerFormData({ ...partnerFormData, ceo_name: e.target.value })}
-                                                placeholder="성함 입력" className="w-full p-3 sm:p-5 bg-white border-2 border-gray-200 rounded-[1.25rem] text-base font-black focus:bg-white focus:border-indigo-600 outline-none transition-all placeholder:text-gray-300 shadow-sm" />
+                                                placeholder="성함 입력" className="w-full p-3 sm:p-5 bg-white border-2 border-gray-200 rounded-[1.25rem] text-base font-black focus:bg-white focus:border-indigo-600 outline-none transition-all placeholder:text-gray-600 shadow-sm" />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-xs font-black text-gray-400 uppercase tracking-tight ml-1">본사 대표번호</label>
+                                            <label className="text-xs font-black text-gray-700 uppercase tracking-tight ml-1">본사 대표번호</label>
                                             <input type="text" value={partnerFormData.company_contact || ""} onChange={(e) => setPartnerFormData({ ...partnerFormData, company_contact: formatPhone(e.target.value) })}
-                                                placeholder="041-000-0000" className="w-full p-3 sm:p-5 bg-white border-2 border-gray-200 rounded-[1.25rem] text-base font-black focus:bg-white focus:border-indigo-600 outline-none transition-all placeholder:text-gray-300 shadow-sm" />
+                                                placeholder="041-000-0000" className="w-full p-3 sm:p-5 bg-white border-2 border-gray-200 rounded-[1.25rem] text-base font-black focus:bg-white focus:border-indigo-600 outline-none transition-all placeholder:text-gray-600 shadow-sm" />
                                         </div>
                                     </div>
 
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <label className="text-xs font-black text-gray-400 uppercase tracking-tight ml-1">담당자 성함</label>
+                                            <label className="text-xs font-black text-gray-700 uppercase tracking-tight ml-1">담당자 성함</label>
                                             <input type="text" value={partnerFormData.manager_name || ""} onChange={(e) => setPartnerFormData({ ...partnerFormData, manager_name: e.target.value })}
                                                 className="w-full p-3 sm:p-5 bg-white border-2 border-gray-200 shadow-sm rounded-[1.25rem] text-base font-black focus:bg-white focus:border-indigo-600 outline-none transition-all" />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-xs font-black text-gray-400 uppercase tracking-tight ml-1">담당자 연락처</label>
+                                            <label className="text-xs font-black text-gray-700 uppercase tracking-tight ml-1">담당자 연락처</label>
                                             <input type="text" value={partnerFormData.manager_contact || ""} onChange={(e) => setPartnerFormData({ ...partnerFormData, manager_contact: formatPhone(e.target.value) })}
-                                                placeholder="010-0000-0000" className="w-full p-3 sm:p-5 bg-white border-2 border-gray-200 shadow-sm rounded-[1.25rem] text-base font-black focus:bg-white focus:border-indigo-600 outline-none transition-all placeholder:text-gray-300" />
+                                                placeholder="010-0000-0000" className="w-full p-3 sm:p-5 bg-white border-2 border-gray-200 shadow-sm rounded-[1.25rem] text-base font-black focus:bg-white focus:border-indigo-600 outline-none transition-all placeholder:text-gray-600" />
                                         </div>
                                     </div>
 
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <label className="text-xs font-black text-gray-400 uppercase tracking-tight ml-1 flex items-center gap-1"><Printer className="w-4 h-4" /> 팩스</label>
+                                            <label className="text-xs font-black text-gray-700 uppercase tracking-tight ml-1 flex items-center gap-1"><Printer className="w-4 h-4" /> 팩스</label>
                                             <input type="text" value={partnerFormData.fax_number || ""} onChange={(e) => setPartnerFormData({ ...partnerFormData, fax_number: formatPhone(e.target.value) })}
-                                                placeholder="041-000-0000" className="w-full p-3 sm:p-5 bg-white border-2 border-gray-200 shadow-sm rounded-[1.25rem] text-base font-black focus:bg-white focus:border-indigo-600 outline-none transition-all placeholder:text-gray-300" />
+                                                placeholder="041-000-0000" className="w-full p-3 sm:p-5 bg-white border-2 border-gray-200 shadow-sm rounded-[1.25rem] text-base font-black focus:bg-white focus:border-indigo-600 outline-none transition-all placeholder:text-gray-600" />
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-xs font-black text-rose-600 uppercase tracking-tight ml-1 flex items-center gap-1"><CreditCard className="w-4 h-4" /> 정산 방식 (중요)</label>
@@ -430,7 +430,7 @@ export default function ClientsPage() {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <label className="text-xs font-black text-gray-400 uppercase tracking-tight ml-1 flex items-center gap-1"><Mail className="w-4 h-4" /> 이메일 (세금계산서용)</label>
+                                        <label className="text-xs font-black text-gray-700 uppercase tracking-tight ml-1 flex items-center gap-1"><Mail className="w-4 h-4" /> 이메일 (세금계산서용)</label>
                                         <input type="email" value={partnerFormData.manager_email || ""} onChange={(e) => setPartnerFormData({ ...partnerFormData, manager_email: e.target.value })}
                                             className="w-full p-3 sm:p-5 bg-white border-2 border-gray-200 shadow-sm rounded-[1.25rem] text-base font-black focus:bg-white focus:border-indigo-600 outline-none transition-all" />
                                     </div>
@@ -449,22 +449,22 @@ export default function ClientsPage() {
                                         />
                                         <div className="grid grid-cols-12 gap-3">
                                             <div className="col-span-8 space-y-2">
-                                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-tight ml-1">나머지 주소 (상세 정보)</label>
+                                                <label className="text-[10px] font-black text-gray-700 uppercase tracking-tight ml-1">나머지 주소 (상세 정보)</label>
                                                 <input type="text" value={partnerFormData.hq_detail_address || ""}
                                                     onChange={(e) => setPartnerFormData({ ...partnerFormData, hq_detail_address: e.target.value })}
                                                     className="w-full p-4.5 bg-white border-2 border-gray-100 rounded-[1.25rem] text-sm font-black focus:border-indigo-600 outline-none shadow-sm" placeholder="동, 호수, 사무실 번호 등" />
                                             </div>
                                             <div className="col-span-4 space-y-2">
-                                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-tight ml-1">우편번호</label>
+                                                <label className="text-[10px] font-black text-gray-700 uppercase tracking-tight ml-1">우편번호</label>
                                                 <input type="text" value={partnerFormData.hq_postal_code || ""} readOnly
-                                                    className="w-full p-4.5 bg-gray-50 border-2 border-transparent rounded-[1.25rem] text-sm font-black text-center text-gray-400" placeholder="-" />
+                                                    className="w-full p-4.5 bg-gray-50 border-2 border-transparent rounded-[1.25rem] text-sm font-black text-center text-gray-700" placeholder="-" />
                                             </div>
                                         </div>
                                     </div>
 
                                     <div className="space-y-4">
                                         <div className="flex justify-between items-center px-1">
-                                            <label className="text-xs font-black text-gray-400 uppercase tracking-tight ml-1">납품 주소</label>
+                                            <label className="text-xs font-black text-gray-700 uppercase tracking-tight ml-1">납품 주소</label>
                                             <button
                                                 type="button"
                                                 onClick={() => setPartnerFormData({
@@ -491,21 +491,21 @@ export default function ClientsPage() {
                                         />
                                         <div className="grid grid-cols-12 gap-3">
                                             <div className="col-span-8 space-y-2">
-                                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-tight ml-1">나머지 주소 (상세 정보)</label>
+                                                <label className="text-[10px] font-black text-gray-700 uppercase tracking-tight ml-1">나머지 주소 (상세 정보)</label>
                                                 <input type="text" value={partnerFormData.delivery_detail_address || ""}
                                                     onChange={(e) => setPartnerFormData({ ...partnerFormData, delivery_detail_address: e.target.value })}
                                                     className="w-full p-4.5 bg-white border-2 border-gray-100 rounded-[1.25rem] text-sm font-black focus:border-indigo-600 outline-none shadow-sm" placeholder="창고 번호, 진입로 상세 설명 등" />
                                             </div>
                                             <div className="col-span-4 space-y-2">
-                                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-tight ml-1">우편번호</label>
+                                                <label className="text-[10px] font-black text-gray-700 uppercase tracking-tight ml-1">우편번호</label>
                                                 <input type="text" value={partnerFormData.delivery_postal_code || ""} readOnly
-                                                    className="w-full p-4.5 bg-gray-50 border-2 border-transparent rounded-[1.25rem] text-sm font-black text-center text-gray-400" placeholder="-" />
+                                                    className="w-full p-4.5 bg-gray-50 border-2 border-transparent rounded-[1.25rem] text-sm font-black text-center text-gray-700" placeholder="-" />
                                             </div>
                                         </div>
                                     </div>
 
                                     <div className="space-y-2">
-                                        <label className="text-xs font-black text-gray-400 uppercase tracking-tight ml-1">거래처 특이사항 (메모)</label>
+                                        <label className="text-xs font-black text-gray-700 uppercase tracking-tight ml-1">거래처 특이사항 (메모)</label>
                                         <textarea value={partnerFormData.special_notes || ""} onChange={(e) => setPartnerFormData({ ...partnerFormData, special_notes: e.target.value })}
                                             placeholder="주거래 품목, 시간 엄수 사항 등..."
                                             className="w-full p-5 bg-gray-100/50 border-2 border-transparent rounded-[2rem] text-sm font-medium focus:bg-white focus:border-indigo-600 outline-none transition-all h-36 resize-none shadow-inner" />
@@ -514,25 +514,25 @@ export default function ClientsPage() {
                             ) : (
                                 <div className="grid grid-cols-1 gap-5">
                                     <div className="space-y-2">
-                                        <label className="text-xs font-black text-gray-400 uppercase tracking-tight ml-1">고객 성함 (필수)</label>
+                                        <label className="text-xs font-black text-gray-700 uppercase tracking-tight ml-1">고객 성함 (필수)</label>
                                         <input type="text" value={customerFormData.name} onChange={(e) => setCustomerFormData({ ...customerFormData, name: e.target.value })}
                                             placeholder="예: 김철수" className="w-full p-3 sm:p-5 bg-white border-2 border-gray-200 shadow-sm rounded-[1.25rem] text-base font-black focus:bg-white focus:border-green-600 outline-none transition-all" />
                                     </div>
                                     <div className="flex flex-col sm:grid sm:grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <label className="text-xs font-black text-gray-400 uppercase tracking-tight ml-1">연락처</label>
+                                            <label className="text-xs font-black text-gray-700 uppercase tracking-tight ml-1">연락처</label>
                                             <input type="text" value={customerFormData.contact || ""} onChange={(e) => setCustomerFormData({ ...customerFormData, contact: formatPhone(e.target.value) })}
                                                 placeholder="010-0000-0000" className="w-full p-3 sm:p-5 bg-white border-2 border-gray-200 shadow-sm rounded-[1.25rem] text-base font-black focus:bg-white focus:border-green-600 outline-none transition-all" />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-xs font-black text-gray-400 uppercase tracking-tight ml-1">성별 구분</label>
+                                            <label className="text-xs font-black text-gray-700 uppercase tracking-tight ml-1">성별 구분</label>
                                             <div className="grid grid-cols-2 gap-2 h-[66px]">
                                                 <button
                                                     type="button"
                                                     onClick={() => setCustomerFormData({ ...customerFormData, gender: '남' })}
                                                     className={`rounded-[1.25rem] font-black text-lg transition-all border-2 flex items-center justify-center gap-2 ${customerFormData.gender === '남'
                                                         ? 'bg-blue-500 border-blue-600 text-white shadow-lg scale-[1.02]'
-                                                        : 'bg-white border-gray-100 text-gray-400 hover:border-blue-200'
+                                                        : 'bg-white border-gray-100 text-gray-700 hover:border-blue-200'
                                                         }`}
                                                 >
                                                     <span className={customerFormData.gender === '남' ? 'animate-bounce' : ''}>♂</span> 남성
@@ -542,7 +542,7 @@ export default function ClientsPage() {
                                                     onClick={() => setCustomerFormData({ ...customerFormData, gender: '여' })}
                                                     className={`rounded-[1.25rem] font-black text-lg transition-all border-2 flex items-center justify-center gap-2 ${customerFormData.gender === '여'
                                                         ? 'bg-pink-500 border-pink-600 text-white shadow-lg scale-[1.02]'
-                                                        : 'bg-white border-gray-100 text-gray-400 hover:border-pink-200'
+                                                        : 'bg-white border-gray-100 text-gray-700 hover:border-pink-200'
                                                         }`}
                                                 >
                                                     <span className={customerFormData.gender === '여' ? 'animate-bounce' : ''}>♀</span> 여성
@@ -564,15 +564,15 @@ export default function ClientsPage() {
                                         />
                                         <div className="grid grid-cols-12 gap-3">
                                             <div className="col-span-8 space-y-2">
-                                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-tight ml-1">나머지 주소 (동, 호수 등)</label>
+                                                <label className="text-[10px] font-black text-gray-700 uppercase tracking-tight ml-1">나머지 주소 (동, 호수 등)</label>
                                                 <input type="text" value={customerFormData.detail_address || ""}
                                                     onChange={(e) => setCustomerFormData({ ...customerFormData, detail_address: e.target.value })}
                                                     className="w-full p-4.5 bg-white border-2 border-gray-100 rounded-[1.25rem] text-sm font-black focus:border-green-600 outline-none shadow-sm" placeholder="예: 101동 202호" />
                                             </div>
                                             <div className="col-span-4 space-y-2">
-                                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-tight ml-1">우편번호</label>
+                                                <label className="text-[10px] font-black text-gray-700 uppercase tracking-tight ml-1">우편번호</label>
                                                 <input type="text" value={customerFormData.postal_code || ""} readOnly
-                                                    className="w-full p-4.5 bg-gray-50 border-2 border-transparent rounded-[1.25rem] text-sm font-black text-center text-gray-400" placeholder="-" />
+                                                    className="w-full p-4.5 bg-gray-50 border-2 border-transparent rounded-[1.25rem] text-sm font-black text-center text-gray-700" placeholder="-" />
                                             </div>
                                         </div>
                                     </div>
@@ -582,7 +582,7 @@ export default function ClientsPage() {
                                         <span className="text-base font-black text-gray-600 tracking-tight">단골 VIP 지정 (특별 관리 대상)</span>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-xs font-black text-gray-400 uppercase tracking-tight ml-1">고객 특이사항 (메모)</label>
+                                        <label className="text-xs font-black text-gray-700 uppercase tracking-tight ml-1">고객 특이사항 (메모)</label>
                                         <textarea value={customerFormData.special_notes || ""} onChange={(e) => setCustomerFormData({ ...customerFormData, special_notes: e.target.value })}
                                             placeholder="주요 구매 품목, 배송 요청 사항, 고객 특징 등..."
                                             className="w-full p-5 bg-gray-100/50 border-2 border-transparent rounded-[2.5rem] text-sm font-medium focus:bg-white focus:border-green-600 outline-none transition-all h-36 resize-none shadow-inner" />
@@ -593,7 +593,7 @@ export default function ClientsPage() {
 
                         <div className="flex gap-4 pt-4">
                             <button onClick={() => setIsModalOpen(false)}
-                                className="flex-1 py-4.5 bg-gray-50 text-gray-400 rounded-3xl font-black text-sm hover:bg-gray-100 transition-all border border-gray-100/50">
+                                className="flex-1 py-4.5 bg-gray-50 text-gray-700 rounded-3xl font-black text-sm hover:bg-gray-100 transition-all border border-gray-100/50">
                                 취소
                             </button>
                             <button onClick={handleSave}

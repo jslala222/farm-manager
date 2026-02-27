@@ -68,7 +68,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
     return (
         <div className={`space-y-2 ${className}`}>
             <div className="flex justify-between items-end ml-1">
-                <label className="text-xs font-black text-gray-400 uppercase tracking-tight flex items-center gap-1">
+                <label className="text-xs font-black text-gray-700 uppercase tracking-tight flex items-center gap-1">
                     <MapPin className="w-4 h-4" /> {label}
                 </label>
                 <button
@@ -85,7 +85,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
                 onChange={(e) => onChange(e.target.value)}
                 placeholder={placeholder}
                 rows={2}
-                className="w-full px-4 py-3 bg-white border-2 border-gray-200 shadow-sm rounded-2xl text-sm font-black focus:bg-white focus:border-indigo-600 outline-none transition-all placeholder:text-gray-300 resize-none min-h-[4.5rem] leading-relaxed"
+                className="w-full px-4 py-3 bg-white border-2 border-gray-200 shadow-sm rounded-2xl text-sm font-black focus:bg-white focus:border-indigo-600 outline-none transition-all placeholder:text-gray-600 resize-none min-h-[4.5rem] leading-relaxed"
             />
 
             {/* 카카오 주소 검색 모달 */}
@@ -98,7 +98,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
                                 onClick={() => setIsOpen(false)}
                                 className="p-2 hover:bg-gray-100 rounded-xl transition-all"
                             >
-                                <X className="w-6 h-6 text-gray-400" />
+                                <X className="w-6 h-6 text-gray-700" />
                             </button>
                         </div>
                         <div className="h-[400px]">
@@ -107,7 +107,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
                                 style={{ height: '100%', width: '100%' }}
                             />
                         </div>
-                        <div className="p-4 bg-gray-50 text-[10px] text-center text-gray-400 font-bold uppercase tracking-widest">
+                        <div className="p-4 bg-gray-50 text-[10px] text-center text-gray-700 font-bold uppercase tracking-widest">
                             Kakao Postcode Service Connected
                         </div>
                     </div>

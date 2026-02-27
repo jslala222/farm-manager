@@ -98,7 +98,7 @@ export default function NavBar() {
                         </div>
                         <div className="flex-1 min-w-0">
                             <p className="font-bold text-gray-900 text-sm leading-tight truncate">농장관리</p>
-                            <p className="text-[10px] text-gray-400 truncate mt-0.5">{farm?.farm_name || profile?.full_name}</p>
+                            <p className="text-[10px] text-gray-700 truncate mt-0.5">{farm?.farm_name || profile?.full_name}</p>
                             <div className="mt-2">
                                 <DbStatus />
                             </div>
@@ -108,7 +108,7 @@ export default function NavBar() {
                                 onClick={() => setShowFarmSwitcher(!showFarmSwitcher)}
                                 className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
                             >
-                                <Settings className="w-4 h-4 text-gray-400" />
+                                <Settings className="w-4 h-4 text-gray-700" />
                             </button>
                         )}
                     </div>
@@ -117,7 +117,7 @@ export default function NavBar() {
                 {/* 농장 전환 메뉴 (관리자용) */}
                 {showFarmSwitcher && profile?.role === 'admin' && (
                     <div className="mx-3 mt-3 p-2 bg-gray-50 rounded-xl space-y-1 max-h-48 overflow-y-auto border border-gray-100 animate-in fade-in slide-in-from-top-2">
-                        <p className="text-[10px] font-black text-gray-400 px-2 py-1 uppercase">농장 전환</p>
+                        <p className="text-[10px] font-black text-gray-700 px-2 py-1 uppercase">농장 전환</p>
                         {farms.map(f => (
                             <button
                                 key={f.id}
@@ -149,12 +149,12 @@ export default function NavBar() {
 
                 <div className="p-3 border-t border-gray-100 space-y-1">
                     <button onClick={handleEmergencyReset}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium text-gray-400 hover:bg-orange-50 hover:text-orange-600 transition-all w-full">
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-all w-full">
                         <RefreshCcw size={14} />
                         연결 세션 초기화
                     </button>
                     <button onClick={handleSignOut}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-500 hover:bg-red-50 hover:text-red-600 transition-all w-full">
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 hover:bg-red-50 hover:text-red-600 transition-all w-full">
                         <LogOut className="w-4 h-4" />
                         로그아웃
                     </button>
@@ -182,13 +182,13 @@ export default function NavBar() {
                         {/* [bkit] 긴급 연결 복구 버튼 */}
                         <button
                             onClick={handleEmergencyReset}
-                            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all"
+                            className="p-2 text-gray-700 hover:text-red-500 hover:bg-red-50 rounded-full transition-all"
                             title="연결 복구"
                         >
                             <RefreshCcw size={18} />
                         </button>
 
-                        <button onClick={() => setMobileOpen(!mobileOpen)} className="p-2 text-gray-500 hover:bg-gray-50 rounded-full">
+                        <button onClick={() => setMobileOpen(!mobileOpen)} className="p-2 text-gray-700 hover:bg-gray-50 rounded-full">
                             {mobileOpen ? <X size={20} /> : <AlignLeft size={20} />}
                         </button>
                     </div>
@@ -202,13 +202,13 @@ export default function NavBar() {
                     <div className="absolute left-0 top-0 bottom-0 w-56 bg-white shadow-xl flex flex-col animate-in slide-in-from-left duration-300">
                         <div className="p-5 border-b border-gray-100 flex items-center justify-between">
                             <span className="font-bold text-gray-900">전체 메뉴</span>
-                            <button onClick={() => setMobileOpen(false)}><X className="w-5 h-5 text-gray-400" /></button>
+                            <button onClick={() => setMobileOpen(false)}><X className="w-5 h-5 text-gray-700" /></button>
                         </div>
 
                         {/* 모바일 농장 전환 (관리자용) */}
                         {profile?.role === 'admin' && (
                             <div className="p-4 bg-gray-50 border-b border-gray-100 space-y-2">
-                                <p className="text-[10px] font-black text-gray-400 uppercase ml-1">농장 전환</p>
+                                <p className="text-[10px] font-black text-gray-700 uppercase ml-1">농장 전환</p>
                                 <div className="grid grid-cols-1 gap-1.5">
                                     {farms.map(f => (
                                         <button
@@ -239,7 +239,7 @@ export default function NavBar() {
                         </nav>
                         <div className="p-3 border-t border-gray-100">
                             <button onClick={handleSignOut}
-                                className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-500 hover:bg-red-50 hover:text-red-600 w-full">
+                                className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-700 hover:bg-red-50 hover:text-red-600 w-full">
                                 <LogOut className="w-5 h-5" />
                                 로그아웃
                             </button>
@@ -253,7 +253,7 @@ export default function NavBar() {
                 {navItems.slice(0, 5).map(({ href, label, icon: Icon }) => (
                     <Link key={href} href={href}
                         className={`flex-1 flex flex-col items-center py-3 gap-0.5 text-[11px] font-medium transition-colors
-              ${pathname === href ? 'text-red-600' : 'text-gray-400 hover:text-gray-600'}`}>
+              ${pathname === href ? 'text-red-600' : 'text-gray-700 hover:text-gray-600'}`}>
                         <Icon className="w-5 h-5" />
                         {label}
                     </Link>

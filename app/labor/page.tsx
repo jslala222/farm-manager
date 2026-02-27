@@ -431,8 +431,8 @@ export default function LaborPage() {
         }
     };
 
-    if (!initialized) return <div className="p-8 text-center text-gray-400 text-sm">로딩 중...</div>;
-    if (!farm) return <div className="p-8 text-center text-gray-400 text-sm">농장 정보를 불러올 수 없습니다.</div>;
+    if (!initialized) return <div className="p-8 text-center text-gray-700 text-sm">로딩 중...</div>;
+    if (!farm) return <div className="p-8 text-center text-gray-700 text-sm">농장 정보를 불러올 수 없습니다.</div>;
 
     const unpaidTotal = rows.filter(r => !r.paid).reduce((s, r) => s + rowSubtotal(r), 0);
 
@@ -453,21 +453,21 @@ export default function LaborPage() {
                 </div>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                     {monthSummary.staffDays > 0 && (
-                        <span className="text-[11px] font-bold text-gray-500">
+                        <span className="text-[11px] font-bold text-gray-700">
                             직원/식구 <span className="text-blue-600 font-black">{monthSummary.staffDays}명</span>
                         </span>
                     )}
-                    <span className="text-[11px] font-bold text-gray-500">
+                    <span className="text-[11px] font-bold text-gray-700">
                         알바{' '}
                         <span className="text-orange-600 font-black">인력 {monthSummary.agencyCount}명</span>
-                        <span className="text-gray-300 mx-1">/</span>
+                        <span className="text-gray-600 mx-1">/</span>
                         <span className="text-orange-600 font-black">개별 {monthSummary.directCount}명</span>
                     </span>
-                    <span className="text-[11px] font-bold text-gray-500">
+                    <span className="text-[11px] font-bold text-gray-700">
                         비용 <span className="text-orange-700 font-black">{monthSummary.totalCost.toLocaleString()}원</span>
                     </span>
                     {monthSummary.totalTip > 0 && (
-                        <span className="text-[11px] font-bold text-gray-500">
+                        <span className="text-[11px] font-bold text-gray-700">
                             팁 <span className="text-orange-500 font-black">{monthSummary.totalTip.toLocaleString()}원</span>
                         </span>
                     )}
@@ -487,7 +487,7 @@ export default function LaborPage() {
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => moveDate(-1)}
-                        className="p-2 rounded-xl bg-gray-100 hover:bg-orange-100 hover:text-orange-600 text-gray-500 transition-all active:scale-95 shrink-0"
+                        className="p-2 rounded-xl bg-gray-100 hover:bg-orange-100 hover:text-orange-600 text-gray-700 transition-all active:scale-95 shrink-0"
                     >
                         <ChevronLeft className="w-5 h-5" />
                     </button>
@@ -506,7 +506,7 @@ export default function LaborPage() {
                     <button
                         onClick={() => moveDate(1)}
                         disabled={selectedDate >= today}
-                        className="p-2 rounded-xl bg-gray-100 hover:bg-orange-100 hover:text-orange-600 text-gray-500 transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+                        className="p-2 rounded-xl bg-gray-100 hover:bg-orange-100 hover:text-orange-600 text-gray-700 transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
                     >
                         <ChevronRight className="w-5 h-5" />
                     </button>
@@ -528,7 +528,7 @@ export default function LaborPage() {
                 <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50">
                     <button
                         onClick={() => moveWeek(-1)}
-                        className="p-1.5 rounded-lg bg-gray-100 hover:bg-orange-100 text-gray-500 hover:text-orange-600 transition-all active:scale-95"
+                        className="p-1.5 rounded-lg bg-gray-100 hover:bg-orange-100 text-gray-700 hover:text-orange-600 transition-all active:scale-95"
                     >
                         <ChevronLeft className="w-4 h-4" />
                     </button>
@@ -538,17 +538,17 @@ export default function LaborPage() {
                     >
                         <CalendarDays className="w-3.5 h-3.5 text-orange-400" />
                         주간 인력 현황
-                        <span className="text-[10px] text-gray-400 font-normal">
+                        <span className="text-[10px] text-gray-700 font-normal">
                             {weekDates[0].slice(5).replace('-', '/')}&nbsp;~&nbsp;{weekDates[6].slice(5).replace('-', '/')}
                         </span>
                         {showWeekSummary
-                            ? <ChevronUp className="w-3.5 h-3.5 text-gray-400" />
-                            : <ChevronDown className="w-3.5 h-3.5 text-gray-400" />}
+                            ? <ChevronUp className="w-3.5 h-3.5 text-gray-700" />
+                            : <ChevronDown className="w-3.5 h-3.5 text-gray-700" />}
                     </button>
                     <button
                         onClick={() => moveWeek(1)}
                         disabled={weekDates[6] >= today}
-                        className="p-1.5 rounded-lg bg-gray-100 hover:bg-orange-100 text-gray-500 hover:text-orange-600 transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed"
+                        className="p-1.5 rounded-lg bg-gray-100 hover:bg-orange-100 text-gray-700 hover:text-orange-600 transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed"
                     >
                         <ChevronRight className="w-4 h-4" />
                     </button>
@@ -580,7 +580,7 @@ export default function LaborPage() {
                                                 : 'bg-gray-50 hover:bg-gray-100'
                                         }`}
                                     >
-                                        <span className={`text-[9px] font-black ${isSelected ? 'text-orange-200' : 'text-gray-400'}`}>
+                                        <span className={`text-[9px] font-black ${isSelected ? 'text-orange-200' : 'text-gray-700'}`}>
                                             {dayName}
                                         </span>
                                         <span className={`text-base font-black leading-none ${
@@ -593,7 +593,7 @@ export default function LaborPage() {
                                         <span className={`text-[10px] font-bold leading-none mt-0.5 ${
                                             isSelected ? 'text-orange-100'
                                             : total > 0 ? 'text-orange-500'
-                                            : 'text-gray-300'
+                                            : 'text-gray-600'
                                         }`}>
                                             {isFuture ? '—' : total > 0 ? `${total}명` : '없음'}
                                         </span>
@@ -613,12 +613,12 @@ export default function LaborPage() {
                             return (
                                 <div className="px-4 pb-4 border-t border-orange-50">
                                     <div className="flex items-center justify-between py-2.5">
-                                        <span className="text-[11px] font-black text-gray-500">
+                                        <span className="text-[11px] font-black text-gray-700">
                                             {mm}/{dd}({dayName}) 상세
                                         </span>
                                         {sel.total > 0 && (
                                             <div className="flex gap-3">
-                                                <span className="text-[10px] font-bold text-gray-400">
+                                                <span className="text-[10px] font-bold text-gray-700">
                                                     총 <span className="text-orange-600 font-black">{sel.total}명</span>
                                                 </span>
                                                 <span className="text-[10px] font-black text-orange-600">
@@ -628,7 +628,7 @@ export default function LaborPage() {
                                         )}
                                     </div>
                                     {sel.total === 0 ? (
-                                        <p className="text-[11px] text-gray-300 font-bold text-center py-2">기록 없음</p>
+                                        <p className="text-[11px] text-gray-600 font-bold text-center py-2">기록 없음</p>
                                     ) : (
                                         <div className="space-y-1.5">
                                             {sel.staffCount > 0 && (
@@ -673,7 +673,7 @@ export default function LaborPage() {
                 </div>
 
                 {rows.length === 0 ? (
-                    <div className="text-center py-10 text-gray-300 text-sm bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                    <div className="text-center py-10 text-gray-600 text-sm bg-gray-50 rounded-2xl border border-dashed border-gray-200">
                         + 행 추가 버튼으로 인력 투입을 기록하세요
                     </div>
                 ) : (
@@ -693,8 +693,8 @@ export default function LaborPage() {
                                                 <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${row.source === '인력사무소' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
                                                     {row.source === '인력사무소' && row.agency_name ? row.agency_name : row.source}
                                                 </span>
-                                                <span className="text-[10px] font-bold text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full">{row.grade}</span>
-                                                <span className="text-[10px] text-gray-400">{row.headcount}명</span>
+                                                <span className="text-[10px] font-bold text-gray-700 bg-gray-50 px-2 py-0.5 rounded-full">{row.grade}</span>
+                                                <span className="text-[10px] text-gray-700">{row.headcount}명</span>
                                                 <span className="text-[10px] font-bold text-gray-600">{row.daily_wage.toLocaleString()}원</span>
                                                 {row.tip > 0 && <span className="text-[10px] text-orange-500 font-bold">+팁{row.tip.toLocaleString()}</span>}
                                                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${row.payment_method === '현금' ? 'bg-green-50 text-green-600' : row.payment_method === '카드' ? 'bg-indigo-50 text-indigo-600' : 'bg-sky-50 text-sky-600'}`}>
@@ -707,7 +707,7 @@ export default function LaborPage() {
                                             ? <CheckCircle className="w-4 h-4 text-green-400 shrink-0" />
                                             : <button
                                                 onClick={() => toggleExpand(row._key)}
-                                                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all shrink-0 ${expanded ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-500 hover:bg-orange-50 hover:text-orange-500'}`}
+                                                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all shrink-0 ${expanded ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-700 hover:bg-orange-50 hover:text-orange-500'}`}
                                             >
                                                 <Pencil className="w-3 h-3" />
                                                 {expanded ? '닫기' : '수정'}
@@ -721,7 +721,7 @@ export default function LaborPage() {
                                             {/* 출처 + 등급 + 지급방식 */}
                                             <div className="grid grid-cols-3 gap-2">
                                                 <div>
-                                                    <label className="text-[9px] font-bold text-gray-400 mb-1 block">출처</label>
+                                                    <label className="text-[9px] font-bold text-gray-700 mb-1 block">출처</label>
                                                     <select
                                                         value={row.source}
                                                         onChange={e => updateRow(row._key, 'source', e.target.value)}
@@ -732,7 +732,7 @@ export default function LaborPage() {
                                                     </select>
                                                 </div>
                                                 <div>
-                                                    <label className="text-[9px] font-bold text-gray-400 mb-1 block">등급</label>
+                                                    <label className="text-[9px] font-bold text-gray-700 mb-1 block">등급</label>
                                                     <select
                                                         value={row.grade}
                                                         onChange={e => updateRow(row._key, 'grade', e.target.value)}
@@ -742,7 +742,7 @@ export default function LaborPage() {
                                                     </select>
                                                 </div>
                                                 <div>
-                                                    <label className="text-[9px] font-bold text-gray-400 mb-1 block">지급방식</label>
+                                                    <label className="text-[9px] font-bold text-gray-700 mb-1 block">지급방식</label>
                                                     <select
                                                         value={row.payment_method}
                                                         onChange={e => updateRow(row._key, 'payment_method', e.target.value as PaymentMethod)}
@@ -767,7 +767,7 @@ export default function LaborPage() {
                                             {/* 인원 × 단가 + 팁 */}
                                             <div className="grid grid-cols-3 gap-2">
                                                 <div>
-                                                    <label className="text-[9px] font-bold text-gray-400 mb-1 block">인원 (명)</label>
+                                                    <label className="text-[9px] font-bold text-gray-700 mb-1 block">인원 (명)</label>
                                                     <input
                                                         type="text"
                                                         inputMode="numeric"
@@ -782,7 +782,7 @@ export default function LaborPage() {
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className="text-[9px] font-bold text-gray-400 mb-1 block">단가 (원)</label>
+                                                    <label className="text-[9px] font-bold text-gray-700 mb-1 block">단가 (원)</label>
                                                     <input
                                                         type="text"
                                                         inputMode="numeric"
@@ -816,7 +816,7 @@ export default function LaborPage() {
                                             {/* 작업명 + 메모 */}
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                                 <div>
-                                                    <label className="text-[9px] font-bold text-gray-400 mb-1 block">작업명</label>
+                                                    <label className="text-[9px] font-bold text-gray-700 mb-1 block">작업명</label>
                                                     <select
                                                         value={row.work_type}
                                                         onChange={e => updateRow(row._key, 'work_type', e.target.value)}
@@ -827,7 +827,7 @@ export default function LaborPage() {
                                                     </select>
                                                 </div>
                                                 <div>
-                                                    <label className="text-[9px] font-bold text-gray-400 mb-1 block">메모</label>
+                                                    <label className="text-[9px] font-bold text-gray-700 mb-1 block">메모</label>
                                                     <input
                                                         type="text" placeholder="특이사항"
                                                         value={row.notes}
@@ -864,7 +864,7 @@ export default function LaborPage() {
                     <h2 className="text-sm font-black text-gray-700 flex items-center gap-2 mb-3">
                         <span className="w-1.5 h-4 bg-blue-400 rounded-full" />
                         직원 / 식구 투입
-                        <span className="text-[9px] text-gray-400 font-normal">(월급 별도 처리)</span>
+                        <span className="text-[9px] text-gray-700 font-normal">(월급 별도 처리)</span>
                     </h2>
                     <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
                         <div className="flex flex-wrap gap-2">
@@ -872,11 +872,11 @@ export default function LaborPage() {
                                 <button
                                     key={w.id}
                                     onClick={() => setAttendance(prev => ({ ...prev, [w.id]: !prev[w.id] }))}
-                                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${attendance[w.id] ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-50 text-gray-500 border border-gray-100'}`}
+                                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${attendance[w.id] ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-50 text-gray-700 border border-gray-100'}`}
                                 >
                                     {attendance[w.id] && <CheckCircle className="w-3.5 h-3.5" />}
                                     {w.name}
-                                    <span className={`text-[9px] ${attendance[w.id] ? 'text-blue-200' : 'text-gray-300'}`}>
+                                    <span className={`text-[9px] ${attendance[w.id] ? 'text-blue-200' : 'text-gray-600'}`}>
                                         {w.role === 'family' ? '식구' : w.role === 'foreign' ? '외국인' : '직원'}
                                     </span>
                                 </button>
@@ -896,7 +896,7 @@ export default function LaborPage() {
                 <section className="bg-orange-50 rounded-2xl p-4 border border-orange-100">
                     <div className="flex justify-between items-start mb-3">
                         <div>
-                            <p className="text-[10px] font-bold text-gray-500 mb-0.5">오늘 지급 합계</p>
+                            <p className="text-[10px] font-bold text-gray-700 mb-0.5">오늘 지급 합계</p>
                             {unpaidTotal < totals.grand && (
                                 <p className="text-[10px] text-green-600 font-bold flex items-center gap-1">
                                     <CheckCircle className="w-3 h-3" />

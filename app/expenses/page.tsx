@@ -330,11 +330,11 @@ export default function ExpensesPage() {
 
                 <div className="flex bg-gray-100 p-1 rounded-xl shrink-0">
                     <button onClick={() => setActiveTab('list')}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'list' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-400'}`}>
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'list' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-700'}`}>
                         지출내역
                     </button>
                     <button onClick={() => setActiveTab('analysis')}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'analysis' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-400'}`}>
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'analysis' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-700'}`}>
                         지출통계
                     </button>
                 </div>
@@ -344,7 +344,7 @@ export default function ExpensesPage() {
             {activeTab === 'list' && (
                 <div className="flex justify-end mb-2">
                     <button onClick={() => setIsAdding(!isAdding)}
-                        className={`px-5 py-2.5 rounded-2xl font-black flex items-center gap-2 transition-all shadow-lg active:scale-95 shrink-0 ${isAdding ? 'bg-gray-100 text-gray-500' : 'bg-red-600 text-white shadow-red-200'
+                        className={`px-5 py-2.5 rounded-2xl font-black flex items-center gap-2 transition-all shadow-lg active:scale-95 shrink-0 ${isAdding ? 'bg-gray-100 text-gray-700' : 'bg-red-600 text-white shadow-red-200'
                             }`}>
                         {isAdding ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
                         {isAdding ? '취소' : '지출 기록'}
@@ -392,17 +392,17 @@ export default function ExpensesPage() {
                         <div className="bg-white rounded-[2.5rem] border border-red-100 shadow-2xl shadow-red-100/50 p-3 space-y-3 animate-in fade-in slide-in-from-top-4 duration-500">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-[11px] font-black text-gray-400 mb-2 ml-1 uppercase tracking-widest">지출 일자</label>
+                                    <label className="block text-[11px] font-black text-gray-700 mb-2 ml-1 uppercase tracking-widest">지출 일자</label>
                                     <div className="relative">
-                                        <CalendarIcon className="absolute left-4 top-3.5 w-4 h-4 text-gray-400 pointer-events-none" />
+                                        <CalendarIcon className="absolute left-4 top-3.5 w-4 h-4 text-gray-700 pointer-events-none" />
                                         <input type="date" value={expenseDate} onChange={(e) => setExpenseDate(e.target.value)}
                                             className="w-full p-3.5 pl-11 border-2 border-gray-100 bg-gray-50 rounded-2xl focus:border-red-500 focus:bg-white outline-none font-bold transition-all text-sm" />
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-[11px] font-black text-gray-400 mb-2 ml-1 uppercase tracking-widest">지출 금액</label>
+                                    <label className="block text-[11px] font-black text-gray-700 mb-2 ml-1 uppercase tracking-widest">지출 금액</label>
                                     <div className="relative">
-                                        <CreditCard className="absolute left-4 top-3.5 w-4 h-4 text-gray-400 pointer-events-none" />
+                                        <CreditCard className="absolute left-4 top-3.5 w-4 h-4 text-gray-700 pointer-events-none" />
                                         <input type="text" value={amount ? formatCurrency(amount) : ""}
                                             onChange={(e) => setAmount(stripNonDigits(e.target.value))}
                                             placeholder="0원"
@@ -413,11 +413,11 @@ export default function ExpensesPage() {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-[11px] font-black text-gray-400 mb-2 ml-1 uppercase tracking-widest">결제 수단</label>
+                                    <label className="block text-[11px] font-black text-gray-700 mb-2 ml-1 uppercase tracking-widest">결제 수단</label>
                                     <div className="flex p-1 bg-gray-100 rounded-2xl gap-1">
                                         {(["카드", "현금"] as const).map(m => (
                                             <button key={m} onClick={() => setPaymentMethod(m)}
-                                                className={`flex-1 py-3 rounded-xl text-xs font-black transition-all ${paymentMethod === m ? 'bg-white shadow-sm text-red-600' : 'text-gray-400 hover:text-gray-600'}`}>
+                                                className={`flex-1 py-3 rounded-xl text-xs font-black transition-all ${paymentMethod === m ? 'bg-white shadow-sm text-red-600' : 'text-gray-700 hover:text-gray-600'}`}>
                                                 {m}
                                             </button>
                                         ))}
@@ -430,7 +430,7 @@ export default function ExpensesPage() {
 
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-[11px] font-black text-gray-400 mb-2 ml-1 uppercase tracking-widest">대분류 선택</label>
+                                    <label className="block text-[11px] font-black text-gray-700 mb-2 ml-1 uppercase tracking-widest">대분류 선택</label>
                                     <div className="flex p-1 bg-gray-100 rounded-2xl gap-1">
                                         {Object.keys(CATEGORY_MAP).map(mCat => (
                                             <button key={mCat} onClick={() => {
@@ -440,7 +440,7 @@ export default function ExpensesPage() {
                                                 setAmount("");
                                                 setNotes("");
                                             }}
-                                                className={`flex-1 py-3 rounded-xl text-xs font-black transition-all ${mainCategory === mCat ? 'bg-white shadow-sm text-red-600' : 'text-gray-400 hover:text-gray-600'
+                                                className={`flex-1 py-3 rounded-xl text-xs font-black transition-all ${mainCategory === mCat ? 'bg-white shadow-sm text-red-600' : 'text-gray-700 hover:text-gray-600'
                                                     }`}>
                                                 {mCat === '농작관리' ? '🚜 농작/운영' : mCat === '인건비' ? '💰 직원급여/식대' : '🏠 가계생활'}
                                             </button>
@@ -449,12 +449,12 @@ export default function ExpensesPage() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-[11px] font-black text-gray-400 mb-2 ml-1 uppercase tracking-widest">상세 항목(소분류)</label>
+                                    <label className="block text-[11px] font-black text-gray-700 mb-2 ml-1 uppercase tracking-widest">상세 항목(소분류)</label>
                                     <div className="flex flex-wrap gap-2">
                                         {CATEGORY_MAP[mainCategory].map(sCat => (
                                             <button key={sCat} onClick={() => setSubCategory(sCat)}
                                                 className={`px-4 py-2.5 rounded-xl border-2 text-[11px] font-black transition-all
-                                        ${subCategory === sCat ? 'bg-red-50 border-red-200 text-red-600' : 'bg-white border-gray-100 text-gray-400 hover:border-gray-200'}`}>
+                                        ${subCategory === sCat ? 'bg-red-50 border-red-200 text-red-600' : 'bg-white border-gray-100 text-gray-700 hover:border-gray-200'}`}>
                                                 {sCat}
                                             </button>
                                         ))}
@@ -463,7 +463,7 @@ export default function ExpensesPage() {
                             </div>
 
                             <div>
-                                <label className="block text-[11px] font-black text-gray-400 mb-2 ml-1 uppercase tracking-widest">메모 (선택사항)</label>
+                                <label className="block text-[11px] font-black text-gray-700 mb-2 ml-1 uppercase tracking-widest">메모 (선택사항)</label>
                                 <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
                                     placeholder="상세 내용을 적어주세요..."
                                     className="w-full p-4 border-2 border-gray-100 bg-gray-50 rounded-2xl focus:border-red-500 focus:bg-white outline-none h-24 resize-none transition-all text-sm" />
@@ -484,9 +484,9 @@ export default function ExpensesPage() {
                                 <div className="space-y-1">
                                     <h2 className="text-xl font-black text-gray-900 flex items-center gap-2">
                                         지출 내역
-                                        <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-bold">{filteredExpenses.length}건</span>
+                                        <span className="text-[10px] bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full font-bold">{filteredExpenses.length}건</span>
                                     </h2>
-                                    <p className="text-[10px] font-bold text-gray-400 flex items-center gap-1">
+                                    <p className="text-[10px] font-bold text-gray-700 flex items-center gap-1">
                                         <CalendarIcon className="w-3 h-3" />
                                         {formattedSelectedDate}
                                     </p>
@@ -506,7 +506,7 @@ export default function ExpensesPage() {
                                         <span className="truncate">{monthlySummary.month}월 지출 리포트</span>
                                     </p>
                                     <div className="flex items-center gap-2 shrink-0">
-                                        <span className="text-xs font-black text-gray-400 bg-gray-100 px-2 py-1 rounded-lg">{monthlySummary.count}건</span>
+                                        <span className="text-xs font-black text-gray-700 bg-gray-100 px-2 py-1 rounded-lg">{monthlySummary.count}건</span>
                                         <span className="text-lg font-black text-red-600 whitespace-nowrap">{formatCurrency(monthlySummary.total)}</span>
                                     </div>
                                 </div>
@@ -532,13 +532,13 @@ export default function ExpensesPage() {
                         <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
                             <button onClick={() => setMainFilter(null)}
                                 className={`px-4 py-2 rounded-xl text-[10px] font-black whitespace-nowrap transition-all border-2
-                        ${!mainFilter ? 'bg-gray-900 border-gray-900 text-white' : 'bg-white border-gray-100 text-gray-400'}`}>
+                        ${!mainFilter ? 'bg-gray-900 border-gray-900 text-white' : 'bg-white border-gray-100 text-gray-700'}`}>
                                 전체보기
                             </button>
                             {Object.keys(CATEGORY_MAP).map(mFilter => (
                                 <button key={mFilter} onClick={() => setMainFilter(mFilter)}
                                     className={`px-4 py-2 rounded-xl text-[10px] font-black whitespace-nowrap transition-all border-2
-                            ${mainFilter === mFilter ? 'bg-red-600 border-red-600 text-white' : 'bg-white border-gray-100 text-gray-400'}`}>
+                            ${mainFilter === mFilter ? 'bg-red-600 border-red-600 text-white' : 'bg-white border-gray-100 text-gray-700'}`}>
                                     {mFilter}
                                 </button>
                             ))}
@@ -548,7 +548,7 @@ export default function ExpensesPage() {
                             {loading ? (
                                 <div className="flex flex-col items-center justify-center py-20 gap-4">
                                     <RefreshCcw className="w-10 h-10 text-gray-200 animate-spin" />
-                                    <p className="text-sm font-bold text-gray-300">지출 데이터를 분석 중입니다...</p>
+                                    <p className="text-sm font-bold text-gray-600">지출 데이터를 분석 중입니다...</p>
                                 </div>
                             ) : filteredExpenses.length > 0 ? (
                                 filteredExpenses.map((exp: Expenditure) => (
@@ -564,14 +564,14 @@ export default function ExpensesPage() {
                                                 <span className={`text-[10px] px-1.5 py-0.5 rounded-lg font-black shrink-0 ${exp.main_category === '농작관리' ? 'bg-red-50 text-red-600' : exp.main_category === '인건비' ? 'bg-orange-50 text-orange-600' : 'bg-sky-50 text-sky-600'}`}>
                                                     {exp.sub_category || exp.category}
                                                 </span>
-                                                <span className="text-[10px] bg-gray-50 text-gray-400 px-1.5 py-0.5 rounded border border-gray-100 font-bold shrink-0">
+                                                <span className="text-[10px] bg-gray-50 text-gray-700 px-1.5 py-0.5 rounded border border-gray-100 font-bold shrink-0">
                                                     {exp.payment_method || '카드'}
                                                 </span>
                                             </div>
-                                            <div className="flex items-center gap-1.5 text-xs text-gray-500 min-w-0">
+                                            <div className="flex items-center gap-1.5 text-xs text-gray-700 min-w-0">
                                                 <p className="font-bold truncate">{exp.notes || '메모 없음'}</p>
                                                 <span className="text-gray-200 shrink-0">|</span>
-                                                <div className="flex items-center gap-1 text-[10px] font-bold text-gray-400 shrink-0">
+                                                <div className="flex items-center gap-1 text-[10px] font-bold text-gray-700 shrink-0">
                                                     <CalendarIcon size={10} />
                                                     {exp.expense_date}
                                                 </div>
@@ -585,7 +585,7 @@ export default function ExpensesPage() {
                                     <div className="w-20 h-20 bg-white rounded-3xl shadow-sm flex items-center justify-center mx-auto mb-6">
                                         <Search className="w-10 h-10 text-gray-200" />
                                     </div>
-                                    <p className="text-gray-400 font-bold">선택하신 조건에 해당하는<br />지출 내역이 없습니다.</p>
+                                    <p className="text-gray-700 font-bold">선택하신 조건에 해당하는<br />지출 내역이 없습니다.</p>
                                     {mainFilter && (
                                         <button onClick={() => setMainFilter(null)} className="mt-4 text-xs font-black text-red-500 underline underline-offset-4">
                                             전체 내역 보기
@@ -612,7 +612,7 @@ export default function ExpensesPage() {
                                         setStatsWeekStart(getLocalISOString(sunday));
                                     }
                                 }}
-                                className={`flex-1 py-2 px-3 rounded-lg text-[11px] font-black transition-all whitespace-nowrap ${statsPeriod === p ? 'bg-white shadow-sm text-red-600' : 'text-gray-400'}`}>
+                                className={`flex-1 py-2 px-3 rounded-lg text-[11px] font-black transition-all whitespace-nowrap ${statsPeriod === p ? 'bg-white shadow-sm text-red-600' : 'text-gray-700'}`}>
                                 {p === 'today' ? '오늘' : p === 'custom' ? '지정일' : p === 'week' ? '이번 주' : '이번 달'}
                             </button>
                         ))}
@@ -640,7 +640,7 @@ export default function ExpensesPage() {
                     {statsPeriod === 'week' && (
                         <div className="bg-white p-4 rounded-3xl border border-gray-100 shadow-sm overflow-x-auto scrollbar-hide">
                             <div className="flex justify-between items-center mb-3">
-                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-2">Weekly Navigation</span>
+                                <span className="text-[10px] font-black text-gray-700 uppercase tracking-widest px-2">Weekly Navigation</span>
                                 <div className="flex gap-2">
                                     <button
                                         onClick={() => {
@@ -648,7 +648,7 @@ export default function ExpensesPage() {
                                             d.setDate(d.getDate() - 7);
                                             setStatsWeekStart(d.toISOString().split('T')[0]);
                                         }}
-                                        className="p-1.5 bg-gray-50 rounded-lg text-gray-400 hover:text-gray-900"
+                                        className="p-1.5 bg-gray-50 rounded-lg text-gray-700 hover:text-gray-900"
                                     >
                                         <ChevronLeft className="w-4 h-4" />
                                     </button>
@@ -660,7 +660,7 @@ export default function ExpensesPage() {
                                             const sunday = new Date(d.setDate(diff));
                                             setStatsWeekStart(sunday.toISOString().split('T')[0]);
                                         }}
-                                        className="px-2 text-[9px] font-black bg-gray-50 rounded-lg text-gray-500"
+                                        className="px-2 text-[9px] font-black bg-gray-50 rounded-lg text-gray-700"
                                     >
                                         이번 주
                                     </button>
@@ -670,7 +670,7 @@ export default function ExpensesPage() {
                                             d.setDate(d.getDate() + 7);
                                             setStatsWeekStart(d.toISOString().split('T')[0]);
                                         }}
-                                        className="p-1.5 bg-gray-50 rounded-lg text-gray-400 hover:text-gray-900"
+                                        className="p-1.5 bg-gray-50 rounded-lg text-gray-700 hover:text-gray-900"
                                     >
                                         <ChevronRight className="w-4 h-4" />
                                     </button>
@@ -692,7 +692,7 @@ export default function ExpensesPage() {
 
                                     return (
                                         <div key={i} className={`flex flex-col items-center gap-2 p-3 rounded-2xl border-2 min-w-[56px] ${isToday ? 'border-red-400 bg-red-50/30' : 'border-gray-50 bg-white'}`}>
-                                            <span className="text-[10px] font-black text-gray-300 uppercase">
+                                            <span className="text-[10px] font-black text-gray-600 uppercase">
                                                 {['일', '월', '화', '수', '목', '금', '토'][i]}
                                             </span>
                                             <span className={`text-base font-black ${isToday ? 'text-red-600' : 'text-gray-900'}`}>
@@ -721,14 +721,14 @@ export default function ExpensesPage() {
                                     onClick={() => setStatsMonth({ ...statsMonth, year: statsMonth.year - 1 })}
                                     className="p-2 hover:bg-gray-50 rounded-xl"
                                 >
-                                    <ChevronLeft className="w-4 h-4 text-gray-400" />
+                                    <ChevronLeft className="w-4 h-4 text-gray-700" />
                                 </button>
                                 <span className="text-sm font-black text-gray-900">{statsMonth.year}년</span>
                                 <button
                                     onClick={() => setStatsMonth({ ...statsMonth, year: statsMonth.year + 1 })}
                                     className="p-2 hover:bg-gray-50 rounded-xl"
                                 >
-                                    <ChevronRight className="w-4 h-4 text-gray-400" />
+                                    <ChevronRight className="w-4 h-4 text-gray-700" />
                                 </button>
                             </div>
                             <div className="grid grid-cols-4 gap-2">
@@ -745,7 +745,7 @@ export default function ExpensesPage() {
                                                 ? 'bg-red-600 border-red-700 text-white shadow-lg'
                                                 : isCurrentMonth
                                                     ? 'bg-white border-red-500 text-red-600'
-                                                    : 'bg-white border-gray-50 text-gray-500 hover:border-red-100'
+                                                    : 'bg-white border-gray-50 text-gray-700 hover:border-red-100'
                                                 }`}
                                         >
                                             {m}월
@@ -760,15 +760,15 @@ export default function ExpensesPage() {
                         <div className="absolute top-0 right-0 w-32 h-32 bg-red-500 opacity-20 rounded-full -mr-16 -mt-16 blur-2xl"></div>
                         <div className="flex justify-between items-start mb-4 gap-2">
                             <div className="min-w-0">
-                                <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1">Total Expenses</p>
+                                <p className="text-gray-700 text-xs font-bold uppercase tracking-widest mb-1">Total Expenses</p>
                                 <h2 className="text-3xl font-black tracking-tighter truncate text-red-400">{formatCurrency(statsAggregated.total)}</h2>
                             </div>
                             <div className="text-right shrink-0">
-                                <p className="text-[10px] text-gray-500 font-bold uppercase">Category</p>
+                                <p className="text-[10px] text-gray-700 font-bold uppercase">Category</p>
                                 <div className="space-y-0.5 mt-1">
-                                    <p className="text-xs font-black text-gray-300">농작: <span className="text-white">{formatCurrency(statsAggregated.byCategory['농작관리'])}</span></p>
-                                    <p className="text-xs font-black text-gray-300">인건: <span className="text-white">{formatCurrency(statsAggregated.byCategory['인건비'])}</span></p>
-                                    <p className="text-xs font-black text-gray-300">가계: <span className="text-white">{formatCurrency(statsAggregated.byCategory['가계생활'])}</span></p>
+                                    <p className="text-xs font-black text-gray-600">농작: <span className="text-white">{formatCurrency(statsAggregated.byCategory['농작관리'])}</span></p>
+                                    <p className="text-xs font-black text-gray-600">인건: <span className="text-white">{formatCurrency(statsAggregated.byCategory['인건비'])}</span></p>
+                                    <p className="text-xs font-black text-gray-600">가계: <span className="text-white">{formatCurrency(statsAggregated.byCategory['가계생활'])}</span></p>
                                 </div>
                             </div>
                         </div>
@@ -777,7 +777,7 @@ export default function ExpensesPage() {
                     {/* 대분류별 통계 */}
                     <section className="space-y-3">
                         <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-                            <BarChart3 className="w-4 h-4 text-gray-400" /> 분류별 지출
+                            <BarChart3 className="w-4 h-4 text-gray-700" /> 분류별 지출
                         </h3>
                         <div className="grid grid-cols-3 gap-2">
                             {[
@@ -792,7 +792,7 @@ export default function ExpensesPage() {
                                             <div className="text-xs font-black uppercase tracking-tighter">{cat.name}</div>
                                             {cat.icon}
                                         </div>
-                                        <div className={`text-sm font-black tracking-tighter truncate ${amount > 0 ? 'text-gray-900' : 'text-gray-300'}`}>
+                                        <div className={`text-sm font-black tracking-tighter truncate ${amount > 0 ? 'text-gray-900' : 'text-gray-600'}`}>
                                             {amount > 0 ? (amount / 10000).toFixed(0) + '만' : '0'}
                                         </div>
                                     </div>
@@ -805,11 +805,11 @@ export default function ExpensesPage() {
                     {statsPeriod !== 'today' && (
                         <section className="space-y-3">
                             <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-                                <CalendarDays className="w-4 h-4 text-gray-400" /> 세부 내역 추이
+                                <CalendarDays className="w-4 h-4 text-gray-700" /> 세부 내역 추이
                             </h3>
                             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-2">
                                 {Object.keys(statsAggregated.bySubCat).length === 0 ? (
-                                    <div className="text-center py-6 text-xs text-gray-400 font-bold">데이터가 없습니다.</div>
+                                    <div className="text-center py-6 text-xs text-gray-700 font-bold">데이터가 없습니다.</div>
                                 ) : (
                                     Object.entries(statsAggregated.bySubCat).sort((a, b) => b[1] - a[1]).map(([subCat, amount]) => (
                                         <div key={subCat} className="flex items-center justify-between p-3 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors rounded-lg">
@@ -838,19 +838,19 @@ export default function ExpensesPage() {
                                 <Edit2 className="w-5 h-5 text-red-500" />
                                 지출 수정
                             </h2>
-                            <button onClick={() => setEditModal(null)} className="p-2 rounded-full hover:bg-gray-100 text-gray-400 transition-all">
+                            <button onClick={() => setEditModal(null)} className="p-2 rounded-full hover:bg-gray-100 text-gray-700 transition-all">
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
 
                         {/* 대분류 */}
                         <div>
-                            <label className="text-[10px] font-black text-gray-400 uppercase block mb-2 ml-1">대분류</label>
+                            <label className="text-[10px] font-black text-gray-700 uppercase block mb-2 ml-1">대분류</label>
                             <div className="flex p-1 bg-gray-100 rounded-2xl gap-1">
                                 {Object.keys(CATEGORY_MAP).map(mCat => (
                                     <button key={mCat}
                                         onClick={() => setEditModal(prev => prev ? { ...prev, main_category: mCat, sub_category: CATEGORY_MAP[mCat][0] } : null)}
-                                        className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all ${editModal.main_category === mCat ? 'bg-white shadow-sm text-red-600' : 'text-gray-400'}`}>
+                                        className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all ${editModal.main_category === mCat ? 'bg-white shadow-sm text-red-600' : 'text-gray-700'}`}>
                                         {mCat === '농작관리' ? '🚜 농작' : mCat === '인건비' ? '💰 직원/식대' : '🏠 가계'}
                                     </button>
                                 ))}
@@ -859,12 +859,12 @@ export default function ExpensesPage() {
 
                         {/* 소분류 */}
                         <div>
-                            <label className="text-[10px] font-black text-gray-400 uppercase block mb-2 ml-1">소분류</label>
+                            <label className="text-[10px] font-black text-gray-700 uppercase block mb-2 ml-1">소분류</label>
                             <div className="flex flex-wrap gap-1.5">
                                 {CATEGORY_MAP[editModal.main_category].map(sCat => (
                                     <button key={sCat}
                                         onClick={() => setEditModal(prev => prev ? { ...prev, sub_category: sCat } : null)}
-                                        className={`px-3 py-2 rounded-xl border-2 text-[11px] font-black transition-all ${editModal.sub_category === sCat ? 'bg-red-50 border-red-200 text-red-600' : 'bg-white border-gray-100 text-gray-400'}`}>
+                                        className={`px-3 py-2 rounded-xl border-2 text-[11px] font-black transition-all ${editModal.sub_category === sCat ? 'bg-red-50 border-red-200 text-red-600' : 'bg-white border-gray-100 text-gray-700'}`}>
                                         {sCat}
                                     </button>
                                 ))}
@@ -874,9 +874,9 @@ export default function ExpensesPage() {
                         {/* 금액 + 결제수단 */}
                         <div className="grid grid-cols-2 gap-3">
                             <div>
-                                <label className="text-[10px] font-black text-gray-400 uppercase block mb-2 ml-1">금액</label>
+                                <label className="text-[10px] font-black text-gray-700 uppercase block mb-2 ml-1">금액</label>
                                 <div className="relative">
-                                    <CreditCard className="absolute left-3 top-3.5 w-4 h-4 text-gray-300" />
+                                    <CreditCard className="absolute left-3 top-3.5 w-4 h-4 text-gray-600" />
                                     <input type="text"
                                         value={editModal.amount ? formatCurrency(editModal.amount) : ''}
                                         onChange={e => setEditModal(prev => prev ? { ...prev, amount: stripNonDigits(e.target.value) } : null)}
@@ -884,12 +884,12 @@ export default function ExpensesPage() {
                                 </div>
                             </div>
                             <div>
-                                <label className="text-[10px] font-black text-gray-400 uppercase block mb-2 ml-1">결제수단</label>
+                                <label className="text-[10px] font-black text-gray-700 uppercase block mb-2 ml-1">결제수단</label>
                                 <div className="flex p-1 bg-gray-100 rounded-2xl gap-1">
                                     {['카드', '현금'].map(m => (
                                         <button key={m}
                                             onClick={() => setEditModal(prev => prev ? { ...prev, payment_method: m } : null)}
-                                            className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all ${editModal.payment_method === m ? 'bg-white shadow-sm text-red-600' : 'text-gray-400'}`}>
+                                            className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all ${editModal.payment_method === m ? 'bg-white shadow-sm text-red-600' : 'text-gray-700'}`}>
                                             {m}
                                         </button>
                                     ))}
@@ -899,7 +899,7 @@ export default function ExpensesPage() {
 
                         {/* 날짜 */}
                         <div>
-                            <label className="text-[10px] font-black text-gray-400 uppercase block mb-2 ml-1">지출 날짜</label>
+                            <label className="text-[10px] font-black text-gray-700 uppercase block mb-2 ml-1">지출 날짜</label>
                             <input type="date"
                                 value={editModal.expense_date}
                                 onChange={e => setEditModal(prev => prev ? { ...prev, expense_date: e.target.value } : null)}
@@ -908,7 +908,7 @@ export default function ExpensesPage() {
 
                         {/* 메모 */}
                         <div>
-                            <label className="text-[10px] font-black text-gray-400 uppercase block mb-2 ml-1">메모</label>
+                            <label className="text-[10px] font-black text-gray-700 uppercase block mb-2 ml-1">메모</label>
                             <input type="text"
                                 value={editModal.notes}
                                 onChange={e => setEditModal(prev => prev ? { ...prev, notes: e.target.value } : null)}

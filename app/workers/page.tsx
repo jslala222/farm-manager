@@ -340,12 +340,12 @@ export default function WorkersPage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase">Name</label>
+                            <label className="text-[10px] font-bold text-gray-700 ml-1 uppercase">Name</label>
                             <input value={editName} onChange={(e) => setEditName(e.target.value)}
                                 className="w-full p-3 bg-gray-50 rounded-xl border border-gray-100 focus:bg-white focus:border-red-300 outline-none font-bold text-base" />
                         </div>
                         <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase">Phone</label>
+                            <label className="text-[10px] font-bold text-gray-700 ml-1 uppercase">Phone</label>
                             <input value={editPhone} onChange={(e) => setEditPhone(formatPhone(e.target.value))}
                                 placeholder="010-0000-0000"
                                 className="w-full p-3 bg-gray-50 rounded-xl border border-gray-100 focus:bg-white focus:border-red-300 outline-none font-bold text-base" />
@@ -354,26 +354,26 @@ export default function WorkersPage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase">Role</label>
+                            <label className="text-[10px] font-bold text-gray-700 ml-1 uppercase">Role</label>
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
                                 {(['family', 'staff', 'foreign', 'part_time'] as const).map(r => (
                                     <button key={r} onClick={() => setEditRole(r)}
                                         className={`py-2 rounded-lg text-[10px] font-bold transition-all border
-                                            ${editRole === r ? 'bg-red-600 border-red-700 text-white shadow-md' : 'bg-white text-gray-400 border-gray-100'}`}>
+                                            ${editRole === r ? 'bg-red-600 border-red-700 text-white shadow-md' : 'bg-white text-gray-700 border-gray-100'}`}>
                                         {roleInfo[r].label.split('/')[0]}
                                     </button>
                                 ))}
                             </div>
                         </div>
                         <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase">Gender</label>
+                            <label className="text-[10px] font-bold text-gray-700 ml-1 uppercase">Gender</label>
                             <div className="grid grid-cols-2 gap-2">
                                 <button onClick={() => setEditGender('male')}
                                     className={`py-2 rounded-lg text-[10px] font-bold border transition-all
-                                        ${editGender === 'male' ? 'bg-indigo-600 border-indigo-700 text-white shadow-md' : 'bg-white text-gray-400 border-gray-100'}`}>남성</button>
+                                        ${editGender === 'male' ? 'bg-indigo-600 border-indigo-700 text-white shadow-md' : 'bg-white text-gray-700 border-gray-100'}`}>남성</button>
                                 <button onClick={() => setEditGender('female')}
                                     className={`py-2 rounded-lg text-[10px] font-bold border transition-all
-                                        ${editGender === 'female' ? 'bg-rose-600 border-rose-700 text-white shadow-md' : 'bg-white text-gray-400 border-gray-100'}`}>여성</button>
+                                        ${editGender === 'female' ? 'bg-rose-600 border-rose-700 text-white shadow-md' : 'bg-white text-gray-700 border-gray-100'}`}>여성</button>
                             </div>
                         </div>
                     </div>
@@ -392,14 +392,14 @@ export default function WorkersPage() {
                             />
                         </div>
                         <div className="col-span-3 space-y-2">
-                            <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase">우편번호</label>
+                            <label className="text-[10px] font-bold text-gray-700 ml-1 uppercase">우편번호</label>
                             <input value={editPostalCode} onChange={(e) => setEditPostalCode(e.target.value)}
                                 className="w-full py-4 px-1 bg-gray-50 rounded-xl border border-gray-100 focus:bg-white focus:border-red-300 outline-none font-bold text-center text-sm" placeholder="00000" />
                         </div>
                     </div>
 
                     <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase">Notes</label>
+                        <label className="text-[10px] font-bold text-gray-700 ml-1 uppercase">Notes</label>
                         <div className="relative">
                             <textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)}
                                 placeholder="특이사항 기록"
@@ -408,9 +408,9 @@ export default function WorkersPage() {
                     </div>
 
                     <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase">Default Daily Wage (기본 일당)</label>
+                        <label className="text-[10px] font-bold text-gray-700 ml-1 uppercase">Default Daily Wage (기본 일당)</label>
                         <div className="relative">
-                            <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
+                            <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
                             <input value={editDailyWage} onChange={(e) => {
                                 const val = e.target.value.replace(/[^0-9]/g, "");
                                 setEditDailyWage(val ? parseInt(val).toLocaleString() : "");
@@ -424,7 +424,7 @@ export default function WorkersPage() {
                         <button onClick={handleUpdateWorker} className="flex-1 bg-gray-900 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg shadow-gray-200 text-sm">
                             <Check className="w-4 h-4" /> 저장
                         </button>
-                        <button onClick={cancelEdit} className="px-6 py-3 bg-gray-100 text-gray-500 rounded-xl font-bold active:scale-95 transition-all text-sm">
+                        <button onClick={cancelEdit} className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold active:scale-95 transition-all text-sm">
                             취소
                         </button>
                     </div>
@@ -446,14 +446,14 @@ export default function WorkersPage() {
                     <div>
                         <div className="flex items-center gap-2 mb-1">
                             <span className="font-bold text-xl text-gray-900">{worker.name}</span>
-                            {!worker.is_active && <span className="text-[9px] font-bold bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full uppercase">중단</span>}
+                            {!worker.is_active && <span className="text-[9px] font-bold bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full uppercase">중단</span>}
                         </div>
                         <div className="flex flex-col gap-1">
                             <div className="flex items-center gap-2 text-xs font-medium">
                                 <span className={`${info.color} bg-white px-2 py-0.5 rounded-lg border ${info.border} text-[10px]`}>{info.label}</span>
-                                {worker.phone && <span className="text-gray-400 flex items-center gap-1"><Phone className="w-3 h-3" />{worker.phone}</span>}
+                                {worker.phone && <span className="text-gray-700 flex items-center gap-1"><Phone className="w-3 h-3" />{worker.phone}</span>}
                             </div>
-                            {worker.address && <p className="text-[10px] text-gray-400 flex items-start gap-1 px-1 leading-relaxed"><MapPin className="w-3 h-3 mt-0.5 shrink-0" />{worker.address}</p>}
+                            {worker.address && <p className="text-[10px] text-gray-700 flex items-start gap-1 px-1 leading-relaxed"><MapPin className="w-3 h-3 mt-0.5 shrink-0" />{worker.address}</p>}
                             <div className="flex items-center gap-2 mt-1">
                                 <span className="text-[10px] font-black text-rose-500 bg-rose-50 px-2 py-0.5 rounded border border-rose-100 italic">
                                     일당: {worker.default_daily_wage ? worker.default_daily_wage.toLocaleString() : '0'}원
@@ -463,10 +463,10 @@ export default function WorkersPage() {
                     </div>
                 </div>
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
-                    <button onClick={() => toggleWorkerStatus(worker.id, worker.is_active)} className={`p-2.5 rounded-xl transition-all active:scale-90 ${worker.is_active ? 'text-gray-300 hover:bg-gray-100 hover:text-gray-500' : 'bg-green-50 text-green-600'}`}>
+                    <button onClick={() => toggleWorkerStatus(worker.id, worker.is_active)} className={`p-2.5 rounded-xl transition-all active:scale-90 ${worker.is_active ? 'text-gray-600 hover:bg-gray-100 hover:text-gray-700' : 'bg-green-50 text-green-600'}`}>
                         {worker.is_active ? <UserX className="w-5 h-5" /> : <UserCheck className="w-5 h-5" />}
                     </button>
-                    <button onClick={() => startEdit(worker)} className="p-2.5 text-gray-300 hover:text-blue-500 hover:bg-blue-50 rounded-xl transition-all active:scale-90">
+                    <button onClick={() => startEdit(worker)} className="p-2.5 text-gray-600 hover:text-blue-500 hover:bg-blue-50 rounded-xl transition-all active:scale-90">
                         <Edit2 className="w-5 h-5" />
                     </button>
                     <button onClick={() => deleteWorker(worker.id)} className="p-2.5 text-gray-200 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all active:scale-90">
@@ -486,7 +486,7 @@ export default function WorkersPage() {
                     </div>
                     <div className="min-w-0">
                         <h1 className="text-xl font-bold text-gray-900 tracking-tight whitespace-nowrap">인력 현황 관리</h1>
-                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Worker Management</p>
+                        <p className="text-[10px] text-gray-700 font-bold uppercase tracking-wider">Worker Management</p>
                     </div>
                 </div>
                 <div className="flex gap-2 shrink-0">
@@ -496,12 +496,12 @@ export default function WorkersPage() {
                             fetchAttendances();
                         }}
                         disabled={loading}
-                        className={`p-3 bg-white border border-gray-100 text-gray-400 rounded-xl hover:bg-gray-50 shadow-sm transition-all active:rotate-180 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                        className={`p-3 bg-white border border-gray-100 text-gray-700 rounded-xl hover:bg-gray-50 shadow-sm transition-all active:rotate-180 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}>
                         <RefreshCcw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
                     </button>
                     <button onClick={() => setIsAdding(!isAdding)}
                         className={`px-5 py-3 rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg active:scale-95 transition-all
-                            ${isAdding ? 'bg-gray-100 text-gray-500' : 'bg-red-600 text-white shadow-red-200 hover:bg-red-700'}`}>
+                            ${isAdding ? 'bg-gray-100 text-gray-700' : 'bg-red-600 text-white shadow-red-200 hover:bg-red-700'}`}>
                         {isAdding ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
                         {isAdding ? '닫기' : '추가'}
                     </button>
@@ -538,12 +538,12 @@ export default function WorkersPage() {
                 <div className="bg-white rounded-3xl border border-red-100 shadow-xl p-3 space-y-3 animate-in slide-in-from-top-6 duration-300">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div className="space-y-2">
-                            <label className="block text-[10px] font-bold text-gray-400 ml-1 uppercase">Name</label>
+                            <label className="block text-[10px] font-bold text-gray-700 ml-1 uppercase">Name</label>
                             <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="실명 입력"
                                 className="w-full text-lg font-bold p-4 bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-red-50 outline-none transition-all" />
                         </div>
                         <div className="space-y-2">
-                            <label className="block text-[10px] font-bold text-gray-400 ml-1 uppercase">Phone</label>
+                            <label className="block text-[10px] font-bold text-gray-700 ml-1 uppercase">Phone</label>
                             <input value={newPhone} onChange={(e) => setNewPhone(formatPhone(e.target.value))} placeholder="010-0000-0000"
                                 className="w-full text-lg font-bold p-4 bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-red-50 outline-none transition-all" />
                         </div>
@@ -551,28 +551,28 @@ export default function WorkersPage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div>
-                            <label className="block text-[10px] font-bold text-gray-400 mb-2 ml-1 uppercase">Role</label>
+                            <label className="block text-[10px] font-bold text-gray-700 mb-2 ml-1 uppercase">Role</label>
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
                                 {(['family', 'staff', 'foreign', 'part_time'] as const).map(r => (
                                     <button key={r} onClick={() => setNewRole(r)}
                                         className={`py-3 rounded-xl text-[10px] font-bold transition-all flex flex-col items-center gap-1
                                             ${newRole === r
                                                 ? 'bg-red-600 border-red-700 text-white shadow-lg'
-                                                : 'bg-white border text-gray-400 border-gray-100 hover:bg-gray-50'}`}>
+                                                : 'bg-white border text-gray-700 border-gray-100 hover:bg-gray-50'}`}>
                                         {roleInfo[r].label.split('/')[0]}
                                     </button>
                                 ))}
                             </div>
                         </div>
                         <div>
-                            <label className="block text-[10px] font-bold text-gray-400 mb-2 ml-1 uppercase">Gender</label>
+                            <label className="block text-[10px] font-bold text-gray-700 mb-2 ml-1 uppercase">Gender</label>
                             <div className="grid grid-cols-2 gap-2">
                                 <button onClick={() => setNewGender('male')}
                                     className={`py-3 rounded-xl border text-xs font-bold transition-all
-                                        ${newGender === 'male' ? 'bg-indigo-600 border-indigo-700 text-white shadow-lg' : 'bg-white text-gray-400 border-gray-100'}`}>남성</button>
+                                        ${newGender === 'male' ? 'bg-indigo-600 border-indigo-700 text-white shadow-lg' : 'bg-white text-gray-700 border-gray-100'}`}>남성</button>
                                 <button onClick={() => setNewGender('female')}
                                     className={`py-3 rounded-xl border text-xs font-bold transition-all
-                                        ${newGender === 'female' ? 'bg-rose-600 border-rose-700 text-white shadow-lg' : 'bg-white text-gray-400 border-gray-100'}`}>여성</button>
+                                        ${newGender === 'female' ? 'bg-rose-600 border-rose-700 text-white shadow-lg' : 'bg-white text-gray-700 border-gray-100'}`}>여성</button>
                             </div>
                         </div>
                     </div>
@@ -591,22 +591,22 @@ export default function WorkersPage() {
                             />
                         </div>
                         <div className="col-span-3 space-y-2">
-                            <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase">우편번호</label>
+                            <label className="text-[10px] font-bold text-gray-700 ml-1 uppercase">우편번호</label>
                             <input value={newPostalCode} onChange={(e) => setNewPostalCode(e.target.value)}
                                 className="w-full py-5 px-1 bg-gray-50 rounded-2xl border-transparent focus:bg-white focus:ring-4 focus:ring-red-50 outline-none text-center font-bold text-sm" placeholder="00000" />
                         </div>
                     </div>
 
                     <div className="space-y-2">
-                        <label className="block text-[10px] font-bold text-gray-400 ml-1 uppercase">Memo</label>
+                        <label className="block text-[10px] font-bold text-gray-700 ml-1 uppercase">Memo</label>
                         <textarea value={newNotes} onChange={(e) => setNewNotes(e.target.value)} placeholder="메모 입력"
                             className="w-full p-4 bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-red-50 outline-none h-24 resize-none transition-all text-sm font-medium" />
                     </div>
 
                     <div className="space-y-2">
-                        <label className="block text-[10px] font-bold text-gray-400 ml-1 uppercase">Default Daily Wage (기본 일당)</label>
+                        <label className="block text-[10px] font-bold text-gray-700 ml-1 uppercase">Default Daily Wage (기본 일당)</label>
                         <div className="relative">
-                            <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-300" />
+                            <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-600" />
                             <input value={newDailyWage} onChange={(e) => {
                                 const val = e.target.value.replace(/[^0-9]/g, "");
                                 setNewDailyWage(val ? parseInt(val).toLocaleString() : "");
@@ -627,7 +627,7 @@ export default function WorkersPage() {
                     {loading ? (
                         <div className="flex flex-col items-center justify-center py-20 space-y-4">
                             <div className="w-10 h-10 border-4 border-red-50 border-t-red-600 rounded-full animate-spin"></div>
-                            <p className="text-gray-400 font-bold text-sm">로딩 중...</p>
+                            <p className="text-gray-700 font-bold text-sm">로딩 중...</p>
                         </div>
                     ) :
                         (['family', 'staff', 'foreign', 'part_time'] as const).map(role => {
@@ -639,7 +639,7 @@ export default function WorkersPage() {
                                     <div className="flex items-center gap-3 px-2">
                                         <div className={`w-1.5 h-5 rounded-full ${roleInfo[role].color.replace('text', 'bg')}`}></div>
                                         <h2 className="text-lg font-bold text-gray-800">{roleInfo[role].label}</h2>
-                                        <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-md ml-1">{filtered.length}</span>
+                                        <span className="text-[10px] font-bold text-gray-700 bg-gray-100 px-2 py-0.5 rounded-md ml-1">{filtered.length}</span>
                                     </div>
                                     <div className="grid grid-cols-1 gap-3">
                                         {filtered.map(worker => renderWorkerCard(worker))}
@@ -651,7 +651,7 @@ export default function WorkersPage() {
 
                     {!loading && workers.length === 0 && !isAdding && !errorMsg && (
                         <div className="text-center py-20 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-100">
-                            <p className="text-gray-400 font-bold text-sm">등록된 근로자가 없습니다.</p>
+                            <p className="text-gray-700 font-bold text-sm">등록된 근로자가 없습니다.</p>
                         </div>
                     )}
                 </div>
@@ -667,7 +667,7 @@ export default function WorkersPage() {
                             setSelectedDate(d.toISOString().split('T')[0]);
                         }} className="p-2 hover:bg-gray-100 rounded-xl transition-all"><X className="w-5 h-5 rotate-45" /></button>
                         <div className="flex flex-col items-center">
-                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Work Date</span>
+                            <span className="text-[10px] font-black text-gray-700 uppercase tracking-widest">Work Date</span>
                             <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)}
                                 className="text-lg font-black text-gray-900 bg-transparent outline-none text-center" />
                         </div>
@@ -690,12 +690,12 @@ export default function WorkersPage() {
                                         <div className="flex items-center gap-4">
                                             <button onClick={() => handleToggleAttendance(worker)}
                                                 className={`w-14 h-14 rounded-2xl flex items-center justify-center border-2 transition-all active:scale-90
-                                                    ${isPresent ? 'bg-green-500 border-green-600 text-white shadow-lg' : 'bg-gray-50 border-gray-100 text-gray-300'}`}>
+                                                    ${isPresent ? 'bg-green-500 border-green-600 text-white shadow-lg' : 'bg-gray-50 border-gray-100 text-gray-600'}`}>
                                                 {isPresent ? <UserCheck className="w-7 h-7" /> : <User className="w-7 h-7" />}
                                             </button>
                                             <div>
                                                 <h4 className="font-black text-lg text-gray-900">{worker.name}</h4>
-                                                <p className="text-[10px] font-bold text-gray-400">{info.label}</p>
+                                                <p className="text-[10px] font-bold text-gray-700">{info.label}</p>
                                             </div>
                                         </div>
 
@@ -720,7 +720,7 @@ export default function WorkersPage() {
 
                                     {isPresent && (
                                         <div className="mt-3 relative">
-                                            <AlignLeft className="absolute left-3 top-2.5 w-3.5 h-3.5 text-gray-300" />
+                                            <AlignLeft className="absolute left-3 top-2.5 w-3.5 h-3.5 text-gray-600" />
                                             <input
                                                 placeholder="오늘 이 분의 업무나 컨디션은 어땠나요? (현장 일기)"
                                                 value={report.memo || ""}
@@ -743,13 +743,13 @@ export default function WorkersPage() {
                         <div className="flex items-center gap-3">
                             <div className="p-2.5 bg-indigo-50 rounded-xl text-indigo-600"><Timer className="w-5 h-5" /></div>
                             <div>
-                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">Settlement Month</span>
+                                <span className="text-[10px] font-black text-gray-700 uppercase tracking-widest leading-none">Settlement Month</span>
                                 <input type="month" value={statsMonth} onChange={(e) => setStatsMonth(e.target.value)}
                                     className="block text-lg font-black text-gray-900 bg-transparent outline-none mt-0.5" />
                             </div>
                         </div>
                         <div className="text-right">
-                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Total Payout</span>
+                            <span className="text-[10px] font-black text-gray-700 uppercase tracking-widest block">Total Payout</span>
                             <span className="text-xl font-black text-indigo-600">
                                 {payrollData.reduce((acc, curr) => acc + curr.totalWage, 0).toLocaleString()}원
                             </span>
@@ -760,15 +760,15 @@ export default function WorkersPage() {
                         <table className="w-full text-left border-collapse min-w-[320px]">
                             <thead>
                                 <tr className="bg-gray-50 border-b border-gray-100">
-                                    <th className="p-2 sm:p-4 text-[10px] font-black text-gray-400 uppercase">근로자</th>
-                                    <th className="p-2 sm:p-4 text-[10px] font-black text-gray-400 uppercase text-center">출근일수</th>
-                                    <th className="p-2 sm:p-4 text-[10px] font-black text-gray-400 uppercase text-right">총 정산액</th>
+                                    <th className="p-2 sm:p-4 text-[10px] font-black text-gray-700 uppercase">근로자</th>
+                                    <th className="p-2 sm:p-4 text-[10px] font-black text-gray-700 uppercase text-center">출근일수</th>
+                                    <th className="p-2 sm:p-4 text-[10px] font-black text-gray-700 uppercase text-right">총 정산액</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {payrollData.length === 0 ? (
                                     <tr>
-                                        <td colSpan={3} className="p-20 text-center text-sm text-gray-400 font-bold">기록이 없습니다.</td>
+                                        <td colSpan={3} className="p-20 text-center text-sm text-gray-700 font-bold">기록이 없습니다.</td>
                                     </tr>
                                 ) : payrollData.map((stat, idx) => (
                                     <tr key={idx} className="border-b border-gray-50 hover:bg-gray-50 transition-all group">

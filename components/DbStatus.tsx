@@ -41,7 +41,7 @@ export default function DbStatus() {
                     }`}></span>
             </div>
 
-            <span className={`text-[9px] font-black uppercase tracking-tighter ${status === 'online' ? 'text-green-600' : status === 'offline' ? 'text-red-600' : 'text-gray-400'
+            <span className={`text-[9px] font-black uppercase tracking-tighter ${status === 'online' ? 'text-green-600' : status === 'offline' ? 'text-red-600' : 'text-gray-700'
                 }`}>
                 {status === 'online' ? 'Connected' : status === 'offline' ? 'Disconnected' : 'Checking...'}
             </span>
@@ -49,7 +49,7 @@ export default function DbStatus() {
             <button
                 onClick={checkStatus}
                 disabled={isChecking}
-                className={`p-1 hover:bg-white rounded-full transition-all ${isChecking ? 'animate-spin text-gray-400' : 'text-gray-300 hover:text-gray-600'}`}
+                className={`p-1 hover:bg-white rounded-full transition-all ${isChecking ? 'animate-spin text-gray-700' : 'text-gray-600 hover:text-gray-600'}`}
                 title={`Last checked: ${lastChecked.toLocaleTimeString()}`}
             >
                 <RefreshCcw size={10} />

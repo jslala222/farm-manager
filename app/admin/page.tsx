@@ -55,7 +55,7 @@ export default function AdminPage() {
         <div className="p-4 md:p-3 pb-20 md:pb-6 max-w-4xl mx-auto">
             <div className="mb-6">
                 <h1 className="text-xl font-bold text-gray-900">관리자 대시보드</h1>
-                <p className="text-gray-500 text-sm mt-1">전체 농장 현황 및 승인 관리</p>
+                <p className="text-gray-700 text-sm mt-1">전체 농장 현황 및 승인 관리</p>
             </div>
 
             {/* 요약 카드 */}
@@ -63,14 +63,14 @@ export default function AdminPage() {
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
                     <div className="flex items-center gap-2 mb-2">
                         <Sprout className="w-5 h-5 text-green-600" />
-                        <span className="text-sm text-gray-500">전체 농장</span>
+                        <span className="text-sm text-gray-700">전체 농장</span>
                     </div>
                     <p className="text-3xl font-bold text-gray-900">{farms.length}</p>
                 </div>
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
                     <div className="flex items-center gap-2 mb-2">
                         <CheckCircle className="w-5 h-5 text-blue-600" />
-                        <span className="text-sm text-gray-500">승인 완료</span>
+                        <span className="text-sm text-gray-700">승인 완료</span>
                     </div>
                     <p className="text-3xl font-bold text-gray-900">{activeFarms.length}</p>
                 </div>
@@ -104,7 +104,7 @@ export default function AdminPage() {
             <div>
                 <h2 className="text-base font-bold text-gray-700 mb-3">✅ 승인된 농장 ({activeFarms.length})</h2>
                 {loading ? (
-                    <p className="text-gray-400 text-sm text-center py-8">로딩 중...</p>
+                    <p className="text-gray-700 text-sm text-center py-8">로딩 중...</p>
                 ) : (
                     <div className="space-y-3">
                         {activeFarms.map(farm => (
@@ -123,14 +123,14 @@ function FarmCard({ farm, onToggle }: { farm: Farm; onToggle: (id: string, curre
             <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                     <h3 className="font-bold text-gray-900">{farm.farm_name}</h3>
-                    <div className="text-sm text-gray-500 mt-1 space-y-0.5">
+                    <div className="text-sm text-gray-700 mt-1 space-y-0.5">
                         <p className="font-medium text-blue-600">👤 소유자 ID: {farm.owner_id.substring(0, 8)}...</p>
                         {farm.phone && <p>📞 {farm.phone}</p>}
                         {farm.address && <p>📍 {farm.address}</p>}
                         {farm.business_number && <p>🏢 {farm.business_number}</p>}
-                        {farm.notes && <p className="text-xs text-gray-400 mt-1">💬 {farm.notes}</p>}
+                        {farm.notes && <p className="text-xs text-gray-700 mt-1">💬 {farm.notes}</p>}
                     </div>
-                    <p className="text-xs text-gray-400 mt-2">
+                    <p className="text-xs text-gray-700 mt-2">
                         등록일: {new Date(farm.created_at).toLocaleDateString('ko-KR')}
                     </p>
                 </div>
@@ -144,7 +144,7 @@ function FarmCard({ farm, onToggle }: { farm: Farm; onToggle: (id: string, curre
                         {farm.is_active ? '승인 취소' : '즉시 승인'}
                     </button>
                     {!farm.is_active && (
-                        <p className="text-[10px] text-gray-400 text-center font-bold">승인 시 이메일도 함께 인증됩니다</p>
+                        <p className="text-[10px] text-gray-700 text-center font-bold">승인 시 이메일도 함께 인증됩니다</p>
                     )}
                 </div>
             </div>

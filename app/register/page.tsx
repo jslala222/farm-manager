@@ -82,7 +82,7 @@ export default function RegisterPage() {
                         <CheckCircle className="w-8 h-8 text-green-600" />
                     </div>
                     <h1 className="text-xl font-bold text-gray-900 mb-2">신청 완료!</h1>
-                    <p className="text-gray-500 mb-6">
+                    <p className="text-gray-700 mb-6">
                         농장 등록 신청이 완료되었습니다.<br />
                         관리자 승인 후 로그인이 가능합니다.
                     </p>
@@ -103,14 +103,14 @@ export default function RegisterPage() {
                         <Sprout className="w-8 h-8 text-red-600" />
                     </div>
                     <h1 className="text-xl font-bold text-gray-900">농장 등록 신청</h1>
-                    <p className="text-gray-500 mt-1 text-sm">관리자 승인 후 사용 가능합니다</p>
+                    <p className="text-gray-700 mt-1 text-sm">관리자 승인 후 사용 가능합니다</p>
                 </div>
 
                 <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4">
                     <form onSubmit={handleSubmit} className="space-y-5">
                         {/* 계정 정보 */}
                         <div>
-                            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">계정 정보</h3>
+                            <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-3">계정 정보</h3>
                             <div className="space-y-3">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">이름 *</label>
@@ -143,7 +143,7 @@ export default function RegisterPage() {
 
                         {/* 농장 정보 */}
                         <div>
-                            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">농장 정보</h3>
+                            <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-3">농장 정보</h3>
                             <div className="space-y-3">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">농장 이름 *</label>
@@ -180,7 +180,7 @@ export default function RegisterPage() {
                                         />
                                     </div>
                                     <div className="w-full sm:w-20 space-y-2 sm:shrink-0">
-                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-tight ml-1">우편번호</label>
+                                        <label className="text-[10px] font-bold text-gray-700 uppercase tracking-tight ml-1">우편번호</label>
                                         <input type="text" value={form.postal_code}
                                             onChange={(e) => setForm({ ...form, postal_code: e.target.value })}
                                             className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none text-center font-bold text-sm" placeholder="00000" />
@@ -209,7 +209,7 @@ export default function RegisterPage() {
                     </form>
 
                     <div className="mt-6 pt-6 border-t border-gray-100 text-center">
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-gray-700">
                             이미 계정이 있으신가요?{" "}
                             <a href="/login" className="text-red-600 font-medium hover:underline">로그인</a>
                         </p>

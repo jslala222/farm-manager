@@ -552,7 +552,7 @@ export default function CourierSalesPage() {
                                         </p>
                                     )}
                                 </div>
-                                <button onClick={() => { setDetailModal(null); setIsEditMode(false); }} className="p-2 rounded-full hover:bg-gray-100 text-gray-400">
+                                <button onClick={() => { setDetailModal(null); setIsEditMode(false); }} className="p-2 rounded-full hover:bg-gray-100 text-gray-700">
                                     <X className="w-5 h-5" />
                                 </button>
                             </div>
@@ -561,7 +561,7 @@ export default function CourierSalesPage() {
                                 <>
                                     {/* 정산 상태 토글 */}
                                     <div>
-                                        <label className="text-[10px] font-black text-gray-400 uppercase block mb-2 ml-1">정산 상태</label>
+                                        <label className="text-[10px] font-black text-gray-700 uppercase block mb-2 ml-1">정산 상태</label>
                                         <div className="flex p-1 bg-gray-100 rounded-2xl gap-1">
                                             <button
                                                 onClick={async () => {
@@ -569,7 +569,7 @@ export default function CourierSalesPage() {
                                                     fetchHistory();
                                                     setDetailModal({ ...detailModal, is_settled: true, payment_status: 'completed' });
                                                 }}
-                                                className={`flex-1 py-3 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all ${detailModal.is_settled ? 'bg-white shadow-sm text-emerald-600' : 'text-gray-400'}`}>
+                                                className={`flex-1 py-3 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all ${detailModal.is_settled ? 'bg-white shadow-sm text-emerald-600' : 'text-gray-700'}`}>
                                                 <CheckCircle className="w-4 h-4" /> 정산 완료
                                             </button>
                                             <button
@@ -578,7 +578,7 @@ export default function CourierSalesPage() {
                                                     fetchHistory();
                                                     setDetailModal({ ...detailModal, is_settled: false, payment_status: 'pending' });
                                                 }}
-                                                className={`flex-1 py-3 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all ${!detailModal.is_settled ? 'bg-white shadow-sm text-amber-500' : 'text-gray-400'}`}>
+                                                className={`flex-1 py-3 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all ${!detailModal.is_settled ? 'bg-white shadow-sm text-amber-500' : 'text-gray-700'}`}>
                                                 <Clock className="w-4 h-4" /> 미정산 (외상)
                                             </button>
                                         </div>

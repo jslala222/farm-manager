@@ -82,12 +82,12 @@ export default function LoginPage() {
                         <Sprout className="w-6 h-6 text-red-600" />
                     </div>
                     <h1 className="text-xl font-bold">농장관리</h1>
-                    <p className="text-gray-500 text-sm">로그인 후 사용 가능합니다</p>
+                    <p className="text-gray-700 text-sm">로그인 후 사용 가능합니다</p>
                 </div>
 
                 <form onSubmit={handleLogin} className="space-y-3 sm:space-y-4">
                     <div>
-                        <label className="block text-xs font-bold text-gray-400 mb-1 uppercase">Email</label>
+                        <label className="block text-xs font-bold text-gray-700 mb-1 uppercase">Email</label>
                         <input
                             name="email"
                             type="email"
@@ -97,7 +97,7 @@ export default function LoginPage() {
                         />
                     </div>
                     <div>
-                        <label className="block text-xs font-bold text-gray-400 mb-1 uppercase">Password</label>
+                        <label className="block text-xs font-bold text-gray-700 mb-1 uppercase">Password</label>
                         <input
                             name="password"
                             type="password"
@@ -121,7 +121,7 @@ export default function LoginPage() {
                 <div className="mt-8 flex flex-col gap-3">
                     <button
                         onClick={testSupabase}
-                        className="text-xs text-gray-400 hover:text-gray-600 underline"
+                        className="text-xs text-gray-700 hover:text-gray-600 underline"
                     >
                         데이터베이스 연결 상태 확인
                     </button>

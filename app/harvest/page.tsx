@@ -404,25 +404,25 @@ export default function HarvestPage() {
                     </div>
                     <div className="min-w-0">
                         <h1 className="text-xl font-bold text-gray-900 tracking-tight whitespace-nowrap">수확 관리</h1>
-                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Harvest Tracking</p>
+                        <p className="text-[10px] text-gray-700 font-bold uppercase tracking-wider">Harvest Tracking</p>
                     </div>
                 </div>
 
                 {/* 탭 전환 버튼 */}
                 <div className="flex bg-gray-100 p-1 rounded-xl shrink-0">
                     <button onClick={() => setActiveTab('record')}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'record' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-400'}`}>
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'record' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-700'}`}>
                         수확하기
                     </button>
                     <button onClick={() => {
                         setActiveTab('history');
                         fetchAllDiaries();
                     }}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'history' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-400'}`}>
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'history' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-700'}`}>
                         영농일지
                     </button>
                     <button onClick={() => setActiveTab('analysis')}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'analysis' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-400'}`}>
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'analysis' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-700'}`}>
                         통계보기
                     </button>
                 </div>
@@ -467,7 +467,7 @@ export default function HarvestPage() {
                                     >
                                         <div className="flex items-center justify-between mb-1.5">
                                             <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-lg">{house}동</span>
-                                            <Edit2 className="w-2.5 h-2.5 text-gray-300 group-hover:text-blue-400" />
+                                            <Edit2 className="w-2.5 h-2.5 text-gray-600 group-hover:text-blue-400" />
                                         </div>
                                         <p className="text-[11px] text-gray-600 line-clamp-2 font-medium leading-relaxed">{note}</p>
                                     </button>
@@ -529,7 +529,7 @@ export default function HarvestPage() {
                                                     colorClass = "bg-green-600 text-white border-green-700 shadow-lg shadow-green-100 scale-105";
                                                 }
                                             } else {
-                                                if (isFallow) colorClass = "bg-gray-50 border-gray-100 text-gray-300 opacity-60";
+                                                if (isFallow) colorClass = "bg-gray-50 border-gray-100 text-gray-600 opacity-60";
                                                 else colorClass = "bg-white border-gray-100 text-gray-900 hover:border-gray-200";
                                             }
 
@@ -554,14 +554,14 @@ export default function HarvestPage() {
                                         <div className="flex items-center gap-2">
                                             <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex flex-col items-center justify-center border border-green-50">
                                                 <span className="text-[10px] font-black text-green-600 leading-none">{selectedHouse}동</span>
-                                                <span className="text-[7px] font-bold text-gray-400 tracking-tighter mt-0.5">{houses.find(h => h.house_number === selectedHouse)?.current_crop || '딸기'}</span>
+                                                <span className="text-[7px] font-bold text-gray-700 tracking-tighter mt-0.5">{houses.find(h => h.house_number === selectedHouse)?.current_crop || '딸기'}</span>
                                             </div>
                                             <button
                                                 onClick={() => {
                                                     fetchHouseDiaries(selectedHouse);
                                                     setIsHouseHistoryOpen(true);
                                                 }}
-                                                className="text-[10px] font-black text-gray-500 hover:text-blue-600 flex items-center gap-1 transition-colors"
+                                                className="text-[10px] font-black text-gray-700 hover:text-blue-600 flex items-center gap-1 transition-colors"
                                             >
                                                 <History className="w-3 h-3" /> 과거 기록 추적
                                             </button>
@@ -590,7 +590,7 @@ export default function HarvestPage() {
                                                 onClick={() => setSelectedGrade(g)}
                                                 className={`w-full py-3.5 px-4 rounded-2xl text-[11px] font-black flex items-center justify-between transition-all border ${selectedGrade === g
                                                     ? 'bg-orange-50 border-orange-200 text-orange-700 shadow-sm ring-1 ring-orange-200'
-                                                    : 'bg-white border-gray-50 text-gray-400 hover:bg-gray-50'
+                                                    : 'bg-white border-gray-50 text-gray-700 hover:bg-gray-50'
                                                     }`}
                                             >
                                                 {gradeLabel(g)}
@@ -620,7 +620,7 @@ export default function HarvestPage() {
                                             />
                                             <span className="absolute right-6 top-1/2 -translate-y-1/2 text-sm font-black text-green-200">BOX</span>
                                         </div>
-                                        <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Enter Quantity</span>
+                                        <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest">Enter Quantity</span>
                                     </div>
                                 </div>
                             </div>
@@ -650,12 +650,12 @@ export default function HarvestPage() {
                                         <p className="text-[10px] text-blue-400 font-bold mt-1 uppercase tracking-widest leading-none">Field Management Diary</p>
                                     </div>
                                     <button onClick={() => setIsDiaryModalOpen(false)} className="p-2 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
-                                        <X className="w-5 h-5 text-gray-400" />
+                                        <X className="w-5 h-5 text-gray-700" />
                                     </button>
                                 </div>
                                 <div className="p-4 space-y-3">
                                     <div className="space-y-3">
-                                        <label className="text-[11px] font-black text-gray-400 uppercase tracking-tighter ml-1">오늘의 하우스 컨실션 및 특이사항</label>
+                                        <label className="text-[11px] font-black text-gray-700 uppercase tracking-tighter ml-1">오늘의 하우스 컨실션 및 특이사항</label>
                                         <textarea
                                             value={houseNotes[selectedHouse!] || ""}
                                             onChange={(e) => {
@@ -673,7 +673,7 @@ export default function HarvestPage() {
                                     <div className="flex gap-4">
                                         <button
                                             onClick={() => setIsDiaryModalOpen(false)}
-                                            className="flex-1 py-4.5 bg-gray-50 text-gray-400 text-xs font-black rounded-3xl hover:bg-gray-100 transition-colors"
+                                            className="flex-1 py-4.5 bg-gray-50 text-gray-700 text-xs font-black rounded-3xl hover:bg-gray-100 transition-colors"
                                         >
                                             취소
                                         </button>
@@ -704,7 +704,7 @@ export default function HarvestPage() {
                                             <History className="w-6 h-6 text-blue-600" />
                                             현장 리포트 아카이브
                                         </h3>
-                                        <p className="text-[10px] text-gray-400 font-bold mt-1 uppercase tracking-widest leading-none">Field Report History</p>
+                                        <p className="text-[10px] text-gray-700 font-bold mt-1 uppercase tracking-widest leading-none">Field Report History</p>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <select
@@ -721,19 +721,19 @@ export default function HarvestPage() {
                                             setIsArchiveOpen(false);
                                             setArchiveHouseFilter(null);
                                         }} className="p-2 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
-                                            <X className="w-5 h-5 text-gray-400" />
+                                            <X className="w-5 h-5 text-gray-700" />
                                         </button>
                                     </div>
                                 </div>
 
                                 <div className="flex-1 overflow-y-auto p-3 space-y-3">
                                     {loading ? (
-                                        <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
+                                        <div className="flex flex-col items-center justify-center h-full text-gray-700 gap-2">
                                             <RefreshCcw className="w-8 h-8 animate-spin opacity-20" />
                                             <span className="text-xs font-bold">기록을 불러오는 중...</span>
                                         </div>
                                     ) : allDiaries.length === 0 ? (
-                                        <div className="flex flex-col items-center justify-center h-full text-gray-300 gap-2">
+                                        <div className="flex flex-col items-center justify-center h-full text-gray-600 gap-2">
                                             <NotebookPen className="w-12 h-12 opacity-10" />
                                             <span className="text-xs font-bold">기록된 일지가 없습니다.</span>
                                         </div>
@@ -751,7 +751,7 @@ export default function HarvestPage() {
                                             <div key={date} className="space-y-3">
                                                 <div className="flex items-center gap-3">
                                                     <div className="h-px bg-gray-200 flex-1"></div>
-                                                    <span className="text-[11px] font-black text-gray-400 bg-gray-100 px-3 py-1 rounded-full">{date}</span>
+                                                    <span className="text-[11px] font-black text-gray-700 bg-gray-100 px-3 py-1 rounded-full">{date}</span>
                                                     <div className="h-px bg-gray-200 flex-1"></div>
                                                 </div>
                                                 <div className="grid gap-2">
@@ -766,7 +766,7 @@ export default function HarvestPage() {
                                                                         setIsArchiveOpen(false);
                                                                         setIsDiaryModalOpen(true);
                                                                     }}
-                                                                    className="p-1.5 opacity-0 group-hover:opacity-100 bg-gray-50 rounded-lg text-gray-400 hover:text-blue-500 transition-all"
+                                                                    className="p-1.5 opacity-0 group-hover:opacity-100 bg-gray-50 rounded-lg text-gray-700 hover:text-blue-500 transition-all"
                                                                 >
                                                                     <Edit2 className="w-3 h-3" />
                                                                 </button>
@@ -806,18 +806,18 @@ export default function HarvestPage() {
                                         <p className="text-[10px] text-green-500 font-bold mt-1 uppercase tracking-widest leading-none">House Management History</p>
                                     </div>
                                     <button onClick={() => setIsHouseHistoryOpen(false)} className="p-2 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
-                                        <X className="w-5 h-5 text-gray-400" />
+                                        <X className="w-5 h-5 text-gray-700" />
                                     </button>
                                 </div>
 
                                 <div className="flex-1 overflow-y-auto p-4 space-y-3">
                                     {loading ? (
-                                        <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
+                                        <div className="flex flex-col items-center justify-center h-full text-gray-700 gap-2">
                                             <RefreshCcw className="w-8 h-8 animate-spin opacity-20" />
                                             <span className="text-xs font-bold">기록을 불러오는 중...</span>
                                         </div>
                                     ) : houseHistory.length === 0 ? (
-                                        <div className="flex flex-col items-center justify-center h-full text-gray-300 gap-2">
+                                        <div className="flex flex-col items-center justify-center h-full text-gray-600 gap-2">
                                             <NotebookPen className="w-12 h-12 opacity-10" />
                                             <span className="text-xs font-bold text-center">해당 동의 기록이 없습니다.</span>
                                         </div>
@@ -826,7 +826,7 @@ export default function HarvestPage() {
                                             <div key={h.id} className="relative pl-6 pb-6 border-l-2 border-gray-50 last:pb-0">
                                                 <div className="absolute left-[-5px] top-0 w-2 h-2 rounded-full bg-green-500 shadow-sm shadow-green-200"></div>
                                                 <div className="space-y-2">
-                                                    <span className="text-[11px] font-black text-gray-400 font-mono tracking-tighter">{h.date}</span>
+                                                    <span className="text-[11px] font-black text-gray-700 font-mono tracking-tighter">{h.date}</span>
                                                     <div className="bg-gray-50/50 p-4 rounded-3xl border border-gray-100/50 group hover:border-green-200 transition-all">
                                                         <div className="flex justify-between items-start mb-2">
                                                             <div className="w-1.5 h-1.5 bg-green-200 rounded-full"></div>
@@ -836,7 +836,7 @@ export default function HarvestPage() {
                                                                     setIsHouseHistoryOpen(false);
                                                                     setIsDiaryModalOpen(true);
                                                                 }}
-                                                                className="opacity-0 group-hover:opacity-100 p-1 bg-white rounded-lg shadow-sm text-gray-400 hover:text-green-600 transition-all"
+                                                                className="opacity-0 group-hover:opacity-100 p-1 bg-white rounded-lg shadow-sm text-gray-700 hover:text-green-600 transition-all"
                                                             >
                                                                 <Edit2 className="w-3.5 h-3.5" />
                                                             </button>
@@ -863,13 +863,13 @@ export default function HarvestPage() {
                     {/* 최근 내역 */}
                     <section className="pt-4">
                         <div className="flex items-center justify-between mb-3 px-1">
-                            <h2 className="text-sm font-bold text-gray-500 flex items-center gap-2 uppercase tracking-wide">
+                            <h2 className="text-sm font-bold text-gray-700 flex items-center gap-2 uppercase tracking-wide">
                                 <History className="w-4 h-4" /> Recent History
                             </h2>
                         </div>
                         <div className="space-y-3">
                             {history.length === 0 ? (
-                                <div className="text-center py-8 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-100 text-gray-300 text-xs font-bold">
+                                <div className="text-center py-8 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-100 text-gray-600 text-xs font-bold">
                                     기록이 없습니다.
                                 </div>
                             ) : (
@@ -892,7 +892,7 @@ export default function HarvestPage() {
                                                 </div>
                                                 <div className="flex gap-2">
                                                     <button onClick={handleUpdate} className="flex-1 bg-gray-900 text-white py-2 rounded-lg font-bold text-xs">수정</button>
-                                                    <button onClick={() => setEditingId(null)} className="flex-1 bg-gray-100 text-gray-500 py-2 rounded-lg font-bold text-xs">취소</button>
+                                                    <button onClick={() => setEditingId(null)} className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg font-bold text-xs">취소</button>
                                                 </div>
                                             </div>
                                         );
@@ -903,7 +903,7 @@ export default function HarvestPage() {
                                             className="w-full text-left bg-white rounded-2xl border border-gray-50 p-2.5 px-4 shadow-sm flex items-center justify-between animate-in slide-in-from-bottom-2 duration-300 active:scale-[0.98] hover:border-green-200 transition-all">
                                             <div className="flex items-center gap-4 flex-1">
                                                 <div className="flex items-center gap-2 min-w-[60px]">
-                                                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">House</span>
+                                                    <span className="text-[10px] font-black text-gray-700 uppercase tracking-tighter">House</span>
                                                     <span className="text-sm font-black text-gray-900">{item.house_number}</span>
                                                 </div>
                                                 <div className="flex items-center gap-3 flex-1">
@@ -912,11 +912,11 @@ export default function HarvestPage() {
                                                     </span>
                                                     <div className="flex items-center gap-1">
                                                         <span className="text-base font-black text-gray-900 tracking-tighter">{item.quantity}</span>
-                                                        <span className="text-[9px] text-gray-400 font-black uppercase">Box</span>
+                                                        <span className="text-[9px] text-gray-700 font-black uppercase">Box</span>
                                                     </div>
                                                 </div>
                                                 <div className="flex flex-col items-end gap-0.5 bg-gray-50/50 px-2.5 py-1.5 rounded-xl border border-gray-100/50">
-                                                    <div className="flex items-center gap-1 text-[9px] text-gray-400 font-bold">
+                                                    <div className="flex items-center gap-1 text-[9px] text-gray-700 font-bold">
                                                         <CalendarDays className="w-2.5 h-2.5" />
                                                         {new Date(item.recorded_at).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })}
                                                     </div>
@@ -958,12 +958,12 @@ export default function HarvestPage() {
 
                     <div className="space-y-3">
                         {loading ? (
-                            <div className="flex flex-col items-center justify-center py-12 text-gray-400 gap-2">
+                            <div className="flex flex-col items-center justify-center py-12 text-gray-700 gap-2">
                                 <RefreshCcw className="w-8 h-8 animate-spin opacity-20" />
                                 <span className="text-xs font-bold">기록을 불러오는 중...</span>
                             </div>
                         ) : allDiaries.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-12 text-gray-300 gap-2 bg-white rounded-3xl border-2 border-dashed border-gray-50">
+                            <div className="flex flex-col items-center justify-center py-12 text-gray-600 gap-2 bg-white rounded-3xl border-2 border-dashed border-gray-50">
                                 <NotebookPen className="w-12 h-12 opacity-10" />
                                 <span className="text-xs font-bold">기록된 일지가 없습니다.</span>
                             </div>
@@ -974,7 +974,7 @@ export default function HarvestPage() {
                                 <div key={date} className="space-y-3">
                                     <div className="flex items-center gap-3">
                                         <div className="h-px bg-gray-200 flex-1"></div>
-                                        <span className="text-[11px] font-black text-gray-400 bg-gray-100 px-3 py-1 rounded-full">{date}</span>
+                                        <span className="text-[11px] font-black text-gray-700 bg-gray-100 px-3 py-1 rounded-full">{date}</span>
                                         <div className="h-px bg-gray-200 flex-1"></div>
                                     </div>
                                     <div className="grid gap-2">
@@ -989,7 +989,7 @@ export default function HarvestPage() {
                                                             setActiveTab('record');
                                                             setIsDiaryModalOpen(true);
                                                         }}
-                                                        className="p-1.5 opacity-0 group-hover:opacity-100 bg-gray-50 rounded-lg text-gray-400 hover:text-blue-500 transition-all"
+                                                        className="p-1.5 opacity-0 group-hover:opacity-100 bg-gray-50 rounded-lg text-gray-700 hover:text-blue-500 transition-all"
                                                     >
                                                         <Edit2 className="w-3.5 h-3.5" />
                                                     </button>
@@ -1021,7 +1021,7 @@ export default function HarvestPage() {
                                         setStatsWeekStart(getLocalISOString(sunday));
                                     }
                                 }}
-                                className={`flex-1 py-2 px-3 rounded-lg text-[11px] font-black transition-all whitespace-nowrap ${statsPeriod === p ? 'bg-white shadow-sm text-green-600' : 'text-gray-400'}`}>
+                                className={`flex-1 py-2 px-3 rounded-lg text-[11px] font-black transition-all whitespace-nowrap ${statsPeriod === p ? 'bg-white shadow-sm text-green-600' : 'text-gray-700'}`}>
                                 {p === 'today' ? '오늘' : p === 'custom' ? '지정일' : p === 'week' ? '이번 주' : '이번 달'}
                             </button>
                         ))}
@@ -1040,7 +1040,7 @@ export default function HarvestPage() {
                     {statsPeriod === 'week' && (
                         <div className="bg-white p-4 rounded-3xl border border-gray-100 shadow-sm overflow-x-auto scrollbar-hide">
                             <div className="flex justify-between items-center mb-3">
-                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-2">Weekly Navigation</span>
+                                <span className="text-[10px] font-black text-gray-700 uppercase tracking-widest px-2">Weekly Navigation</span>
                                 <div className="flex gap-2">
                                     <button
                                         onClick={() => {
@@ -1048,7 +1048,7 @@ export default function HarvestPage() {
                                             d.setDate(d.getDate() - 7);
                                             setStatsWeekStart(d.toISOString().split('T')[0]);
                                         }}
-                                        className="p-1.5 bg-gray-50 rounded-lg text-gray-400 hover:text-gray-900"
+                                        className="p-1.5 bg-gray-50 rounded-lg text-gray-700 hover:text-gray-900"
                                     >
                                         <ChevronLeft className="w-4 h-4" />
                                     </button>
@@ -1060,7 +1060,7 @@ export default function HarvestPage() {
                                             const sunday = new Date(d.setDate(diff));
                                             setStatsWeekStart(sunday.toISOString().split('T')[0]);
                                         }}
-                                        className="px-2 text-[9px] font-black bg-gray-50 rounded-lg text-gray-500"
+                                        className="px-2 text-[9px] font-black bg-gray-50 rounded-lg text-gray-700"
                                     >
                                         이번 주
                                     </button>
@@ -1070,7 +1070,7 @@ export default function HarvestPage() {
                                             d.setDate(d.getDate() + 7);
                                             setStatsWeekStart(d.toISOString().split('T')[0]);
                                         }}
-                                        className="p-1.5 bg-gray-50 rounded-lg text-gray-400 hover:text-gray-900"
+                                        className="p-1.5 bg-gray-50 rounded-lg text-gray-700 hover:text-gray-900"
                                     >
                                         <ChevronRight className="w-4 h-4" />
                                     </button>
@@ -1092,7 +1092,7 @@ export default function HarvestPage() {
 
                                     return (
                                         <div key={i} className={`flex flex-col items-center gap-2 p-3 rounded-2xl border-2 min-w-[56px] ${isToday ? 'border-red-400 bg-orange-50/30' : 'border-gray-50 bg-white'}`}>
-                                            <span className="text-[10px] font-black text-gray-300 uppercase">
+                                            <span className="text-[10px] font-black text-gray-600 uppercase">
                                                 {['일', '월', '화', '수', '목', '금', '토'][i]}
                                             </span>
                                             <span className={`text-base font-black ${isToday ? 'text-red-600' : 'text-gray-900'}`}>
@@ -1106,7 +1106,7 @@ export default function HarvestPage() {
                                                     };
                                                     return <div key={hNum} className={`w-1.5 h-1.5 rounded-full ${hColors[hNum] || "bg-green-400"} shadow-sm`} />;
                                                 })}
-                                                {hList.length > 6 && <div className="text-[6px] font-bold text-gray-400 leading-none">+</div>}
+                                                {hList.length > 6 && <div className="text-[6px] font-bold text-gray-700 leading-none">+</div>}
                                             </div>
                                         </div>
                                     );
@@ -1122,14 +1122,14 @@ export default function HarvestPage() {
                                     onClick={() => setStatsMonth({ ...statsMonth, year: statsMonth.year - 1 })}
                                     className="p-2 hover:bg-gray-50 rounded-xl"
                                 >
-                                    <ChevronLeft className="w-4 h-4 text-gray-400" />
+                                    <ChevronLeft className="w-4 h-4 text-gray-700" />
                                 </button>
                                 <span className="text-sm font-black text-gray-900">{statsMonth.year}년</span>
                                 <button
                                     onClick={() => setStatsMonth({ ...statsMonth, year: statsMonth.year + 1 })}
                                     className="p-2 hover:bg-gray-50 rounded-xl"
                                 >
-                                    <ChevronRight className="w-4 h-4 text-gray-400" />
+                                    <ChevronRight className="w-4 h-4 text-gray-700" />
                                 </button>
                             </div>
                             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
@@ -1146,7 +1146,7 @@ export default function HarvestPage() {
                                                 ? 'bg-green-600 border-green-700 text-white shadow-lg'
                                                 : isCurrentMonth
                                                     ? 'bg-white border-red-500 text-red-600'
-                                                    : 'bg-white border-gray-50 text-gray-500 hover:border-green-100'
+                                                    : 'bg-white border-gray-50 text-gray-700 hover:border-green-100'
                                                 }`}
                                         >
                                             {m}월
@@ -1178,7 +1178,7 @@ export default function HarvestPage() {
                     {/* 동별 통계 */}
                     <section className="space-y-3">
                         <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-                            <BarChart3 className="w-4 h-4 text-gray-400" /> 동별 수확량
+                            <BarChart3 className="w-4 h-4 text-gray-700" /> 동별 수확량
                         </h3>
                         <div className="grid grid-cols-3 gap-2">
                             {houses.map(h => {
@@ -1187,25 +1187,25 @@ export default function HarvestPage() {
                                 return (
                                     <div key={h.id} className={`p-3 rounded-[24px] border transition-all ${count > 0 ? 'bg-white border-green-100 shadow-sm' : 'bg-gray-50 border-gray-100 opacity-50'}`}>
                                         <div className="flex justify-between items-start mb-2">
-                                            <div className="text-xs font-black text-gray-400 uppercase tracking-tighter">{h.house_number}동</div>
+                                            <div className="text-xs font-black text-gray-700 uppercase tracking-tighter">{h.house_number}동</div>
                                             <div className="text-[9px] font-black text-green-600 bg-green-50 px-1.5 py-0.5 rounded-lg">TOT</div>
                                         </div>
-                                        <div className={`text-2xl font-black mb-2 tracking-tighter truncate ${count > 0 ? 'text-gray-900' : 'text-gray-300'}`}>
+                                        <div className={`text-2xl font-black mb-2 tracking-tighter truncate ${count > 0 ? 'text-gray-900' : 'text-gray-600'}`}>
                                             {count.toLocaleString()}
                                             <span className="text-[10px] font-medium ml-0.5 opacity-40">B</span>
                                         </div>
                                         <div className="space-y-2 pt-3 border-t border-gray-50">
                                             <div className="flex justify-between items-center">
-                                                <span className="text-xs font-bold text-gray-400">특/상</span>
+                                                <span className="text-xs font-bold text-gray-700">특/상</span>
                                                 <span className="text-base font-black text-orange-600">{gBreakdown.sang}</span>
                                             </div>
                                             <div className="flex justify-between items-center">
-                                                <span className="text-xs font-bold text-gray-400">중</span>
+                                                <span className="text-xs font-bold text-gray-700">중</span>
                                                 <span className="text-base font-black text-blue-600">{gBreakdown.jung}</span>
                                             </div>
                                             <div className="flex justify-between items-center">
-                                                <span className="text-xs font-bold text-gray-400">하</span>
-                                                <span className="text-base font-black text-gray-500">{gBreakdown.ha}</span>
+                                                <span className="text-xs font-bold text-gray-700">하</span>
+                                                <span className="text-base font-black text-gray-700">{gBreakdown.ha}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -1218,23 +1218,23 @@ export default function HarvestPage() {
                     {statsPeriod !== 'today' && (
                         <section className="space-y-3">
                             <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-                                <CalendarDays className="w-4 h-4 text-gray-400" /> 날짜별 추이
+                                <CalendarDays className="w-4 h-4 text-gray-700" /> 날짜별 추이
                             </h3>
                             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-2">
                                 {Object.keys(dateStats).length === 0 ? (
-                                    <div className="text-center py-6 text-xs text-gray-400">데이터가 없습니다.</div>
+                                    <div className="text-center py-6 text-xs text-gray-700">데이터가 없습니다.</div>
                                 ) : (
                                     Object.entries(dateStats).sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime()).map(([date, count]) => {
                                         const dg = dateGradeStats[date] || { sang: 0, jung: 0, ha: 0 };
                                         return (
                                             <div key={date} className="flex items-center justify-between p-3 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors rounded-lg">
                                                 <div className="flex flex-col">
-                                                    <span className="text-sm font-bold text-gray-500">{date}</span>
-                                                    <span className="text-sm text-gray-400 font-bold mt-0.5">
+                                                    <span className="text-sm font-bold text-gray-700">{date}</span>
+                                                    <span className="text-sm text-gray-700 font-bold mt-0.5">
                                                         특 {dg.sang} / 중 {dg.jung} / 하 {dg.ha}
                                                     </span>
                                                 </div>
-                                                <span className="text-base font-black text-gray-900">{count.toLocaleString()} <span className="text-xs text-gray-400 font-normal">Box</span></span>
+                                                <span className="text-base font-black text-gray-900">{count.toLocaleString()} <span className="text-xs text-gray-700 font-normal">Box</span></span>
                                             </div>
                                         );
                                     })
@@ -1256,11 +1256,11 @@ export default function HarvestPage() {
                             <h2 className="text-base font-black text-gray-900">
                                 {harvestEditModal.house_number}동 · {gradeLabel(harvestEditModal.grade)} {harvestEditModal.quantity}박스
                             </h2>
-                            <p className="text-xs text-gray-400 font-bold mt-0.5">
+                            <p className="text-xs text-gray-700 font-bold mt-0.5">
                                 {new Date(harvestEditModal.recorded_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}
                             </p>
                         </div>
-                        <button onClick={() => setHarvestEditModal(null)} className="p-2 rounded-full hover:bg-gray-100 text-gray-400">
+                        <button onClick={() => setHarvestEditModal(null)} className="p-2 rounded-full hover:bg-gray-100 text-gray-700">
                             <X className="w-5 h-5" />
                         </button>
                     </div>
@@ -1270,7 +1270,7 @@ export default function HarvestPage() {
                         {/* 동 / 등급 */}
                         <div className="grid grid-cols-2 gap-3">
                             <div>
-                                <label className="text-[10px] font-black text-gray-400 block mb-1.5 ml-1">동 선택</label>
+                                <label className="text-[10px] font-black text-gray-700 block mb-1.5 ml-1">동 선택</label>
                                 <select
                                     value={editHouse || harvestEditModal.house_number}
                                     onChange={(e) => setEditHouse(Number(e.target.value))}
@@ -1279,7 +1279,7 @@ export default function HarvestPage() {
                                 </select>
                             </div>
                             <div>
-                                <label className="text-[10px] font-black text-gray-400 block mb-1.5 ml-1">등급</label>
+                                <label className="text-[10px] font-black text-gray-700 block mb-1.5 ml-1">등급</label>
                                 <select
                                     value={editGrade || harvestEditModal.grade}
                                     onChange={(e) => setEditGrade(e.target.value as any)}
@@ -1293,7 +1293,7 @@ export default function HarvestPage() {
 
                         {/* 수량 */}
                         <div>
-                            <label className="text-[10px] font-black text-gray-400 block mb-1.5 ml-1">수량 (BOX)</label>
+                            <label className="text-[10px] font-black text-gray-700 block mb-1.5 ml-1">수량 (BOX)</label>
                             <div className="flex items-center gap-3 bg-gray-50 border border-gray-100 rounded-2xl p-3">
                                 <button onClick={() => setEditQuantity(Math.max(1, (editQuantity || harvestEditModal.quantity) - 1))}
                                     className="w-10 h-10 flex items-center justify-center bg-white rounded-xl shadow-sm">
@@ -1312,7 +1312,7 @@ export default function HarvestPage() {
 
                         {/* 날짜 */}
                         <div>
-                            <label className="text-[10px] font-black text-gray-400 block mb-1.5 ml-1">날짜</label>
+                            <label className="text-[10px] font-black text-gray-700 block mb-1.5 ml-1">날짜</label>
                             <input type="date"
                                 value={editDate || harvestEditModal.recorded_at.split('T')[0]}
                                 onChange={(e) => setEditDate(e.target.value)}

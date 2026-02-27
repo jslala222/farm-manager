@@ -314,7 +314,7 @@ export default function SettingsPage() {
 
     const field = (label: string, key: keyof Farm, type = "text", placeholder = "") => (
         <div className="space-y-1">
-            <label className="block text-sm font-semibold text-gray-500 ml-1">{label}</label>
+            <label className="block text-sm font-semibold text-gray-700 ml-1">{label}</label>
             <input type={type} value={(farm[key] as string) ?? ""} placeholder={placeholder}
                 onChange={(e) => {
                     let val = e.target.value;
@@ -334,7 +334,7 @@ export default function SettingsPage() {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
                 <div className="w-10 h-10 border-4 border-red-100 border-t-red-600 rounded-full animate-spin"></div>
-                <p className="text-gray-400 font-medium animate-pulse">농장 정보 로딩 중...</p>
+                <p className="text-gray-700 font-medium animate-pulse">농장 정보 로딩 중...</p>
             </div>
         );
     }
@@ -349,7 +349,7 @@ export default function SettingsPage() {
                     </div>
                     <div>
                         <h1 className="text-xl font-black text-gray-900 tracking-tight">농장 설정</h1>
-                        <p className="text-sm text-gray-400 font-medium">Farm Settings & Management</p>
+                        <p className="text-sm text-gray-700 font-medium">Farm Settings & Management</p>
                     </div>
                 </div>
                 {storeFarm?.id && (
@@ -399,7 +399,7 @@ export default function SettingsPage() {
                                     placeholder="총 동 갯수 (예: 12)"
                                     className="w-full p-5 pl-14 bg-red-50/30 border-2 border-red-100 rounded-[1.25rem] focus:bg-white focus:border-red-500 focus:ring-4 focus:ring-red-500/10 outline-none text-gray-900 font-black text-xl placeholder:text-red-200 transition-all shadow-inner" />
                             </div>
-                            <p className="text-[11px] text-gray-400 mt-2 ml-1">해당 숫자만큼 동이 자동으로 생성됩니다. 나중에 추가/삭제도 가능해요!</p>
+                            <p className="text-[11px] text-gray-700 mt-2 ml-1">해당 숫자만큼 동이 자동으로 생성됩니다. 나중에 추가/삭제도 가능해요!</p>
                         </div>
                     )}
 
@@ -428,7 +428,7 @@ export default function SettingsPage() {
                             />
                         </div>
                         <div className="w-full sm:w-20 space-y-2 sm:shrink-0">
-                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-tight ml-1">우편번호</label>
+                            <label className="text-[10px] font-bold text-gray-700 uppercase tracking-tight ml-1">우편번호</label>
                             <input value={farm.postal_code || ""}
                                 onChange={(e) => setFarm({ ...farm, postal_code: e.target.value })}
                                 className="w-full py-5 px-1 bg-gray-50 border-2 border-transparent rounded-[1.25rem] focus:bg-white focus:border-red-200 outline-none text-center font-bold text-sm" placeholder="00000" />
@@ -436,7 +436,7 @@ export default function SettingsPage() {
                     </div>
 
                     <div className="space-y-1">
-                        <label className="block text-sm font-semibold text-gray-500 ml-1">농장 운영 메모</label>
+                        <label className="block text-sm font-semibold text-gray-700 ml-1">농장 운영 메모</label>
                         <textarea value={farm.notes ?? ""} onChange={(e) => setFarm({ ...farm, notes: e.target.value })}
                             placeholder="메모하고 싶은 사항 (영업시간, 주력 품종 등)"
                             className="w-full p-5 bg-gray-50 border border-transparent rounded-[1.5rem] focus:bg-white focus:border-red-200 focus:ring-4 focus:ring-red-50/50 outline-none h-40 text-gray-900 transition-all resize-none shadow-sm" />
@@ -496,11 +496,11 @@ export default function SettingsPage() {
 
                     {/* 추천 프리셋 버튼 */}
                     <div className="space-y-2">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">한국 농장 프리셋 (클릭하면 자동 추가)</p>
+                        <p className="text-[10px] font-black text-gray-700 uppercase tracking-widest ml-1">한국 농장 프리셋 (클릭하면 자동 추가)</p>
                         <div className="flex gap-2 flex-wrap">
                             {Object.entries(PRESETS).map(([label, crops]) => (
                                 <button key={label} onClick={() => addPresetCrops([...crops])}
-                                    className="px-4 py-2.5 bg-gray-50 hover:bg-green-50 border border-gray-100 hover:border-green-200 rounded-xl text-xs font-bold text-gray-500 hover:text-green-600 transition-all">
+                                    className="px-4 py-2.5 bg-gray-50 hover:bg-green-50 border border-gray-100 hover:border-green-200 rounded-xl text-xs font-bold text-gray-700 hover:text-green-600 transition-all">
                                     {label}
                                 </button>
                             ))}
@@ -510,12 +510,12 @@ export default function SettingsPage() {
                     {/* 등록된 작물 목록 */}
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                         {loadingCrops ? (
-                            <div className="col-span-full py-10 text-center text-gray-300">작물 목록 로딩 중...</div>
+                            <div className="col-span-full py-10 text-center text-gray-600">작물 목록 로딩 중...</div>
                         ) : farmCrops.length === 0 ? (
                             <div className="col-span-full text-center py-16 bg-gray-50/50 rounded-[2rem] border-2 border-dashed border-gray-100">
                                 <Sprout className="w-12 h-12 text-gray-200 mx-auto mb-4" />
-                                <p className="text-gray-400 font-medium">등록된 작물이 없습니다.<br />
-                                    <span className="text-xs text-gray-300">위의 프리셋 버튼을 누르거나 직접 입력해 주세요!</span>
+                                <p className="text-gray-700 font-medium">등록된 작물이 없습니다.<br />
+                                    <span className="text-xs text-gray-600">위의 프리셋 버튼을 누르거나 직접 입력해 주세요!</span>
                                 </p>
                             </div>
                         ) : (
@@ -523,12 +523,12 @@ export default function SettingsPage() {
                                 <div key={crop.id}
                                     className="group flex flex-col items-center justify-center p-5 rounded-[1.5rem] border-2 bg-white border-green-50 shadow-sm hover:shadow-green-100/50 hover:border-green-200 transition-all relative">
                                     <button onClick={() => deleteCrop(crop.id, crop.crop_name)}
-                                        className="absolute top-2 right-2 text-gray-300 hover:text-red-500 transition-all p-1.5 opacity-0 group-hover:opacity-100 scale-75 hover:scale-100">
+                                        className="absolute top-2 right-2 text-gray-600 hover:text-red-500 transition-all p-1.5 opacity-0 group-hover:opacity-100 scale-75 hover:scale-100">
                                         <Trash2 className="w-4 h-4" />
                                     </button>
                                     <span className="text-3xl mb-1">{crop.crop_icon}</span>
                                     <span className="text-sm font-black text-gray-800">{crop.crop_name}</span>
-                                    <span className="text-[9px] text-gray-400 font-bold mt-0.5">
+                                    <span className="text-[9px] text-gray-700 font-bold mt-0.5">
                                         {crop.available_units?.join(' · ') || crop.default_unit}
                                     </span>
                                 </div>
@@ -546,13 +546,13 @@ export default function SettingsPage() {
                             <span className="w-2 h-7 bg-red-400 rounded-full"></span>
                             하우스 동 설정
                         </h2>
-                        <span className="px-3 py-1 bg-gray-100 text-gray-500 rounded-full text-xs font-bold">Total: {houses.length}</span>
+                        <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-bold">Total: {houses.length}</span>
                     </div>
 
                     {/* 개별 추가 컨트롤 */}
                     <div className="flex gap-3">
                         <div className="relative flex-1 group">
-                            <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-300 group-focus-within:text-red-400 transition-colors" />
+                            <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-600 group-focus-within:text-red-400 transition-colors" />
                             <input type="text" value={newHouseNum} onChange={(e) => setNewHouseNum(e.target.value)}
                                 placeholder="예: 6 (또는 1-12 범위)"
                                 className="w-full p-4 pl-12 bg-gray-50 border border-transparent rounded-2xl focus:bg-white focus:border-red-200 focus:ring-4 focus:ring-red-50/50 outline-none transition-all shadow-inner" />
@@ -567,7 +567,7 @@ export default function SettingsPage() {
                     {/* 하우스 동 목록 - 작물 드롭다운 선택 */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                         {loadingHouses ? (
-                            <div className="col-span-full py-16 text-center text-gray-300 font-medium">하우스 목록 불러오는 중...</div>
+                            <div className="col-span-full py-16 text-center text-gray-600 font-medium">하우스 목록 불러오는 중...</div>
                         ) : (
                             houses.map((h) => {
                                 const cropInfo = farmCrops.find(c => c.crop_name === h.current_crop);
@@ -576,13 +576,13 @@ export default function SettingsPage() {
                                         className={`group flex flex-col items-center justify-between p-5 rounded-[1.5rem] border-2 transition-all relative ${h.is_active ? 'bg-white border-red-50 shadow-md hover:shadow-red-100/50 hover:border-red-200' : 'bg-gray-50 border-transparent opacity-50 grayscale'}`}>
 
                                         <button onClick={() => deleteHouse(h.id)}
-                                            className="absolute top-2 right-2 text-gray-300 hover:text-red-500 transition-all p-1.5 opacity-0 group-hover:opacity-100 scale-75 hover:scale-100">
+                                            className="absolute top-2 right-2 text-gray-600 hover:text-red-500 transition-all p-1.5 opacity-0 group-hover:opacity-100 scale-75 hover:scale-100">
                                             <Trash2 className="w-4 h-4" />
                                         </button>
 
                                         <div className="flex flex-col items-center gap-2 w-full">
                                             {/* 작물 아이콘 (선택된 작물이 있으면 해당 아이콘, 없으면 하우스 아이콘) */}
-                                            <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors cursor-pointer ${h.is_active ? (cropInfo ? 'bg-green-50' : 'bg-red-50 text-red-600') : 'bg-gray-200 text-gray-400'}`}
+                                            <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors cursor-pointer ${h.is_active ? (cropInfo ? 'bg-green-50' : 'bg-red-50 text-red-600') : 'bg-gray-200 text-gray-700'}`}
                                                 onClick={() => toggleHouse(h.id, h.is_active)}>
                                                 {cropInfo ? (
                                                     <span className="text-2xl">{cropInfo.crop_icon}</span>
@@ -592,7 +592,7 @@ export default function SettingsPage() {
                                             </div>
 
                                             {/* 동 번호 */}
-                                            <span className={`text-xl font-black ${h.is_active ? 'text-gray-900' : 'text-gray-400'}`}>{h.house_number}동</span>
+                                            <span className={`text-xl font-black ${h.is_active ? 'text-gray-900' : 'text-gray-700'}`}>{h.house_number}동</span>
 
                                             {/* 작물 선택 드롭다운 */}
                                             <select
@@ -619,7 +619,7 @@ export default function SettingsPage() {
                                             </select>
 
                                             {/* 상태 배지 */}
-                                            <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-tighter cursor-pointer ${h.is_active ? 'bg-red-500 text-white shadow-sm shadow-red-200' : 'bg-gray-300 text-gray-500'}`}
+                                            <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-tighter cursor-pointer ${h.is_active ? 'bg-red-500 text-white shadow-sm shadow-red-200' : 'bg-gray-300 text-gray-700'}`}
                                                 onClick={() => toggleHouse(h.id, h.is_active)}>
                                                 {h.is_active ? 'Active' : 'Hidden'}
                                             </span>
@@ -633,7 +633,7 @@ export default function SettingsPage() {
                     {!loadingHouses && houses.length === 0 && (
                         <div className="text-center py-20 bg-gray-50/50 rounded-[2rem] border-2 border-dashed border-gray-100">
                             <LayoutGrid className="w-12 h-12 text-gray-200 mx-auto mb-4" />
-                            <p className="text-gray-400 font-medium">등록된 하우스가 없습니다.<br /><span className="text-xs text-gray-300">위의 입력창에서 동을 추가해보세요!</span></p>
+                            <p className="text-gray-700 font-medium">등록된 하우스가 없습니다.<br /><span className="text-xs text-gray-600">위의 입력창에서 동을 추가해보세요!</span></p>
                         </div>
                     )}
                 </section>

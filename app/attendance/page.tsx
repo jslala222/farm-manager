@@ -193,11 +193,11 @@ export default function AttendancePage() {
                                         ${presence[worker.id] ? 'bg-blue-600 shadow-lg shadow-blue-200' : 'bg-gray-50'}`}>
                                         {presence[worker.id]
                                             ? <UserCheck className="w-6 h-6 text-white" />
-                                            : <UserX className="w-6 h-6 text-gray-300" />}
+                                            : <UserX className="w-6 h-6 text-gray-600" />}
                                     </div>
                                     <div className="min-w-0">
-                                        <p className={`text-lg font-black truncate ${presence[worker.id] ? 'text-gray-900' : 'text-gray-400'}`}>{worker.name}</p>
-                                        <p className={`text-[10px] font-bold ${presence[worker.id] ? 'text-blue-500' : 'text-gray-300'}`}>
+                                        <p className={`text-lg font-black truncate ${presence[worker.id] ? 'text-gray-900' : 'text-gray-700'}`}>{worker.name}</p>
+                                        <p className={`text-[10px] font-bold ${presence[worker.id] ? 'text-blue-500' : 'text-gray-600'}`}>
                                             {presence[worker.id] ? '출근 완료' : '결근/대기'}
                                         </p>
                                     </div>
@@ -206,19 +206,19 @@ export default function AttendancePage() {
                             {presence[worker.id] && role === 'part_time' && (
                                 <div className="flex gap-2 mb-3">
                                     <div className="flex-1">
-                                        <label className="block text-[8px] font-bold text-gray-400 mb-0.5 ml-1 uppercase tracking-tighter">인원</label>
+                                        <label className="block text-[8px] font-bold text-gray-700 mb-0.5 ml-1 uppercase tracking-tighter">인원</label>
                                         <input type="number" placeholder="명" value={headcounts[worker.id] || ""}
                                             onChange={(e) => setHeadcounts({ ...headcounts, [worker.id]: e.target.value })}
                                             className="w-full p-2 bg-white border border-blue-100 rounded-xl text-xs font-bold focus:ring-2 focus:ring-blue-500 outline-none h-9 text-center" />
                                     </div>
                                     <div className="flex-1">
-                                        <label className="block text-[8px] font-bold text-gray-400 mb-0.5 ml-1 uppercase tracking-tighter">시간</label>
+                                        <label className="block text-[8px] font-bold text-gray-700 mb-0.5 ml-1 uppercase tracking-tighter">시간</label>
                                         <input type="number" placeholder="h" value={hours[worker.id] || ""}
                                             onChange={(e) => setHours({ ...hours, [worker.id]: e.target.value })}
                                             className="w-full p-2 bg-white border border-blue-100 rounded-xl text-xs font-bold focus:ring-2 focus:ring-blue-500 outline-none h-9 text-center" />
                                     </div>
                                     <div className="flex-[2]">
-                                        <label className="block text-[8px] font-bold text-gray-400 mb-0.5 ml-1 uppercase tracking-tighter">일당(원)</label>
+                                        <label className="block text-[8px] font-bold text-gray-700 mb-0.5 ml-1 uppercase tracking-tighter">일당(원)</label>
                                         <input type="text" placeholder="일당" value={wages[worker.id] ? `${Number(wages[worker.id].replace(/[^\d]/g, '')).toLocaleString()}원` : ""}
                                             onChange={(e) => setWages({ ...wages, [worker.id]: e.target.value.replace(/[^\d]/g, '') })}
                                             className="w-full p-2 bg-white border border-blue-100 rounded-xl text-xs font-bold focus:ring-2 focus:ring-blue-500 outline-none h-9 text-right" />
@@ -229,7 +229,7 @@ export default function AttendancePage() {
                                 <div className="mt-2 relative animate-in slide-in-from-top-2">
                                     <input type="text" placeholder="특이사항 메모 (예: 오전 작업 / 병원 방문 등)" value={notes[worker.id] || ""}
                                         onChange={(e) => setNotes({ ...notes, [worker.id]: e.target.value })}
-                                        className="w-full p-3 bg-white/50 border border-blue-50 rounded-xl text-[11px] font-medium focus:bg-white focus:border-blue-300 outline-none transition-all placeholder:text-gray-300 shadow-inner" />
+                                        className="w-full p-3 bg-white/50 border border-blue-50 rounded-xl text-[11px] font-medium focus:bg-white focus:border-blue-300 outline-none transition-all placeholder:text-gray-600 shadow-inner" />
                                 </div>
                             )}
                         </div>
@@ -260,12 +260,12 @@ export default function AttendancePage() {
             <div className="flex bg-white rounded-2xl border border-gray-100 shadow-sm p-1">
                 <button onClick={() => setActiveTab('record')}
                     className={`flex-1 py-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2
-                        ${activeTab === 'record' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400 hover:bg-gray-50'}`}>
+                        ${activeTab === 'record' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-700 hover:bg-gray-50'}`}>
                     <UserCheck className="w-4 h-4" /> 기록하기
                 </button>
                 <button onClick={() => setActiveTab('stats')}
                     className={`flex-1 py-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2
-                        ${activeTab === 'stats' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400 hover:bg-gray-50'}`}>
+                        ${activeTab === 'stats' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-700 hover:bg-gray-50'}`}>
                     <History className="w-4 h-4" /> 통계보기
                 </button>
             </div>
@@ -273,7 +273,7 @@ export default function AttendancePage() {
             {activeTab === 'record' ? (
                 <>
 
-                    {loading ? <div className="text-center py-24 text-gray-300 animate-pulse font-black text-lg">데이터 동기화 중...</div> : (
+                    {loading ? <div className="text-center py-24 text-gray-600 animate-pulse font-black text-lg">데이터 동기화 중...</div> : (
                         <>
                             <div className="bg-white rounded-[3rem] border border-gray-100 shadow-2xl shadow-gray-50 p-4">
                                 {renderGroup("💼 가족/식구", 'family')}
@@ -283,7 +283,7 @@ export default function AttendancePage() {
 
                                 {workers.length === 0 && (
                                     <div className="text-center py-16 bg-gray-50 rounded-[2.5rem] border-2 border-dashed border-gray-100">
-                                        <p className="text-gray-400 mb-6 text-sm font-bold">등록된 활성 근로자가 없습니다.</p>
+                                        <p className="text-gray-700 mb-6 text-sm font-bold">등록된 활성 근로자가 없습니다.</p>
                                         <Link href="/workers" className="inline-flex items-center gap-2 px-8 py-4 bg-blue-600 text-white rounded-2xl font-black text-sm hover:bg-blue-700 shadow-xl shadow-blue-50 transition-all active:scale-95">
                                             <UserPlus className="w-5 h-5" /> 근로자 관리 바로가기
                                         </Link>
@@ -303,15 +303,15 @@ export default function AttendancePage() {
                             <section className="pt-12">
                                 <div className="flex items-center justify-between mb-6 px-3">
                                     <h2 className="text-xl font-black text-gray-800 flex items-center gap-2">
-                                        <History className="w-6 h-6 text-gray-400" />
+                                        <History className="w-6 h-6 text-gray-700" />
                                         출근 기록 히스토리
                                     </h2>
-                                    <span className="text-[9px] text-gray-300 font-black uppercase tracking-[0.2em]">Latest Logs</span>
+                                    <span className="text-[9px] text-gray-600 font-black uppercase tracking-[0.2em]">Latest Logs</span>
                                 </div>
 
                                 <div className="space-y-3">
                                     {history.length === 0 ? (
-                                        <div className="text-center py-16 bg-gray-50 rounded-[2.5rem] border-2 border-dashed border-gray-100 text-gray-300 text-sm font-black">
+                                        <div className="text-center py-16 bg-gray-50 rounded-[2.5rem] border-2 border-dashed border-gray-100 text-gray-600 text-sm font-black">
                                             저장된 출근 기록이 없습니다.
                                         </div>
                                     ) : (
@@ -330,10 +330,10 @@ export default function AttendancePage() {
                                                                     <CheckCircle2 className="w-3 h-3" /> 출근
                                                                 </div>
                                                             ) : (
-                                                                <span className="text-[10px] font-black text-gray-300 bg-gray-50 px-2 py-0.5 rounded-md">결근</span>
+                                                                <span className="text-[10px] font-black text-gray-600 bg-gray-50 px-2 py-0.5 rounded-md">결근</span>
                                                             )}
                                                         </div>
-                                                        <div className="flex items-center gap-1 text-[9px] text-gray-300 font-bold">
+                                                        <div className="flex items-center gap-1 text-[9px] text-gray-600 font-bold">
                                                             <Clock className="w-3 h-3" />
                                                             최종 확정: {new Date(item.recorded_at!).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
                                                         </div>
@@ -377,19 +377,19 @@ export default function AttendancePage() {
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="bg-white p-3 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-md transition-all text-center">
-                                <p className="text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">💼 가족/식구</p>
+                                <p className="text-[10px] font-black text-gray-700 mb-2 uppercase tracking-widest">💼 가족/식구</p>
                                 <p className="text-2xl sm:text-3xl font-black text-blue-600">{roleStats.family}</p>
                             </div>
                             <div className="bg-white p-3 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-md transition-all text-center">
-                                <p className="text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">🤝 일반직원</p>
+                                <p className="text-[10px] font-black text-gray-700 mb-2 uppercase tracking-widest">🤝 일반직원</p>
                                 <p className="text-2xl sm:text-3xl font-black text-gray-900">{roleStats.staff}</p>
                             </div>
                             <div className="bg-white p-3 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-md transition-all text-center">
-                                <p className="text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">🌏 외국인</p>
+                                <p className="text-[10px] font-black text-gray-700 mb-2 uppercase tracking-widest">🌏 외국인</p>
                                 <p className="text-2xl sm:text-3xl font-black text-gray-900">{roleStats.foreign}</p>
                             </div>
                             <div className="bg-white p-3 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-md transition-all text-center">
-                                <p className="text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">⏳ 알바/단기</p>
+                                <p className="text-[10px] font-black text-gray-700 mb-2 uppercase tracking-widest">⏳ 알바/단기</p>
                                 <p className="text-2xl sm:text-3xl font-black text-blue-600">{roleStats.part_time}</p>
                             </div>
                         </div>
@@ -399,13 +399,13 @@ export default function AttendancePage() {
                     <section className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
                         <div className="p-3 border-b border-gray-50 flex items-center justify-between bg-gray-50/30">
                             <h3 className="text-base font-black text-gray-800 flex items-center gap-2">
-                                <CalendarDays className="w-5 h-5 text-gray-400" />
+                                <CalendarDays className="w-5 h-5 text-gray-700" />
                                 날짜별 출근 추이
                             </h3>
                         </div>
                         <div className="divide-y divide-gray-50">
                             {Object.keys(dateRoleStats).length === 0 ? (
-                                <p className="px-6 py-12 text-center text-sm text-gray-300 font-bold">출근 기록이 없습니다.</p>
+                                <p className="px-6 py-12 text-center text-sm text-gray-600 font-bold">출근 기록이 없습니다.</p>
                             ) : (
                                 Object.entries(dateRoleStats)
                                     .sort((a, b) => b[0].localeCompare(a[0]))
@@ -415,13 +415,13 @@ export default function AttendancePage() {
                                         return (
                                             <div key={date} className="p-5 flex items-center justify-between hover:bg-gray-50 transition-colors">
                                                 <div className="flex flex-col">
-                                                    <span className="text-sm font-bold text-gray-500">{date}</span>
-                                                    <span className="text-sm text-gray-400 font-bold mt-1">
+                                                    <span className="text-sm font-bold text-gray-700">{date}</span>
+                                                    <span className="text-sm text-gray-700 font-bold mt-1">
                                                         식구 {roles.family} / 직원 {roles.staff} / 외국인 {roles.foreign} / 알바 {roles.part_time}
                                                     </span>
                                                 </div>
                                                 <div className="text-right">
-                                                    <span className="text-xl font-black text-gray-900">{total} <span className="text-xs text-gray-400 font-normal">명</span></span>
+                                                    <span className="text-xl font-black text-gray-900">{total} <span className="text-xs text-gray-700 font-normal">명</span></span>
                                                 </div>
                                             </div>
                                         );

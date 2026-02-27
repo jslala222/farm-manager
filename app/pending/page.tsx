@@ -22,7 +22,7 @@ export default function PendingPage() {
 
                 <h1 className="text-xl font-black text-gray-900 mb-4">승인 대기 중</h1>
 
-                <p className="text-gray-500 mb-8 leading-relaxed">
+                <p className="text-gray-700 mb-8 leading-relaxed">
                     사장님(관리자)의 승인이 완료된 후에<br />
                     모든 기능을 이용하실 수 있습니다.<br />
                     잠시만 기다려 주세요.
@@ -30,7 +30,7 @@ export default function PendingPage() {
 
                 <div className="space-y-3">
                     <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 mb-6">
-                        <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mb-1">Status</p>
+                        <p className="text-xs text-gray-700 font-bold uppercase tracking-widest mb-1">Status</p>
                         <p className="text-sm font-black text-yellow-600">Pending Approval</p>
                     </div>
 
@@ -42,7 +42,7 @@ export default function PendingPage() {
                         로그아웃 (다시 로그인)
                     </button>
 
-                    <p className="text-[10px] text-gray-400 mt-4">
+                    <p className="text-[10px] text-gray-700 mt-4">
                         다른 계정으로 로그인하시려면 로그아웃 후 다시 시도해 주세요.
                     </p>
                 </div>

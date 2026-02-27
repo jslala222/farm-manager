@@ -205,14 +205,14 @@ export default function B2CSettledPage() {
                         <span className="text-base font-black text-purple-600">(택배거래)</span>
                         <Package2 className="w-5 h-5 text-purple-500 shrink-0" />
                     </h1>
-                    <p className="text-[10px] text-gray-400 font-bold mt-0.5">
+                    <p className="text-[10px] text-gray-700 font-bold mt-0.5">
                         B2C 택배 입금 현황 · {periodLabel}
                     </p>
                 </div>
                 <button
                     onClick={fetchData}
                     disabled={loading}
-                    className="p-2.5 rounded-xl bg-gray-50 text-gray-400 hover:text-purple-600 hover:bg-purple-50 transition-all"
+                    className="p-2.5 rounded-xl bg-gray-50 text-gray-700 hover:text-purple-600 hover:bg-purple-50 transition-all"
                 >
                     <RefreshCcw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                 </button>
@@ -229,7 +229,7 @@ export default function B2CSettledPage() {
                         <button
                             key={p.key}
                             onClick={() => setPeriod(p.key)}
-                            className={`flex-1 py-2 rounded-xl text-xs font-black transition-all ${period === p.key ? 'bg-white shadow-sm text-purple-600' : 'text-gray-400'}`}
+                            className={`flex-1 py-2 rounded-xl text-xs font-black transition-all ${period === p.key ? 'bg-white shadow-sm text-purple-600' : 'text-gray-700'}`}
                         >
                             {p.label}
                         </button>
@@ -239,12 +239,12 @@ export default function B2CSettledPage() {
                 {period === 'custom' && (
                     <div className="grid grid-cols-2 gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
                         <div>
-                            <label className="text-[10px] font-black text-gray-400 uppercase block mb-1 ml-1">시작일</label>
+                            <label className="text-[10px] font-black text-gray-700 uppercase block mb-1 ml-1">시작일</label>
                             <input type="date" value={range.from} onChange={e => setRange(r => ({ ...r, from: e.target.value }))}
                                 className="w-full p-3 border-2 border-gray-100 rounded-2xl text-sm font-bold focus:border-purple-400 outline-none" />
                         </div>
                         <div>
-                            <label className="text-[10px] font-black text-gray-400 uppercase block mb-1 ml-1">종료일</label>
+                            <label className="text-[10px] font-black text-gray-700 uppercase block mb-1 ml-1">종료일</label>
                             <input type="date" value={range.to} onChange={e => setRange(r => ({ ...r, to: e.target.value }))}
                                 className="w-full p-3 border-2 border-gray-100 rounded-2xl text-sm font-bold focus:border-purple-400 outline-none" />
                         </div>
@@ -260,24 +260,24 @@ export default function B2CSettledPage() {
             <div className="bg-gray-900 rounded-3xl p-5 text-white shadow-xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-40 h-40 bg-purple-500 opacity-20 rounded-full -mr-20 -mt-20 blur-3xl" />
                 <div className="relative z-10">
-                    <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-1">기간 내 총 입금액</p>
+                    <p className="text-gray-700 text-[10px] font-bold uppercase tracking-widest mb-1">기간 내 총 입금액</p>
                     <h2 className="text-3xl font-black tracking-tighter text-purple-300 mb-3">{formatCurrency(settledTotal)}</h2>
                     <div className="grid grid-cols-2 gap-3">
                         <div className="bg-white/5 rounded-2xl p-3">
                             <div className="flex items-center gap-1.5 mb-1">
                                 <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
-                                <span className="text-[10px] text-gray-400 font-bold">정산 완료</span>
+                                <span className="text-[10px] text-gray-700 font-bold">정산 완료</span>
                             </div>
                             <p className="text-base font-black text-white">{formatCurrency(settledTotal)}</p>
-                            <p className="text-[10px] text-gray-500 font-bold">{settledCount}건</p>
+                            <p className="text-[10px] text-gray-700 font-bold">{settledCount}건</p>
                         </div>
                         <div className="bg-white/5 rounded-2xl p-3">
                             <div className="flex items-center gap-1.5 mb-1">
                                 <Clock className="w-3.5 h-3.5 text-amber-400" />
-                                <span className="text-[10px] text-gray-400 font-bold">미정산 (외상)</span>
+                                <span className="text-[10px] text-gray-700 font-bold">미정산 (외상)</span>
                             </div>
                             <p className="text-base font-black text-amber-300">{formatCurrency(pendingTotal)}</p>
-                            <p className="text-[10px] text-gray-500 font-bold">{pendingCount}건</p>
+                            <p className="text-[10px] text-gray-700 font-bold">{pendingCount}건</p>
                         </div>
                     </div>
                 </div>
@@ -286,8 +286,8 @@ export default function B2CSettledPage() {
             {/* 결제수단별 집계 (정산 완료 건 기준) */}
             <section className="space-y-2">
                 <h3 className="text-sm font-black text-gray-700 flex items-center gap-1.5 px-1">
-                    <BarChart3 className="w-4 h-4 text-gray-400" /> 결제수단별 입금 현황
-                    <span className="text-[10px] text-gray-300 font-bold">(정산 완료 기준)</span>
+                    <BarChart3 className="w-4 h-4 text-gray-700" /> 결제수단별 입금 현황
+                    <span className="text-[10px] text-gray-600 font-bold">(정산 완료 기준)</span>
                 </h3>
                 <div className="grid grid-cols-3 gap-2">
                     {(['카드', '현금', '계좌'] as const).map(method => {
@@ -300,14 +300,14 @@ export default function B2CSettledPage() {
                                 className={`p-3 rounded-[24px] border-2 text-left transition-all active:scale-95
                                     ${isActive ? `${cfg.bg} ${cfg.border} shadow-md` : 'bg-white border-gray-100 hover:border-gray-200'}`}
                             >
-                                <div className={`flex items-center gap-1 mb-2 ${isActive ? cfg.color : 'text-gray-400'}`}>
+                                <div className={`flex items-center gap-1 mb-2 ${isActive ? cfg.color : 'text-gray-700'}`}>
                                     {cfg.icon}
                                     <span className="text-[10px] font-black">{cfg.label}</span>
                                 </div>
-                                <div className={`text-sm font-black truncate ${stat.total > 0 ? 'text-gray-900' : 'text-gray-300'}`}>
+                                <div className={`text-sm font-black truncate ${stat.total > 0 ? 'text-gray-900' : 'text-gray-600'}`}>
                                     {stat.total > 0 ? (stat.total / 10000).toFixed(0) + '만' : '없음'}
                                 </div>
-                                <div className="text-[10px] text-gray-400 font-bold mt-0.5">{stat.count}건</div>
+                                <div className="text-[10px] text-gray-700 font-bold mt-0.5">{stat.count}건</div>
                             </button>
                         );
                     })}
@@ -329,7 +329,7 @@ export default function B2CSettledPage() {
                     { key: 'pending', label: `미정산 (${pendingCount})` },
                 ] as { key: SettleFilter; label: string }[]).map(s => (
                     <button key={s.key} onClick={() => setSettleFilter(s.key)}
-                        className={`flex-1 py-2 rounded-xl text-[11px] font-black transition-all whitespace-nowrap ${settleFilter === s.key ? 'bg-white shadow-sm text-purple-600' : 'text-gray-400'}`}>
+                        className={`flex-1 py-2 rounded-xl text-[11px] font-black transition-all whitespace-nowrap ${settleFilter === s.key ? 'bg-white shadow-sm text-purple-600' : 'text-gray-700'}`}>
                         {s.label}
                     </button>
                 ))}
@@ -337,7 +337,7 @@ export default function B2CSettledPage() {
 
             {/* 검색 */}
             <div className="relative">
-                <Search className="absolute left-4 top-3.5 w-4 h-4 text-gray-300" />
+                <Search className="absolute left-4 top-3.5 w-4 h-4 text-gray-600" />
                 <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
                     placeholder="주문자명 또는 연락처 검색"
                     className="w-full pl-11 pr-4 py-3 bg-white border-2 border-gray-100 rounded-2xl text-sm font-bold focus:border-purple-400 outline-none transition-all" />
@@ -348,7 +348,7 @@ export default function B2CSettledPage() {
                 <div className="flex items-center justify-between px-1">
                     <h3 className="text-sm font-black text-gray-700">
                         거래 내역
-                        <span className="ml-1.5 text-[10px] bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full font-bold">{filteredRecords.length}건</span>
+                        <span className="ml-1.5 text-[10px] bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full font-bold">{filteredRecords.length}건</span>
                     </h3>
                     <span className="text-xs font-black text-purple-600">
                         {formatCurrency(filteredRecords.filter(r => r.is_settled).reduce((s, r) => s + (r.price ?? 0), 0))}
@@ -358,13 +358,13 @@ export default function B2CSettledPage() {
                 {loading ? (
                     <div className="flex flex-col items-center justify-center py-20 gap-3">
                         <RefreshCcw className="w-8 h-8 text-gray-200 animate-spin" />
-                        <p className="text-xs text-gray-300 font-bold">데이터 불러오는 중...</p>
+                        <p className="text-xs text-gray-600 font-bold">데이터 불러오는 중...</p>
                     </div>
                 ) : filteredRecords.length === 0 ? (
                     <div className="text-center py-16 bg-gray-50 rounded-[2.5rem] border-2 border-dashed border-gray-100">
                         <Package2 className="w-12 h-12 text-gray-200 mx-auto mb-3" />
-                        <p className="text-sm text-gray-400 font-bold">해당 기간에 택배 거래가 없습니다.</p>
-                        <p className="text-[10px] text-gray-300 font-bold mt-1">택배(B2C) 메뉴에서 먼저 기록하세요.</p>
+                        <p className="text-sm text-gray-700 font-bold">해당 기간에 택배 거래가 없습니다.</p>
+                        <p className="text-[10px] text-gray-600 font-bold mt-1">택배(B2C) 메뉴에서 먼저 기록하세요.</p>
                     </div>
                 ) : (
                     filteredRecords.map(rec => {
@@ -402,7 +402,7 @@ export default function B2CSettledPage() {
                                                     {method}
                                                 </span>
                                             </div>
-                                            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-gray-400 font-bold">
+                                            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-gray-700 font-bold">
                                                 {phone && (
                                                     <span className="flex items-center gap-1">
                                                         <Phone className="w-3 h-3" />{phone}
@@ -424,7 +424,7 @@ export default function B2CSettledPage() {
                                                 )}
                                             </div>
                                             {rec.delivery_note && (
-                                                <p className="text-[10px] text-gray-300 mt-1 truncate">{rec.delivery_note}</p>
+                                                <p className="text-[10px] text-gray-600 mt-1 truncate">{rec.delivery_note}</p>
                                             )}
                                         </div>
                                     </div>
@@ -434,7 +434,7 @@ export default function B2CSettledPage() {
                                             {formatCurrency(amount)}
                                         </p>
                                         {rec.shipping_cost && rec.shipping_cost > 0 && rec.shipping_fee_type !== '착불' && (
-                                            <p className="text-[10px] text-gray-400 font-bold">
+                                            <p className="text-[10px] text-gray-700 font-bold">
                                                 실수령 {formatCurrency(amount - rec.shipping_cost)}
                                             </p>
                                         )}
@@ -451,19 +451,19 @@ export default function B2CSettledPage() {
                 <div className="sticky bottom-20 md:bottom-6 bg-white border-2 border-purple-100 rounded-3xl p-4 shadow-2xl shadow-purple-100/50">
                     <div className="grid grid-cols-3 gap-3 text-center">
                         <div>
-                            <p className="text-[9px] font-black text-gray-400 uppercase mb-0.5">정산 완료</p>
+                            <p className="text-[9px] font-black text-gray-700 uppercase mb-0.5">정산 완료</p>
                             <p className="text-base font-black text-purple-600">
                                 {formatCurrency(filteredRecords.filter(r => r.is_settled).reduce((s, r) => s + (r.price ?? 0), 0))}
                             </p>
                         </div>
                         <div className="border-x border-gray-100">
-                            <p className="text-[9px] font-black text-gray-400 uppercase mb-0.5">미정산</p>
+                            <p className="text-[9px] font-black text-gray-700 uppercase mb-0.5">미정산</p>
                             <p className="text-base font-black text-amber-500">
                                 {formatCurrency(filteredRecords.filter(r => !r.is_settled).reduce((s, r) => s + (r.price ?? 0), 0))}
                             </p>
                         </div>
                         <div>
-                            <p className="text-[9px] font-black text-gray-400 uppercase mb-0.5">건수</p>
+                            <p className="text-[9px] font-black text-gray-700 uppercase mb-0.5">건수</p>
                             <p className="text-base font-black text-gray-900">{filteredRecords.length}건</p>
                         </div>
                     </div>

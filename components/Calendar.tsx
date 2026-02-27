@@ -116,13 +116,13 @@ export default function Calendar({ selectedDate, onChange, harvestedDates = {}, 
                         <h3 className="text-lg font-black text-gray-900 leading-none">
                             {viewDate.getFullYear()}년 {viewDate.getMonth() + 1}월
                         </h3>
-                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
+                        <p className="text-[10px] text-gray-700 font-bold uppercase tracking-widest mt-1">
                             {mode === 'harvest' ? 'Calendar & Harvest' : 'Expenditure Calendar'}
                         </p>
                     </div>
                 </div>
                 <div className="flex gap-2">
-                    <button onClick={handlePrevMonth} className="p-2 hover:bg-white rounded-xl transition-all border border-transparent hover:border-gray-100 text-gray-400 hover:text-gray-900">
+                    <button onClick={handlePrevMonth} className="p-2 hover:bg-white rounded-xl transition-all border border-transparent hover:border-gray-100 text-gray-700 hover:text-gray-900">
                         <ChevronLeft className="w-5 h-5" />
                     </button>
                     <button
@@ -136,7 +136,7 @@ export default function Calendar({ selectedDate, onChange, harvestedDates = {}, 
                     >
                         오늘
                     </button>
-                    <button onClick={handleNextMonth} className="p-2 hover:bg-white rounded-xl transition-all border border-transparent hover:border-gray-100 text-gray-400 hover:text-gray-900">
+                    <button onClick={handleNextMonth} className="p-2 hover:bg-white rounded-xl transition-all border border-transparent hover:border-gray-100 text-gray-700 hover:text-gray-900">
                         <ChevronRight className="w-5 h-5" />
                     </button>
                 </div>
@@ -146,7 +146,7 @@ export default function Calendar({ selectedDate, onChange, harvestedDates = {}, 
             <div className="p-4 bg-white">
                 <div className="grid grid-cols-7 mb-2">
                     {weekDays.map((d, i) => (
-                        <div key={d} className={`text-center py-2 text-[10px] font-black uppercase tracking-tighter ${i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-gray-300'}`}>
+                        <div key={d} className={`text-center py-2 text-[10px] font-black uppercase tracking-tighter ${i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-gray-600'}`}>
                             {d}
                         </div>
                     ))}
@@ -207,29 +207,29 @@ export default function Calendar({ selectedDate, onChange, harvestedDates = {}, 
             <div className="px-6 py-4 bg-gray-50/50 border-t border-gray-100 flex items-center gap-4 overflow-x-auto scrollbar-hide">
                 <div className="flex items-center gap-1.5 shrink-0">
                     <div className="w-3 h-3 border-2 border-red-500 bg-orange-50 rounded-md"></div>
-                    <span className="text-[10px] font-black text-gray-400">오늘</span>
+                    <span className="text-[10px] font-black text-gray-700">오늘</span>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                     <div className={`w-3 h-3 border-2 ${mode === 'harvest' ? 'border-green-400' : 'border-blue-400'} rounded-md`}></div>
-                    <span className="text-[10px] font-black text-gray-400">{mode === 'harvest' ? '수확 활동' : '지출 내역'}</span>
+                    <span className="text-[10px] font-black text-gray-700">{mode === 'harvest' ? '수확 활동' : '지출 내역'}</span>
                 </div>
                 <div className="h-3 w-px bg-gray-200 mx-1"></div>
                 <div className="flex items-center gap-2 pointer-events-none">
-                    <span className="text-[10px] font-black text-gray-300 mr-1 italic">
+                    <span className="text-[10px] font-black text-gray-600 mr-1 italic">
                         {legend?.label || 'HOUSE COLOR'}:
                     </span>
                     {legend ? (
                         legend.items.map(item => (
                             <div key={item.value} className="flex items-center gap-1">
                                 <div className={`w-1.5 h-1.5 rounded-full ${item.color}`}></div>
-                                <span className="text-[9px] font-bold text-gray-400">{item.label}</span>
+                                <span className="text-[9px] font-bold text-gray-700">{item.label}</span>
                             </div>
                         ))
                     ) : (
                         [1, 6, 7, 8].map(hNum => (
                             <div key={hNum} className="flex items-center gap-1">
                                 <div className={`w-1.5 h-1.5 rounded-full ${getMarkerColor(hNum)}`}></div>
-                                <span className="text-[9px] font-bold text-gray-400">{hNum}동</span>
+                                <span className="text-[9px] font-bold text-gray-700">{hNum}동</span>
                             </div>
                         ))
                     )}
