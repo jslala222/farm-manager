@@ -124,7 +124,7 @@ export default function RegisterPage() {
                                         placeholder="farm@example.com"
                                         className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none transition-all" />
                                 </div>
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">비밀번호 *</label>
                                         <input name="password" type="password" value={form.password} onChange={handleChange} required
@@ -151,7 +151,7 @@ export default function RegisterPage() {
                                         placeholder="예: 행복 딸기농장"
                                         className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none transition-all" />
                                 </div>
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">연락처</label>
                                         <input name="phone" type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })}
@@ -165,7 +165,7 @@ export default function RegisterPage() {
                                             className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none transition-all" />
                                     </div>
                                 </div>
-                                <div className="flex gap-3 items-end">
+                                <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
                                     <div className="flex-1 min-w-0">
                                         <AddressSearch
                                             label="농장 주소"
@@ -179,7 +179,7 @@ export default function RegisterPage() {
                                             placeholder="농장 위치를 검색하거나 입력하세요"
                                         />
                                     </div>
-                                    <div className="w-20 space-y-2 shrink-0">
+                                    <div className="w-full sm:w-20 space-y-2 sm:shrink-0">
                                         <label className="text-[10px] font-bold text-gray-400 uppercase tracking-tight ml-1">우편번호</label>
                                         <input type="text" value={form.postal_code}
                                             onChange={(e) => setForm({ ...form, postal_code: e.target.value })}

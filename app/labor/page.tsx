@@ -3,7 +3,8 @@
 import { useState, useEffect, useMemo } from "react";
 import {
     Plus, Trash2, Users, Save, CheckCircle,
-    CalendarDays, AlertCircle, ChevronDown, ChevronUp
+    CalendarDays, AlertCircle, ChevronDown, ChevronUp, Pencil,
+    ChevronLeft, ChevronRight
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { supabase, Worker, AttendanceRecord, LaborCost } from "@/lib/supabase";
@@ -15,7 +16,8 @@ type PaymentMethod = '현금' | '계좌이체' | '카드';
 
 const GRADES = ['오야지', '상급', '중급', '하급', '기타'];
 const PAYMENT_METHODS: PaymentMethod[] = ['현금', '계좌이체', '카드'];
-const WORK_TYPES = ['딸기수확', '시설관리', '농약살포', '비료작업', '잡일', '기타'];
+const WORK_TYPES = ['농작물 수확', '시설관리', '농약살포', '비료작업', '잡일', '기타'];
+const DAY_NAMES_KR = ['일', '월', '화', '수', '목', '금', '토'];
 
 // ─── 로컬 행 타입 ──────────────────────────────────────────────────────────────
 interface LaborRow {
@@ -58,11 +60,26 @@ export default function LaborPage() {
 
     const today = new Date().toISOString().split('T')[0];
     const [selectedDate, setSelectedDate] = useState(today);
+
+    const moveDate = (days: number) => {
+        const d = new Date(selectedDate);
+        d.setDate(d.getDate() + days);
+        const next = d.toISOString().split('T')[0];
+        if (next <= today) setSelectedDate(next);
+    };
+
+    const moveWeek = (direction: number) => {
+        const d = new Date(selectedDate + 'T00:00:00');
+        d.setDate(d.getDate() + direction * 7);
+        const next = d.toISOString().split('T')[0];
+        if (next <= today) setSelectedDate(next);
+    };
     const [rows, setRows] = useState<LaborRow[]>([]);
     const [attendance, setAttendance] = useState<Record<string, boolean>>({});
     const [saving, setSaving] = useState(false);
     const [savedFlash, setSavedFlash] = useState(false);
     const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+    const [showWeekSummary, setShowWeekSummary] = useState(true);
 
     // ── 직원/식구 목록 ──────────────────────────────────────────────────────────
     const { data: workers = [] } = useQuery({
@@ -108,6 +125,123 @@ export default function LaborPage() {
         },
         enabled: !!farm?.id,
     });
+
+    // ── 주간 날짜 계산 (월~일) ──────────────────────────────────────────────────
+    const weekDates = useMemo(() => {
+        const d = new Date(selectedDate + 'T00:00:00');
+        const dow = d.getDay();
+        const monday = new Date(d);
+        monday.setDate(d.getDate() - (dow === 0 ? 6 : dow - 1));
+        return Array.from({ length: 7 }, (_, i) => {
+            const dd = new Date(monday);
+            dd.setDate(monday.getDate() + i);
+            return dd.toISOString().split('T')[0];
+        });
+    }, [selectedDate]);
+
+    // ── 주간 labor_costs 조회 ───────────────────────────────────────────────────
+    const { data: weekCosts = [] } = useQuery({
+        queryKey: ['labor_costs_week', farm?.id, weekDates[0]],
+        queryFn: async () => {
+            const { data } = await supabase
+                .from('labor_costs')
+                .select('*')
+                .eq('farm_id', farm!.id)
+                .gte('work_date', weekDates[0])
+                .lte('work_date', weekDates[6]);
+            return (data ?? []) as LaborCost[];
+        },
+        enabled: !!farm?.id,
+    });
+
+    // ── 주간 attendance 조회 ────────────────────────────────────────────────────
+    const { data: weekAttendance = [] } = useQuery({
+        queryKey: ['attendance_week', farm?.id, weekDates[0]],
+        queryFn: async () => {
+            const { data } = await supabase
+                .from('attendance_records')
+                .select('*')
+                .eq('farm_id', farm!.id)
+                .gte('work_date', weekDates[0])
+                .lte('work_date', weekDates[6]);
+            return (data ?? []) as AttendanceRecord[];
+        },
+        enabled: !!farm?.id,
+    });
+
+    // ── 주간 요약 계산 ──────────────────────────────────────────────────────────
+    const weekSummary = useMemo(() => {
+        return weekDates.map(date => {
+            const costs = weekCosts.filter(c => c.work_date === date);
+            const att = weekAttendance.filter(a => a.work_date === date && a.is_present);
+            const laborHeadcount = costs.reduce((s, c) => s + c.headcount, 0);
+            const laborTotal = costs.reduce((s, c) => s + c.headcount * c.daily_wage + (c.tip || 0), 0);
+            const staffCount = att.length;
+            const total = laborHeadcount + staffCount;
+            const bySource: Record<string, { headcount: number; amount: number }> = {};
+            costs.forEach(c => {
+                const key = c.source === '인력사무소' && c.agency_name
+                    ? c.agency_name
+                    : c.source === '인력사무소' ? '인력사무소' : '개별직접';
+                if (!bySource[key]) bySource[key] = { headcount: 0, amount: 0 };
+                bySource[key].headcount += c.headcount;
+                bySource[key].amount += c.headcount * c.daily_wage + (c.tip || 0);
+            });
+            return { date, laborHeadcount, laborTotal, staffCount, total, bySource };
+        });
+    }, [weekDates, weekCosts, weekAttendance]);
+
+    // ── 월간 데이터 조회 ────────────────────────────────────────────────────────
+    const monthStr = selectedDate.slice(0, 7); // YYYY-MM
+    const monthLastDay = new Date(
+        parseInt(monthStr.split('-')[0]),
+        parseInt(monthStr.split('-')[1]),
+        0
+    ).getDate();
+    const monthStart = `${monthStr}-01`;
+    const monthEnd = `${monthStr}-${String(monthLastDay).padStart(2, '0')}`;
+
+    const { data: monthCosts = [] } = useQuery({
+        queryKey: ['labor_costs_month', farm?.id, monthStr],
+        queryFn: async () => {
+            const { data } = await supabase
+                .from('labor_costs')
+                .select('source, headcount, daily_wage, tip')
+                .eq('farm_id', farm!.id)
+                .gte('work_date', monthStart)
+                .lte('work_date', monthEnd);
+            return (data ?? []) as Pick<LaborCost, 'source' | 'headcount' | 'daily_wage' | 'tip'>[];
+        },
+        enabled: !!farm?.id,
+    });
+
+    const { data: monthAttendance = [] } = useQuery({
+        queryKey: ['attendance_month', farm?.id, monthStr],
+        queryFn: async () => {
+            const { data } = await supabase
+                .from('attendance_records')
+                .select('is_present')
+                .eq('farm_id', farm!.id)
+                .gte('work_date', monthStart)
+                .lte('work_date', monthEnd)
+                .eq('is_present', true);
+            return (data ?? []) as { is_present: boolean }[];
+        },
+        enabled: !!farm?.id,
+    });
+
+    const monthSummary = useMemo(() => {
+        const staffDays = monthAttendance.length;
+        const agencyCount = monthCosts
+            .filter(c => c.source === '인력사무소')
+            .reduce((s, c) => s + c.headcount, 0);
+        const directCount = monthCosts
+            .filter(c => c.source === '개별직접')
+            .reduce((s, c) => s + c.headcount, 0);
+        const totalCost = monthCosts.reduce((s, c) => s + c.headcount * c.daily_wage + (c.tip || 0), 0);
+        const totalTip = monthCosts.reduce((s, c) => s + (c.tip || 0), 0);
+        return { staffDays, agencyCount, directCount, totalCost, totalTip };
+    }, [monthCosts, monthAttendance]);
 
     // ── DB → 로컬 state 동기화 ──────────────────────────────────────────────────
     useEffect(() => {
@@ -227,6 +361,10 @@ export default function LaborPage() {
 
             queryClient.invalidateQueries({ queryKey: ['labor_costs'] });
             queryClient.invalidateQueries({ queryKey: ['attendance'] });
+            queryClient.invalidateQueries({ queryKey: ['labor_costs_week'] });
+            queryClient.invalidateQueries({ queryKey: ['attendance_week'] });
+            queryClient.invalidateQueries({ queryKey: ['labor_costs_month'] });
+            queryClient.invalidateQueries({ queryKey: ['attendance_month'] });
             setSavedFlash(true);
             setTimeout(() => setSavedFlash(false), 2000);
         } catch (err: any) {
@@ -298,27 +436,226 @@ export default function LaborPage() {
 
     const unpaidTotal = rows.filter(r => !r.paid).reduce((s, r) => s + rowSubtotal(r), 0);
 
+    const monthNum = parseInt(monthStr.split('-')[1]);
+
     return (
         <div className="p-4 md:p-6 pb-40 max-w-2xl mx-auto space-y-5">
 
-            {/* ── 헤더 ── */}
-            <div className="flex items-center gap-3">
-                <div className="p-3 bg-orange-100 rounded-2xl shadow-sm">
-                    <Users className="w-6 h-6 text-orange-600" />
+            {/* ── 월간 요약 스트립 ── */}
+            <div className="bg-orange-50 border border-orange-100 rounded-2xl px-4 py-3 space-y-1.5">
+                <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black text-orange-400 uppercase tracking-wider">
+                        {monthNum}월 인력 현황 총계
+                    </span>
+                    <span className="text-[10px] font-bold text-orange-300">
+                        알바 총 {monthSummary.agencyCount + monthSummary.directCount}명
+                    </span>
                 </div>
-                <div>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    {monthSummary.staffDays > 0 && (
+                        <span className="text-[11px] font-bold text-gray-500">
+                            직원/식구 <span className="text-blue-600 font-black">{monthSummary.staffDays}명</span>
+                        </span>
+                    )}
+                    <span className="text-[11px] font-bold text-gray-500">
+                        알바{' '}
+                        <span className="text-orange-600 font-black">인력 {monthSummary.agencyCount}명</span>
+                        <span className="text-gray-300 mx-1">/</span>
+                        <span className="text-orange-600 font-black">개별 {monthSummary.directCount}명</span>
+                    </span>
+                    <span className="text-[11px] font-bold text-gray-500">
+                        비용 <span className="text-orange-700 font-black">{monthSummary.totalCost.toLocaleString()}원</span>
+                    </span>
+                    {monthSummary.totalTip > 0 && (
+                        <span className="text-[11px] font-bold text-gray-500">
+                            팁 <span className="text-orange-500 font-black">{monthSummary.totalTip.toLocaleString()}원</span>
+                        </span>
+                    )}
+                </div>
+            </div>
+
+            {/* ── 헤더 ── */}
+            <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                    <div className="p-3 bg-orange-100 rounded-2xl shadow-sm">
+                        <Users className="w-6 h-6 text-orange-600" />
+                    </div>
                     <h1 className="text-xl font-black text-gray-900 tracking-tighter">일일 현황</h1>
-                    <div className="relative mt-1">
+                </div>
+
+                {/* 날짜 네비게이션 - 전체 너비 */}
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => moveDate(-1)}
+                        className="p-2 rounded-xl bg-gray-100 hover:bg-orange-100 hover:text-orange-600 text-gray-500 transition-all active:scale-95 shrink-0"
+                    >
+                        <ChevronLeft className="w-5 h-5" />
+                    </button>
+
+                    <div className="relative flex-1">
                         <input
                             type="date"
                             value={selectedDate}
-                            onChange={e => setSelectedDate(e.target.value)}
-                            className="pl-6 pr-3 py-1 bg-orange-50 text-orange-600 rounded-lg text-[10px] font-black outline-none border border-orange-100 focus:bg-white transition-all"
+                            max={today}
+                            onChange={e => e.target.value <= today && setSelectedDate(e.target.value)}
+                            className="w-full pl-9 pr-3 py-2.5 bg-orange-50 text-orange-600 rounded-xl text-base font-black outline-none border border-orange-200 focus:bg-white transition-all"
                         />
-                        <CalendarDays className="absolute left-1.5 top-1/2 -translate-y-1/2 w-3 text-orange-400 pointer-events-none" />
+                        <CalendarDays className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-orange-400 pointer-events-none" />
                     </div>
+
+                    <button
+                        onClick={() => moveDate(1)}
+                        disabled={selectedDate >= today}
+                        className="p-2 rounded-xl bg-gray-100 hover:bg-orange-100 hover:text-orange-600 text-gray-500 transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+                    >
+                        <ChevronRight className="w-5 h-5" />
+                    </button>
+
+                    {selectedDate < today && (
+                        <button
+                            onClick={() => setSelectedDate(today)}
+                            className="px-3 py-2.5 rounded-xl bg-orange-500 text-white text-sm font-black active:scale-95 transition-transform shrink-0"
+                        >
+                            오늘
+                        </button>
+                    )}
                 </div>
             </div>
+
+            {/* ── 주간 인력 현황 ── */}
+            <section className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+                {/* 헤더 + 주 이동 */}
+                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50">
+                    <button
+                        onClick={() => moveWeek(-1)}
+                        className="p-1.5 rounded-lg bg-gray-100 hover:bg-orange-100 text-gray-500 hover:text-orange-600 transition-all active:scale-95"
+                    >
+                        <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                        onClick={() => setShowWeekSummary(p => !p)}
+                        className="flex items-center gap-2 text-xs font-black text-gray-700"
+                    >
+                        <CalendarDays className="w-3.5 h-3.5 text-orange-400" />
+                        주간 인력 현황
+                        <span className="text-[10px] text-gray-400 font-normal">
+                            {weekDates[0].slice(5).replace('-', '/')}&nbsp;~&nbsp;{weekDates[6].slice(5).replace('-', '/')}
+                        </span>
+                        {showWeekSummary
+                            ? <ChevronUp className="w-3.5 h-3.5 text-gray-400" />
+                            : <ChevronDown className="w-3.5 h-3.5 text-gray-400" />}
+                    </button>
+                    <button
+                        onClick={() => moveWeek(1)}
+                        disabled={weekDates[6] >= today}
+                        className="p-1.5 rounded-lg bg-gray-100 hover:bg-orange-100 text-gray-500 hover:text-orange-600 transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                        <ChevronRight className="w-4 h-4" />
+                    </button>
+                </div>
+
+                {showWeekSummary && (
+                    <>
+                        {/* 7일 칩 */}
+                        <div className="flex overflow-x-auto px-3 py-3 gap-2 scrollbar-hide">
+                            {weekSummary.map(({ date, total }) => {
+                                const d = new Date(date + 'T00:00:00');
+                                const dayName = DAY_NAMES_KR[d.getDay()];
+                                const dayNum = parseInt(date.slice(8));
+                                const isSelected = date === selectedDate;
+                                const isToday = date === today;
+                                const isFuture = date > today;
+                                return (
+                                    <button
+                                        key={date}
+                                        onClick={() => !isFuture && setSelectedDate(date)}
+                                        disabled={isFuture}
+                                        className={`flex flex-col items-center gap-0.5 px-3 py-2.5 rounded-2xl shrink-0 transition-all min-w-[52px] active:scale-95 ${
+                                            isSelected
+                                                ? 'bg-orange-500 text-white shadow-md shadow-orange-100'
+                                                : isFuture
+                                                ? 'bg-gray-50 opacity-30 cursor-not-allowed'
+                                                : total > 0
+                                                ? 'bg-orange-50 hover:bg-orange-100'
+                                                : 'bg-gray-50 hover:bg-gray-100'
+                                        }`}
+                                    >
+                                        <span className={`text-[9px] font-black ${isSelected ? 'text-orange-200' : 'text-gray-400'}`}>
+                                            {dayName}
+                                        </span>
+                                        <span className={`text-base font-black leading-none ${
+                                            isSelected ? 'text-white'
+                                            : isToday ? 'text-orange-500'
+                                            : 'text-gray-800'
+                                        }`}>
+                                            {dayNum}
+                                        </span>
+                                        <span className={`text-[10px] font-bold leading-none mt-0.5 ${
+                                            isSelected ? 'text-orange-100'
+                                            : total > 0 ? 'text-orange-500'
+                                            : 'text-gray-300'
+                                        }`}>
+                                            {isFuture ? '—' : total > 0 ? `${total}명` : '없음'}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {/* 선택된 날 상세 */}
+                        {(() => {
+                            const sel = weekSummary.find(w => w.date === selectedDate);
+                            if (!sel) return null;
+                            const d = new Date(selectedDate + 'T00:00:00');
+                            const dayName = DAY_NAMES_KR[d.getDay()];
+                            const mm = selectedDate.slice(5, 7);
+                            const dd = selectedDate.slice(8);
+                            return (
+                                <div className="px-4 pb-4 border-t border-orange-50">
+                                    <div className="flex items-center justify-between py-2.5">
+                                        <span className="text-[11px] font-black text-gray-500">
+                                            {mm}/{dd}({dayName}) 상세
+                                        </span>
+                                        {sel.total > 0 && (
+                                            <div className="flex gap-3">
+                                                <span className="text-[10px] font-bold text-gray-400">
+                                                    총 <span className="text-orange-600 font-black">{sel.total}명</span>
+                                                </span>
+                                                <span className="text-[10px] font-black text-orange-600">
+                                                    {sel.laborTotal.toLocaleString()}원
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    {sel.total === 0 ? (
+                                        <p className="text-[11px] text-gray-300 font-bold text-center py-2">기록 없음</p>
+                                    ) : (
+                                        <div className="space-y-1.5">
+                                            {sel.staffCount > 0 && (
+                                                <div className="flex items-center justify-between bg-blue-50 rounded-xl px-3 py-2">
+                                                    <span className="text-[11px] font-black text-blue-700">직원 / 식구</span>
+                                                    <span className="text-[11px] font-black text-blue-600">
+                                                        {sel.staffCount}명
+                                                        <span className="text-[9px] text-blue-300 font-medium ml-1">(월급 별도)</span>
+                                                    </span>
+                                                </div>
+                                            )}
+                                            {Object.entries(sel.bySource).map(([key, val]) => (
+                                                <div key={key} className="flex items-center justify-between bg-orange-50/70 rounded-xl px-3 py-2">
+                                                    <span className="text-[11px] font-black text-orange-800 truncate max-w-[140px]">{key}</span>
+                                                    <span className="text-[11px] font-black text-orange-600 shrink-0">
+                                                        {val.headcount}명 · {val.amount.toLocaleString()}원
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
+                    </>
+                )}
+            </section>
 
             {/* ── 알바/용역 섹션 ── */}
             <section>
@@ -350,12 +687,9 @@ export default function LaborPage() {
                                     className={`rounded-2xl border shadow-sm overflow-hidden ${row.paid ? 'bg-gray-50 border-gray-100 opacity-70' : 'bg-white border-gray-100'}`}
                                 >
                                     {/* 요약 행 (항상 보임) */}
-                                    <div
-                                        className="flex items-center gap-2 px-4 py-3 cursor-pointer"
-                                        onClick={() => !row.paid && toggleExpand(row._key)}
-                                    >
+                                    <div className="flex items-center gap-2 px-4 py-3">
                                         <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                            <div className="flex items-center gap-1 flex-wrap">
                                                 <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${row.source === '인력사무소' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
                                                     {row.source === '인력사무소' && row.agency_name ? row.agency_name : row.source}
                                                 </span>
@@ -371,9 +705,13 @@ export default function LaborPage() {
                                         <span className="text-sm font-black text-orange-600 shrink-0">{sub.toLocaleString()}원</span>
                                         {row.paid
                                             ? <CheckCircle className="w-4 h-4 text-green-400 shrink-0" />
-                                            : expanded
-                                                ? <ChevronUp className="w-4 h-4 text-gray-300 shrink-0" />
-                                                : <ChevronDown className="w-4 h-4 text-gray-300 shrink-0" />
+                                            : <button
+                                                onClick={() => toggleExpand(row._key)}
+                                                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all shrink-0 ${expanded ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-500 hover:bg-orange-50 hover:text-orange-500'}`}
+                                            >
+                                                <Pencil className="w-3 h-3" />
+                                                {expanded ? '닫기' : '수정'}
+                                            </button>
                                         }
                                     </div>
 
@@ -431,34 +769,52 @@ export default function LaborPage() {
                                                 <div>
                                                     <label className="text-[9px] font-bold text-gray-400 mb-1 block">인원 (명)</label>
                                                     <input
-                                                        type="number" min={1}
-                                                        value={row.headcount}
-                                                        onChange={e => updateRow(row._key, 'headcount', Math.max(1, parseInt(e.target.value) || 1))}
+                                                        type="text"
+                                                        inputMode="numeric"
+                                                        pattern="[0-9]*"
+                                                        value={row.headcount === 0 ? '' : String(row.headcount)}
+                                                        onChange={e => {
+                                                            const raw = e.target.value.replace(/[^0-9]/g, '');
+                                                            updateRow(row._key, 'headcount', raw === '' ? 0 : parseInt(raw));
+                                                        }}
+                                                        onBlur={() => { if (!row.headcount) updateRow(row._key, 'headcount', 1); }}
                                                         className="w-full text-sm font-black text-center bg-gray-50 border border-gray-100 rounded-xl px-2 py-2 outline-none"
                                                     />
                                                 </div>
                                                 <div>
                                                     <label className="text-[9px] font-bold text-gray-400 mb-1 block">단가 (원)</label>
                                                     <input
-                                                        type="number" min={0} placeholder="0"
-                                                        value={row.daily_wage || ''}
-                                                        onChange={e => updateRow(row._key, 'daily_wage', parseInt(e.target.value) || 0)}
+                                                        type="text"
+                                                        inputMode="numeric"
+                                                        pattern="[0-9]*"
+                                                        placeholder="0"
+                                                        value={row.daily_wage ? row.daily_wage.toLocaleString() : ''}
+                                                        onChange={e => {
+                                                            const raw = e.target.value.replace(/[^0-9]/g, '');
+                                                            updateRow(row._key, 'daily_wage', raw === '' ? 0 : parseInt(raw));
+                                                        }}
                                                         className="w-full text-sm font-black text-right bg-gray-50 border border-gray-100 rounded-xl px-2 py-2 outline-none"
                                                     />
                                                 </div>
                                                 <div>
                                                     <label className="text-[9px] font-bold text-orange-400 mb-1 block">팁 (원)</label>
                                                     <input
-                                                        type="number" min={0} placeholder="0"
-                                                        value={row.tip || ''}
-                                                        onChange={e => updateRow(row._key, 'tip', parseInt(e.target.value) || 0)}
+                                                        type="text"
+                                                        inputMode="numeric"
+                                                        pattern="[0-9]*"
+                                                        placeholder="0"
+                                                        value={row.tip ? row.tip.toLocaleString() : ''}
+                                                        onChange={e => {
+                                                            const raw = e.target.value.replace(/[^0-9]/g, '');
+                                                            updateRow(row._key, 'tip', raw === '' ? 0 : parseInt(raw));
+                                                        }}
                                                         className="w-full text-sm font-black text-right bg-orange-50 border border-orange-100 rounded-xl px-2 py-2 outline-none"
                                                     />
                                                 </div>
                                             </div>
 
                                             {/* 작업명 + 메모 */}
-                                            <div className="grid grid-cols-2 gap-2">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                                 <div>
                                                     <label className="text-[9px] font-bold text-gray-400 mb-1 block">작업명</label>
                                                     <select

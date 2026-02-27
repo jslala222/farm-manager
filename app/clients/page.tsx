@@ -371,55 +371,55 @@ export default function ClientsPage() {
                         <div className="space-y-5">
                             {activeTab === 'business' ? (
                                 <div className="grid grid-cols-1 gap-5">
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <label className="text-xs font-black text-gray-400 uppercase tracking-tight ml-1">상호명 (필수)</label>
                                             <input type="text" value={partnerFormData.company_name} onChange={(e) => setPartnerFormData({ ...partnerFormData, company_name: e.target.value })}
-                                                placeholder="예: 논산농협" className="w-full p-5 bg-white border-2 border-gray-200 rounded-[1.25rem] text-base font-black focus:bg-white focus:border-indigo-600 outline-none transition-all placeholder:text-gray-300 shadow-sm" />
+                                                placeholder="예: 논산농협" className="w-full p-3 sm:p-5 bg-white border-2 border-gray-200 rounded-[1.25rem] text-base font-black focus:bg-white focus:border-indigo-600 outline-none transition-all placeholder:text-gray-300 shadow-sm" />
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-xs font-black text-gray-400 uppercase tracking-tight ml-1">사업자번호</label>
                                             <input type="text" value={partnerFormData.business_number || ""} onChange={(e) => setPartnerFormData({ ...partnerFormData, business_number: formatBusinessNumber(e.target.value) })}
-                                                placeholder="000-00-00000" className="w-full p-5 bg-white border-2 border-gray-200 rounded-[1.25rem] text-base font-black focus:bg-white focus:border-indigo-600 outline-none transition-all placeholder:text-gray-300 shadow-sm" />
+                                                placeholder="000-00-00000" className="w-full p-3 sm:p-5 bg-white border-2 border-gray-200 rounded-[1.25rem] text-base font-black focus:bg-white focus:border-indigo-600 outline-none transition-all placeholder:text-gray-300 shadow-sm" />
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <label className="text-xs font-black text-gray-400 uppercase tracking-tight ml-1">대표자명</label>
                                             <input type="text" value={partnerFormData.ceo_name || ""} onChange={(e) => setPartnerFormData({ ...partnerFormData, ceo_name: e.target.value })}
-                                                placeholder="성함 입력" className="w-full p-5 bg-white border-2 border-gray-200 rounded-[1.25rem] text-base font-black focus:bg-white focus:border-indigo-600 outline-none transition-all placeholder:text-gray-300 shadow-sm" />
+                                                placeholder="성함 입력" className="w-full p-3 sm:p-5 bg-white border-2 border-gray-200 rounded-[1.25rem] text-base font-black focus:bg-white focus:border-indigo-600 outline-none transition-all placeholder:text-gray-300 shadow-sm" />
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-xs font-black text-gray-400 uppercase tracking-tight ml-1">본사 대표번호</label>
                                             <input type="text" value={partnerFormData.company_contact || ""} onChange={(e) => setPartnerFormData({ ...partnerFormData, company_contact: formatPhone(e.target.value) })}
-                                                placeholder="041-000-0000" className="w-full p-5 bg-white border-2 border-gray-200 rounded-[1.25rem] text-base font-black focus:bg-white focus:border-indigo-600 outline-none transition-all placeholder:text-gray-300 shadow-sm" />
+                                                placeholder="041-000-0000" className="w-full p-3 sm:p-5 bg-white border-2 border-gray-200 rounded-[1.25rem] text-base font-black focus:bg-white focus:border-indigo-600 outline-none transition-all placeholder:text-gray-300 shadow-sm" />
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <label className="text-xs font-black text-gray-400 uppercase tracking-tight ml-1">담당자 성함</label>
                                             <input type="text" value={partnerFormData.manager_name || ""} onChange={(e) => setPartnerFormData({ ...partnerFormData, manager_name: e.target.value })}
-                                                className="w-full p-5 bg-white border-2 border-gray-200 shadow-sm rounded-[1.25rem] text-base font-black focus:bg-white focus:border-indigo-600 outline-none transition-all" />
+                                                className="w-full p-3 sm:p-5 bg-white border-2 border-gray-200 shadow-sm rounded-[1.25rem] text-base font-black focus:bg-white focus:border-indigo-600 outline-none transition-all" />
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-xs font-black text-gray-400 uppercase tracking-tight ml-1">담당자 연락처</label>
                                             <input type="text" value={partnerFormData.manager_contact || ""} onChange={(e) => setPartnerFormData({ ...partnerFormData, manager_contact: formatPhone(e.target.value) })}
-                                                placeholder="010-0000-0000" className="w-full p-5 bg-white border-2 border-gray-200 shadow-sm rounded-[1.25rem] text-base font-black focus:bg-white focus:border-indigo-600 outline-none transition-all placeholder:text-gray-300" />
+                                                placeholder="010-0000-0000" className="w-full p-3 sm:p-5 bg-white border-2 border-gray-200 shadow-sm rounded-[1.25rem] text-base font-black focus:bg-white focus:border-indigo-600 outline-none transition-all placeholder:text-gray-300" />
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <label className="text-xs font-black text-gray-400 uppercase tracking-tight ml-1 flex items-center gap-1"><Printer className="w-4 h-4" /> 팩스</label>
                                             <input type="text" value={partnerFormData.fax_number || ""} onChange={(e) => setPartnerFormData({ ...partnerFormData, fax_number: formatPhone(e.target.value) })}
-                                                placeholder="041-000-0000" className="w-full p-5 bg-white border-2 border-gray-200 shadow-sm rounded-[1.25rem] text-base font-black focus:bg-white focus:border-indigo-600 outline-none transition-all placeholder:text-gray-300" />
+                                                placeholder="041-000-0000" className="w-full p-3 sm:p-5 bg-white border-2 border-gray-200 shadow-sm rounded-[1.25rem] text-base font-black focus:bg-white focus:border-indigo-600 outline-none transition-all placeholder:text-gray-300" />
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-xs font-black text-rose-600 uppercase tracking-tight ml-1 flex items-center gap-1"><CreditCard className="w-4 h-4" /> 정산 방식 (중요)</label>
                                             <select value={partnerFormData.settlement_type} onChange={(e) => setPartnerFormData({ ...partnerFormData, settlement_type: e.target.value })}
-                                                className="w-full p-5 bg-rose-50/30 border-2 border-rose-200 shadow-sm rounded-[1.25rem] text-base font-black focus:bg-white focus:border-rose-500 text-rose-900 outline-none transition-all appearance-none"
+                                                className="w-full p-3 sm:p-5 bg-rose-50/30 border-2 border-rose-200 shadow-sm rounded-[1.25rem] text-base font-black focus:bg-white focus:border-rose-500 text-rose-900 outline-none transition-all appearance-none"
                                             >
                                                 <option value="후결제">후결제 (정상)</option>
                                                 <option value="선입금">선입금</option>
@@ -432,7 +432,7 @@ export default function ClientsPage() {
                                     <div className="space-y-2">
                                         <label className="text-xs font-black text-gray-400 uppercase tracking-tight ml-1 flex items-center gap-1"><Mail className="w-4 h-4" /> 이메일 (세금계산서용)</label>
                                         <input type="email" value={partnerFormData.manager_email || ""} onChange={(e) => setPartnerFormData({ ...partnerFormData, manager_email: e.target.value })}
-                                            className="w-full p-5 bg-white border-2 border-gray-200 shadow-sm rounded-[1.25rem] text-base font-black focus:bg-white focus:border-indigo-600 outline-none transition-all" />
+                                            className="w-full p-3 sm:p-5 bg-white border-2 border-gray-200 shadow-sm rounded-[1.25rem] text-base font-black focus:bg-white focus:border-indigo-600 outline-none transition-all" />
                                     </div>
 
                                     <div className="space-y-4">
@@ -516,13 +516,13 @@ export default function ClientsPage() {
                                     <div className="space-y-2">
                                         <label className="text-xs font-black text-gray-400 uppercase tracking-tight ml-1">고객 성함 (필수)</label>
                                         <input type="text" value={customerFormData.name} onChange={(e) => setCustomerFormData({ ...customerFormData, name: e.target.value })}
-                                            placeholder="예: 김철수" className="w-full p-5 bg-white border-2 border-gray-200 shadow-sm rounded-[1.25rem] text-base font-black focus:bg-white focus:border-green-600 outline-none transition-all" />
+                                            placeholder="예: 김철수" className="w-full p-3 sm:p-5 bg-white border-2 border-gray-200 shadow-sm rounded-[1.25rem] text-base font-black focus:bg-white focus:border-green-600 outline-none transition-all" />
                                     </div>
                                     <div className="flex flex-col sm:grid sm:grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <label className="text-xs font-black text-gray-400 uppercase tracking-tight ml-1">연락처</label>
                                             <input type="text" value={customerFormData.contact || ""} onChange={(e) => setCustomerFormData({ ...customerFormData, contact: formatPhone(e.target.value) })}
-                                                placeholder="010-0000-0000" className="w-full p-5 bg-white border-2 border-gray-200 shadow-sm rounded-[1.25rem] text-base font-black focus:bg-white focus:border-green-600 outline-none transition-all" />
+                                                placeholder="010-0000-0000" className="w-full p-3 sm:p-5 bg-white border-2 border-gray-200 shadow-sm rounded-[1.25rem] text-base font-black focus:bg-white focus:border-green-600 outline-none transition-all" />
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-xs font-black text-gray-400 uppercase tracking-tight ml-1">성별 구분</label>

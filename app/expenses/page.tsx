@@ -10,7 +10,7 @@ import Calendar from "@/components/Calendar";
 
 const CATEGORY_MAP: Record<string, string[]> = {
     '농작관리': ["비료/영양제", "농약/종자", "시설보수", "농기계유지/유류", "농기계구입/할부", "수도/전기/가스", "포장재/소모품", "기타 영농비"],
-    '인건비': ["기본급/월급", "아르바이트(일당)", "명절떡값/선물", "성과급/보너스", "식대/새참비", "퇴직금/보험", "기타 인건비"],
+    '인건비': ["기본급/월급", "명절떡값/선물", "성과급/보너스", "식대/새참비", "퇴직금/보험", "기타"],
     '가계생활': ["부모님용돈/효도", "병원/의료비", "식비/생필품", "교육/학원비", "주거/통신/세금", "취미/경조사", "주유", "기타 생활비"]
 };
 
@@ -390,7 +390,7 @@ export default function ExpensesPage() {
                     {/* 입력 폼 */}
                     {isAdding && (
                         <div className="bg-white rounded-[2.5rem] border border-red-100 shadow-2xl shadow-red-100/50 p-3 space-y-3 animate-in fade-in slide-in-from-top-4 duration-500">
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-[11px] font-black text-gray-400 mb-2 ml-1 uppercase tracking-widest">지출 일자</label>
                                     <div className="relative">
@@ -442,7 +442,7 @@ export default function ExpensesPage() {
                                             }}
                                                 className={`flex-1 py-3 rounded-xl text-xs font-black transition-all ${mainCategory === mCat ? 'bg-white shadow-sm text-red-600' : 'text-gray-400 hover:text-gray-600'
                                                     }`}>
-                                                {mCat === '농작관리' ? '🚜 농작/운영' : mCat === '인건비' ? '💰 인건비' : '🏠 가계생활'}
+                                                {mCat === '농작관리' ? '🚜 농작/운영' : mCat === '인건비' ? '💰 직원급여/식대' : '🏠 가계생활'}
                                             </button>
                                         ))}
                                     </div>
@@ -511,7 +511,7 @@ export default function ExpensesPage() {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-3 gap-2 relative z-10">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 relative z-10">
                                     <div className="bg-red-50/80 p-2.5 rounded-2xl border border-red-100 overflow-hidden">
                                         <p className="text-[10px] font-black text-red-400 mb-1">🚜 농작</p>
                                         <p className="text-xs font-black text-gray-900 tracking-tighter truncate">{formatCurrency(monthlySummary.stats['농작관리'])}</p>
@@ -831,7 +831,7 @@ export default function ExpensesPage() {
                     <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setEditModal(null)} />
 
                     {/* 모달 카드 */}
-                    <div className="relative bg-white rounded-[2.5rem] w-full max-w-md shadow-2xl shadow-black/20 p-5 space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-300 max-h-[90vh] overflow-y-auto">
+                    <div className="relative bg-white rounded-[2.5rem] w-full max-w-sm sm:max-w-md shadow-2xl shadow-black/20 p-4 sm:p-5 space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-300 max-h-[90vh] overflow-y-auto">
                         {/* 헤더 */}
                         <div className="flex items-center justify-between">
                             <h2 className="text-lg font-black text-gray-900 flex items-center gap-2">
@@ -851,7 +851,7 @@ export default function ExpensesPage() {
                                     <button key={mCat}
                                         onClick={() => setEditModal(prev => prev ? { ...prev, main_category: mCat, sub_category: CATEGORY_MAP[mCat][0] } : null)}
                                         className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all ${editModal.main_category === mCat ? 'bg-white shadow-sm text-red-600' : 'text-gray-400'}`}>
-                                        {mCat === '농작관리' ? '🚜 농작' : mCat === '인건비' ? '💰 인건' : '🏠 가계'}
+                                        {mCat === '농작관리' ? '🚜 농작' : mCat === '인건비' ? '💰 직원/식대' : '🏠 가계'}
                                     </button>
                                 ))}
                             </div>

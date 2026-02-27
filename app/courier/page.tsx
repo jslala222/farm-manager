@@ -302,7 +302,7 @@ export default function CourierSalesPage() {
                             )}
                         </div>
                         {isFormActive && (
-                            <div className="grid grid-cols-2 gap-2 animate-in fade-in slide-in-from-top-2">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 animate-in fade-in slide-in-from-top-2">
                                 <div className="relative"><User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" /><input type="text" value={ordererName} onChange={(e) => setOrdererName(e.target.value)} placeholder="주문자명" className="w-full pl-9 p-3.5 bg-slate-50 border border-slate-100 rounded-xl text-sm font-black outline-none" /></div>
                                 <div className="relative"><Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" /><input type="text" value={ordererPhone} onChange={(e) => setOrdererPhone(formatPhone(e.target.value))} placeholder="연락처" className="w-full pl-9 p-3.5 bg-slate-50 border border-slate-100 rounded-xl text-sm font-black outline-none" /></div>
                             </div>
@@ -323,7 +323,7 @@ export default function CourierSalesPage() {
                                     </button>
                                 </div>
                                 {!isSameAsOrderer && (
-                                    <div className="grid grid-cols-2 gap-2 animate-in slide-in-from-top-1">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 animate-in slide-in-from-top-1">
                                         <input type="text" value={recipientName} onChange={(e) => setRecipientName(e.target.value)} placeholder="수령인 성함" className="p-3.5 bg-slate-50 border border-slate-100 rounded-xl text-sm font-black" />
                                         <input type="text" value={recipientPhone} onChange={(e) => setRecipientPhone(formatPhone(e.target.value))} placeholder="수령인 연락처" className="p-3.5 bg-slate-50 border border-slate-100 rounded-xl text-sm font-black" />
                                     </div>

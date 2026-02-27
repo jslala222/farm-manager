@@ -496,9 +496,9 @@ export default function HarvestPage() {
                                     />
                                 </div>
 
-                                <div className="grid grid-cols-4 gap-3">
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                     {houses.length === 0 ? (
-                                        <div className="col-span-4 py-8 flex flex-col items-center gap-3">
+                                        <div className="col-span-2 sm:col-span-4 py-8 flex flex-col items-center gap-3">
                                             <p className="text-xs text-slate-400 font-bold">하우스 정보가 로드되지 않았습니다.</p>
                                             <button
                                                 onClick={() => fetchHouses()}
@@ -577,7 +577,7 @@ export default function HarvestPage() {
                             </div>
 
                             {/* 섹션 2: 등급 및 수량 */}
-                            <div className="grid grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6">
                                 <div className="space-y-4">
                                     <h2 className="text-sm font-black text-gray-900 flex items-center gap-2 px-1">
                                         <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
@@ -606,7 +606,7 @@ export default function HarvestPage() {
                                         수량 (BOX)
                                     </h2>
                                     <div className="flex-1 flex flex-col items-center justify-center gap-4 w-full">
-                                        <div className="relative w-full max-w-[200px]">
+                                        <div className="relative w-full max-w-full sm:max-w-[200px]">
                                             <input
                                                 type="text"
                                                 inputMode="numeric"
@@ -616,7 +616,7 @@ export default function HarvestPage() {
                                                     const val = e.target.value.replace(/[^0-9]/g, '');
                                                     setQuantity(val === '' ? 0 : parseInt(val));
                                                 }}
-                                                className="w-full p-3 bg-white border-2 border-green-100 rounded-[2rem] text-4xl font-black text-center text-green-600 outline-none focus:border-green-500 transition-all shadow-sm"
+                                                className="w-full p-3 bg-white border-2 border-green-100 rounded-[2rem] text-2xl sm:text-4xl font-black text-center text-green-600 outline-none focus:border-green-500 transition-all shadow-sm"
                                             />
                                             <span className="absolute right-6 top-1/2 -translate-y-1/2 text-sm font-black text-green-200">BOX</span>
                                         </div>
@@ -667,7 +667,7 @@ export default function HarvestPage() {
                                                 }
                                             }}
                                             placeholder="하우스 온도, 과실 발육 상태, 알박기 작업 등 사장님께 필요한 중요 내용을 기록하세요..."
-                                            className="w-full p-3 bg-gray-50 border-none rounded-[32px] text-lg font-bold h-48 outline-none focus:ring-4 focus:ring-blue-50 transition-all resize-none shadow-inner"
+                                            className="w-full p-3 bg-gray-50 border-none rounded-[32px] text-base sm:text-lg font-bold h-32 sm:h-48 outline-none focus:ring-4 focus:ring-blue-50 transition-all resize-none shadow-inner"
                                         />
                                     </div>
                                     <div className="flex gap-4">
@@ -1132,7 +1132,7 @@ export default function HarvestPage() {
                                     <ChevronRight className="w-4 h-4 text-gray-400" />
                                 </button>
                             </div>
-                            <div className="grid grid-cols-4 gap-2">
+                            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                                 {Array.from({ length: 12 }).map((_, i) => {
                                     const m = i + 1;
                                     const isSelected = statsMonth.month === m;

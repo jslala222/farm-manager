@@ -85,14 +85,14 @@ export default function LoginPage() {
                     <p className="text-gray-500 text-sm">로그인 후 사용 가능합니다</p>
                 </div>
 
-                <form onSubmit={handleLogin} className="space-y-4">
+                <form onSubmit={handleLogin} className="space-y-3 sm:space-y-4">
                     <div>
                         <label className="block text-xs font-bold text-gray-400 mb-1 uppercase">Email</label>
                         <input
                             name="email"
                             type="email"
                             placeholder="farm@example.com"
-                            className="w-full p-4 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-red-500 outline-none text-gray-900"
+                            className="w-full p-3 sm:p-4 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-red-500 outline-none text-gray-900"
                             required
                         />
                     </div>
@@ -102,7 +102,7 @@ export default function LoginPage() {
                             name="password"
                             type="password"
                             placeholder="••••••"
-                            className="w-full p-4 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-red-500 outline-none text-gray-900"
+                            className="w-full p-3 sm:p-4 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-red-500 outline-none text-gray-900"
                             required
                         />
                     </div>
@@ -110,7 +110,7 @@ export default function LoginPage() {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full bg-red-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-red-700 active:scale-95 transition-all disabled:opacity-50"
+                        className="w-full bg-red-600 text-white py-3 sm:py-4 rounded-xl font-bold text-lg hover:bg-red-700 active:scale-95 transition-all disabled:opacity-50"
                     >
                         {loading ? "처리 중..." : "로그인"}
                     </button>

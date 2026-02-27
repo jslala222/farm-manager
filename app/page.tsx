@@ -113,16 +113,16 @@ export default function Home() {
       {/* 빠른 기록 */}
       <div>
         <h2 className="text-lg font-bold text-gray-800 mb-3 ml-1">빠른 기록</h2>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {[
             { href: "/harvest", label: "수확 기록", icon: Sprout, color: "red" },
             { href: "/bulk", label: "납품 기록", icon: TrendingUp, color: "green" },
             { href: "/attendance", label: "출근 체크", icon: Users, color: "blue" },
           ].map(({ href, label, icon: Icon, color }) => (
             <a key={href} href={href}
-              className={`bg-white rounded-2xl border border-gray-100 shadow-xl shadow-gray-200/50 p-4 flex flex-col items-center gap-3 hover:translate-y-[-4px] active:translate-y-0 transition-all active:scale-95 group`}>
-              <div className={`p-4 bg-${color}-50 rounded-2xl group-hover:bg-${color}-100 transition-colors`}>
-                <Icon className={`w-8 h-8 text-${color}-500`} />
+              className={`bg-white rounded-2xl border border-gray-100 shadow-xl shadow-gray-200/50 p-3 sm:p-4 flex flex-col items-center gap-2 sm:gap-3 hover:translate-y-[-4px] active:translate-y-0 transition-all active:scale-95 group`}>
+              <div className={`p-3 sm:p-4 bg-${color}-50 rounded-2xl group-hover:bg-${color}-100 transition-colors`}>
+                <Icon className={`w-6 h-6 sm:w-8 sm:h-8 text-${color}-500`} />
               </div>
               <span className="text-sm font-black text-gray-700 text-center">{label}</span>
             </a>

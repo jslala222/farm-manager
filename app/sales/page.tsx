@@ -295,7 +295,7 @@ export default function SalesPage() {
                                             )}
                                         </div>
                                     ) : (
-                                        <div className="grid grid-cols-2 gap-2">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                             <div className="relative"><User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" /><input type="text" value={ordererName} onChange={(e) => setOrdererName(e.target.value)} placeholder="주문자명" className="w-full pl-9 p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-black outline-none focus:border-rose-300" /></div>
                                             <div className="relative"><Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" /><input type="text" value={ordererPhone} onChange={(e) => setOrdererPhone(e.target.value)} placeholder="010-0000-0000" className="w-full pl-9 p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-black outline-none focus:border-rose-300" /></div>
                                         </div>
@@ -313,7 +313,7 @@ export default function SalesPage() {
                                         </button>
                                     </div>
                                     {!isSameAsOrderer && (
-                                        <div className="grid grid-cols-2 gap-2 animate-in slide-in-from-top-1 duration-200">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 animate-in slide-in-from-top-1 duration-200">
                                             <input type="text" value={recipientName} onChange={(e) => setRecipientName(e.target.value)} placeholder="수령인명" className="p-3.5 bg-slate-50 border border-slate-100 rounded-xl text-sm font-black outline-none focus:border-rose-300" />
                                             <input type="text" value={recipientPhone} onChange={(e) => setRecipientPhone(e.target.value)} placeholder="수령인 연락처" className="p-3.5 bg-slate-50 border border-slate-100 rounded-xl text-sm font-black outline-none focus:border-rose-300" />
                                         </div>

@@ -378,19 +378,19 @@ export default function AttendancePage() {
                         <div className="grid grid-cols-2 gap-4">
                             <div className="bg-white p-3 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-md transition-all text-center">
                                 <p className="text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">💼 가족/식구</p>
-                                <p className="text-3xl font-black text-blue-600">{roleStats.family}</p>
+                                <p className="text-2xl sm:text-3xl font-black text-blue-600">{roleStats.family}</p>
                             </div>
                             <div className="bg-white p-3 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-md transition-all text-center">
                                 <p className="text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">🤝 일반직원</p>
-                                <p className="text-3xl font-black text-gray-900">{roleStats.staff}</p>
+                                <p className="text-2xl sm:text-3xl font-black text-gray-900">{roleStats.staff}</p>
                             </div>
                             <div className="bg-white p-3 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-md transition-all text-center">
                                 <p className="text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">🌏 외국인</p>
-                                <p className="text-3xl font-black text-gray-900">{roleStats.foreign}</p>
+                                <p className="text-2xl sm:text-3xl font-black text-gray-900">{roleStats.foreign}</p>
                             </div>
                             <div className="bg-white p-3 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-md transition-all text-center">
                                 <p className="text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">⏳ 알바/단기</p>
-                                <p className="text-3xl font-black text-blue-600">{roleStats.part_time}</p>
+                                <p className="text-2xl sm:text-3xl font-black text-blue-600">{roleStats.part_time}</p>
                             </div>
                         </div>
                     </section>

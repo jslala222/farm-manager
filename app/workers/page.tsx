@@ -59,7 +59,7 @@ export default function WorkersPage() {
                 setErrorMsg("농장 정보를 불러올 수 없습니다. 다시 로그인해 주세요.");
             }
         }
-    }, [farm, initialized, selectedDate]);
+    }, [farm?.id, initialized, selectedDate]);
 
     const fetchWorkers = async () => {
         if (!farm?.id) return;
@@ -355,7 +355,7 @@ export default function WorkersPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-1">
                             <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase">Role</label>
-                            <div className="grid grid-cols-4 gap-1">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
                                 {(['family', 'staff', 'foreign', 'part_time'] as const).map(r => (
                                     <button key={r} onClick={() => setEditRole(r)}
                                         className={`py-2 rounded-lg text-[10px] font-bold transition-all border
@@ -437,7 +437,7 @@ export default function WorkersPage() {
                 className={`bg-white rounded-2xl border p-5 shadow-sm flex items-center justify-between group transition-all hover:shadow-lg hover:border-gray-200
                     ${worker.is_active ? 'border-gray-100 bg-white' : 'bg-gray-50 border-gray-200 opacity-60'}`}>
                 <div className="flex items-center gap-4">
-                    <div className={`w-14 h-14 rounded-2xl flex flex-col items-center justify-center border relative shadow-inner ${info.bg} ${info.border}`}>
+                    <div className={`w-12 sm:w-14 h-12 sm:h-14 rounded-2xl flex flex-col items-center justify-center border relative shadow-inner ${info.bg} ${info.border}`}>
                         <info.icon className={`w-6 h-6 ${info.color}`} />
                         <span className={`text-[9px] font-bold absolute bottom-1 ${worker.gender === 'female' ? 'text-pink-500' : 'text-blue-500'}`}>
                             {worker.gender === 'female' ? '여성' : '남성'}
@@ -552,7 +552,7 @@ export default function WorkersPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div>
                             <label className="block text-[10px] font-bold text-gray-400 mb-2 ml-1 uppercase">Role</label>
-                            <div className="grid grid-cols-4 gap-1">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
                                 {(['family', 'staff', 'foreign', 'part_time'] as const).map(r => (
                                     <button key={r} onClick={() => setNewRole(r)}
                                         className={`py-3 rounded-xl text-[10px] font-bold transition-all flex flex-col items-center gap-1
@@ -760,9 +760,9 @@ export default function WorkersPage() {
                         <table className="w-full text-left border-collapse min-w-[320px]">
                             <thead>
                                 <tr className="bg-gray-50 border-b border-gray-100">
-                                    <th className="p-4 text-[10px] font-black text-gray-400 uppercase">근로자</th>
-                                    <th className="p-4 text-[10px] font-black text-gray-400 uppercase text-center">출근일수</th>
-                                    <th className="p-4 text-[10px] font-black text-gray-400 uppercase text-right">총 정산액</th>
+                                    <th className="p-2 sm:p-4 text-[10px] font-black text-gray-400 uppercase">근로자</th>
+                                    <th className="p-2 sm:p-4 text-[10px] font-black text-gray-400 uppercase text-center">출근일수</th>
+                                    <th className="p-2 sm:p-4 text-[10px] font-black text-gray-400 uppercase text-right">총 정산액</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -772,7 +772,7 @@ export default function WorkersPage() {
                                     </tr>
                                 ) : payrollData.map((stat, idx) => (
                                     <tr key={idx} className="border-b border-gray-50 hover:bg-gray-50 transition-all group">
-                                        <td className="p-4">
+                                        <td className="p-2 sm:p-4">
                                             <div className="flex items-center gap-3">
                                                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-[10px] ${roleInfo[stat.role as keyof typeof roleInfo]?.bg || 'bg-gray-100'}`}>
                                                     {stat.name[0]}
@@ -780,10 +780,10 @@ export default function WorkersPage() {
                                                 <span className="font-bold text-gray-900">{stat.name}</span>
                                             </div>
                                         </td>
-                                        <td className="p-4 text-center">
+                                        <td className="p-2 sm:p-4 text-center">
                                             <span className="bg-green-50 text-green-600 px-2 py-0.5 rounded-lg text-xs font-black">{stat.count}일</span>
                                         </td>
-                                        <td className="p-4 text-right">
+                                        <td className="p-2 sm:p-4 text-right">
                                             <span className="font-black text-gray-900 group-hover:text-indigo-600 transition-colors">{stat.totalWage.toLocaleString()}원</span>
                                         </td>
                                     </tr>

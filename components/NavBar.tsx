@@ -47,7 +47,7 @@ const navItems = [
 export default function NavBar() {
     const pathname = usePathname();
     const router = useRouter();
-    const { user, profile, farm, initialize, signOut, setFarm } = useAuthStore();
+    const { user, profile, farm, signOut, setFarm } = useAuthStore();
     const [showFarmSwitcher, setShowFarmSwitcher] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
     const [farms, setFarms] = useState<Farm[]>([]);
@@ -62,7 +62,6 @@ export default function NavBar() {
     };
 
     useEffect(() => {
-        initialize();
         if (profile?.role === 'admin') {
             fetchFarms();
         }
@@ -200,7 +199,7 @@ export default function NavBar() {
             {mobileOpen && (
                 <div className="md:hidden fixed inset-0 z-50">
                     <div className="absolute inset-0 bg-black/30" onClick={() => setMobileOpen(false)} />
-                    <div className="absolute left-0 top-0 bottom-0 w-64 bg-white shadow-xl flex flex-col animate-in slide-in-from-left duration-300">
+                    <div className="absolute left-0 top-0 bottom-0 w-56 bg-white shadow-xl flex flex-col animate-in slide-in-from-left duration-300">
                         <div className="p-5 border-b border-gray-100 flex items-center justify-between">
                             <span className="font-bold text-gray-900">전체 메뉴</span>
                             <button onClick={() => setMobileOpen(false)}><X className="w-5 h-5 text-gray-400" /></button>
@@ -253,7 +252,7 @@ export default function NavBar() {
             <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-40 flex">
                 {navItems.slice(0, 5).map(({ href, label, icon: Icon }) => (
                     <Link key={href} href={href}
-                        className={`flex-1 flex flex-col items-center py-2 gap-0.5 text-[10px] font-medium transition-colors
+                        className={`flex-1 flex flex-col items-center py-3 gap-0.5 text-[11px] font-medium transition-colors
               ${pathname === href ? 'text-red-600' : 'text-gray-400 hover:text-gray-600'}`}>
                         <Icon className="w-5 h-5" />
                         {label}

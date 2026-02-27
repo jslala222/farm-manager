@@ -413,7 +413,7 @@ export default function SettingsPage() {
                         {field("사업자 등록 번호", "business_number", "text", "000-00-00000")}
                     </div>
 
-                    <div className="flex gap-3 items-end">
+                    <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
                         <div className="flex-1 min-w-0">
                             <AddressSearch
                                 label="배송/농장 주소"
@@ -427,7 +427,7 @@ export default function SettingsPage() {
                                 placeholder="도로명 주소를 입력하세요"
                             />
                         </div>
-                        <div className="w-20 space-y-2 shrink-0">
+                        <div className="w-full sm:w-20 space-y-2 sm:shrink-0">
                             <label className="text-[10px] font-bold text-gray-400 uppercase tracking-tight ml-1">우편번호</label>
                             <input value={farm.postal_code || ""}
                                 onChange={(e) => setFarm({ ...farm, postal_code: e.target.value })}
@@ -565,7 +565,7 @@ export default function SettingsPage() {
                     </div>
 
                     {/* 하우스 동 목록 - 작물 드롭다운 선택 */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                         {loadingHouses ? (
                             <div className="col-span-full py-16 text-center text-gray-300 font-medium">하우스 목록 불러오는 중...</div>
                         ) : (

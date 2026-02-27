@@ -179,7 +179,7 @@ export default function FinancePage() {
 
             // [bkit 데이터 출처 정밀화] 
             // 1. 인건비 및 식대 분리 집계
-            const WAGE_CATS = ["기본급/월급", "아르바이트(일당)", "명절떡값/선물", "성과급/보너스", "퇴직금/보험", "기타 인건비"];
+            const WAGE_CATS = ["기본급/월급", "명절떡값/선물", "성과급/보너스", "퇴직금/보험", "기타", "아르바이트(일당)", "기타 인건비"];
 
             // 순수 인건비 (식대 제외)
             const wagesExpenses = expensesData?.filter((e: any) => {
@@ -469,7 +469,7 @@ export default function FinancePage() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                     {/* 인건비 섹션 */}
                     <div className="bg-white p-4 rounded-[2rem] border border-gray-100 shadow-sm space-y-1.5 relative overflow-hidden">
                         <div className="flex items-center gap-1.5 mb-1">
@@ -664,7 +664,7 @@ export default function FinancePage() {
 
                                             {/* [bkit 상세 내역 아코디언] */}
                                             {isExpanded && (
-                                                <div className="pl-6 border-l-4 border-green-200 space-y-4 animate-in slide-in-from-top-2 duration-300">
+                                                <div className="pl-2 sm:pl-6 border-l-2 sm:border-l-4 border-green-200 space-y-4 animate-in slide-in-from-top-2 duration-300">
                                                     {partnerGroup.dailyGroups.map((dateGroup: any, dIdx: number) => (
                                                         <button
                                                             key={`${pKey}-${dateGroup.date}`}
@@ -675,7 +675,7 @@ export default function FinancePage() {
                                                             }}
                                                             className="w-full text-left bg-white rounded-[2rem] border-2 border-gray-50 p-3 shadow-sm flex items-center justify-between hover:border-green-300 transition-all active:scale-[0.98]"
                                                         >
-                                                            <div className="flex gap-6 items-center">
+                                                            <div className="flex gap-3 sm:gap-6 items-center">
                                                                 <div className="w-16 h-16 bg-white rounded-2xl flex flex-col items-center justify-center border-2 border-green-100 shadow-sm">
                                                                     <span className="text-[10px] font-black text-green-400 uppercase">{dateGroup.date.split('-')[1]}월</span>
                                                                     <span className="text-xl font-black text-green-600">{dateGroup.date.split('-')[2]}</span>
@@ -828,7 +828,7 @@ export default function FinancePage() {
                 {/* [bkit 정밀 정산 모달 UI] */}
                 {isSettleModalOpen && selectedGroup && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-                        <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+                        <div className="bg-white w-full max-w-sm sm:max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
                             <div className="p-4 bg-orange-500 text-white flex justify-between items-center shadow-lg">
                                 <div>
                                     <h3 className="text-xl font-black tracking-tighter truncate">{selectedGroup.companyName} 정산</h3>
