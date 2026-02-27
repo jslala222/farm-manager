@@ -53,6 +53,11 @@ const newRow = (overrides?: Partial<LaborRow>): LaborRow => ({
 
 const rowSubtotal = (r: LaborRow) => r.headcount * r.daily_wage + (r.tip || 0);
 
+// 안정적인 빈 배열 (매 렌더링마다 새 [] 생성 시 useEffect 무한 루프 방지)
+const EMPTY_WORKERS: Worker[] = [];
+const EMPTY_ATTENDANCE: AttendanceRecord[] = [];
+const EMPTY_COSTS: LaborCost[] = [];
+
 // ─── 컴포넌트 ──────────────────────────────────────────────────────────────────
 export default function LaborPage() {
     const { farm, initialized } = useAuthStore();
@@ -82,7 +87,7 @@ export default function LaborPage() {
     const [showWeekSummary, setShowWeekSummary] = useState(true);
 
     // ── 직원/식구 목록 ──────────────────────────────────────────────────────────
-    const { data: workers = [] } = useQuery({
+    const { data: workers = EMPTY_WORKERS } = useQuery({
         queryKey: ['workers-staff', farm?.id],
         queryFn: async () => {
             const { data } = await supabase
@@ -98,7 +103,7 @@ export default function LaborPage() {
     });
 
     // ── labor_costs 로드 ────────────────────────────────────────────────────────
-    const { data: dbCosts = [] } = useQuery({
+    const { data: dbCosts = EMPTY_COSTS } = useQuery({
         queryKey: ['labor_costs', farm?.id, selectedDate],
         queryFn: async () => {
             const { data } = await supabase
@@ -113,7 +118,7 @@ export default function LaborPage() {
     });
 
     // ── attendance 로드 ─────────────────────────────────────────────────────────
-    const { data: dbAttendance = [] } = useQuery({
+    const { data: dbAttendance = EMPTY_ATTENDANCE } = useQuery({
         queryKey: ['attendance', farm?.id, selectedDate],
         queryFn: async () => {
             const { data } = await supabase
