@@ -439,6 +439,12 @@ export default function WorkersPage() {
             <div key={worker.id}
                 className={`bg-white rounded-xl border p-3 space-y-2 shadow-sm transition-all hover:shadow-lg hover:border-gray-200
                     ${worker.is_active ? 'border-gray-100 bg-white' : 'bg-gray-50 border-gray-200 opacity-60'}`}>
+                {/* 상태 배지 (가운데 상단) */}
+                <div className="flex justify-center mb-1">
+                    <button onClick={() => toggleWorkerStatus(worker.id, worker.is_active)} className={`text-[10px] font-black px-2.5 py-1 rounded-lg transition-all active:scale-95 cursor-pointer ${worker.is_active ? 'bg-green-600 text-white shadow-md hover:bg-green-700' : 'bg-amber-600 text-white shadow-md hover:bg-amber-700'}`}>
+                        {worker.is_active ? '근무중' : '휴직중'}
+                    </button>
+                </div>
                 {/* 헤더: 아이콘 + 이름 + 버튼 */}
                 <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
@@ -462,12 +468,6 @@ export default function WorkersPage() {
                             <Trash2 className="w-4 h-4" />
                         </button>
                     </div>
-                </div>
-                {/* 상태 배지 (가운데) */}
-                <div className="flex justify-center mb-1">
-                    <button onClick={() => toggleWorkerStatus(worker.id, worker.is_active)} className={`text-[10px] font-black px-2.5 py-1 rounded-lg transition-all active:scale-95 cursor-pointer ${worker.is_active ? 'bg-green-600 text-white shadow-md hover:bg-green-700' : 'bg-amber-600 text-white shadow-md hover:bg-amber-700'}`}>
-                        {worker.is_active ? '근무중' : '휴직중'}
-                    </button>
                 </div>
                 {/* 정보 줄: 직급 | 연락처 */}
                 <div className="flex items-center gap-2 text-[11px] font-medium px-1">
