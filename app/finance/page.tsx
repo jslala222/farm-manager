@@ -73,7 +73,10 @@ export default function FinancePage() {
         }
     }, [farm, initialized, selectedMonth]);
 
-    // [bkit] 실시간 결산 엔진 (사장님의 "실시간 반영" 요구사항 반영)
+    // [bkit] 실시간 결산 엔진 disabled - 무한 루프 방지
+    // subscription이 enabled되면 데이터 변경 시마다 fetchFinanceData()가 호출되어 무한 루프 발생
+    // 사용자가 수동으로 새로고침하거나 탭을 전환할 때 자동 로드
+    /*
     useEffect(() => {
         const channel = supabase
             .channel('finance_changes')
@@ -89,6 +92,7 @@ export default function FinancePage() {
             supabase.removeChannel(channel);
         };
     }, [farm?.id, selectedMonth]);
+    */
 
     const fetchFinanceData = async () => {
         if (!farm?.id) return;
@@ -110,18 +114,54 @@ export default function FinancePage() {
             const cashStartDate = `${selectedMonth}-01`;
             const cashEndDate = `${selectedMonth}-${lastDay}`;
 
-            // [bkit 전역 결산 엔진] 
+            // [bkit 전역 결산 엔진 - 3개 쿼리로 분리]
             // 1. B2C (현금): recorded_at 기준으로 해당 월의 모든 판매
             // 2. B2B (정산): settled_at이 해당 월이고 is_settled=true인 것
-            // 3. 미정산 내역: 언제 납품이든 상관없이 전체 조회 (입금 완료되면 사라짐)
-            const { data: salesData, error: salesError } = await supabase
-                .from('sales_records')
-                .select('*, partner:partners(company_name), customer:customers(name)')
-                .eq('farm_id', farm.id)
-                .or(`and(recorded_at.gte.${startStr},recorded_at.lte.${endStr}),and(settled_at.gte.${cashStartDate},settled_at.lte.${cashEndDate},is_settled.eq.true),is_settled.eq.false`)
-                .order('recorded_at', { ascending: false });
+            // 3. 미정산 내역: 언제 납품이든 상관없이 전체 조회
+            
+            // ⚠️ .or()는 복잡할 때 성능 문제 가능 → 별도 쿼리로 분리
+            const [recordsB2CResult, recordsB2BResult, recordsUnsettledResult] = await Promise.all([
+                // B2C recorded_at 기준
+                supabase
+                    .from('sales_records')
+                    .select('*, partner:partners(company_name), customer:customers(name)')
+                    .eq('farm_id', farm.id)
+                    .eq('sale_type', 'b2c')
+                    .gte('recorded_at', startStr)
+                    .lte('recorded_at', endStr)
+                    .order('recorded_at', { ascending: false }),
+                
+                // B2B settled_at 기준 + is_settled=true
+                supabase
+                    .from('sales_records')
+                    .select('*, partner:partners(company_name), customer:customers(name)')
+                    .eq('farm_id', farm.id)
+                    .eq('sale_type', 'b2b')
+                    .eq('is_settled', true)
+                    .gte('settled_at', cashStartDate)
+                    .lte('settled_at', cashEndDate)
+                    .order('settled_at', { ascending: false }),
+                
+                // 미정산 (전체 날짜)
+                supabase
+                    .from('sales_records')
+                    .select('*, partner:partners(company_name), customer:customers(name)')
+                    .eq('farm_id', farm.id)
+                    .eq('is_settled', false)
+                    .order('recorded_at', { ascending: false })
+            ]);
 
-            if (salesError) throw salesError;
+            if (recordsB2CResult.error) throw recordsB2CResult.error;
+            if (recordsB2BResult.error) throw recordsB2BResult.error;
+            if (recordsUnsettledResult.error) throw recordsUnsettledResult.error;
+
+            // 3개 결과를 병합
+            const salesData = [
+                ...(recordsB2CResult.data || []),
+                ...(recordsB2BResult.data || []),
+                ...(recordsUnsettledResult.data || [])
+            ];
+
 
             // 2. 지출 데이터 (Expenditures) - 카테고리 포함 조회
             const { data: expensesData } = await supabase
