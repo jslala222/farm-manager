@@ -550,8 +550,8 @@ export default function FinancePage() {
                             <div>
                                 <p className="text-gray-700 text-[9px] font-bold uppercase mb-1.5">총 매출액</p>
                                 <p className="text-lg font-black text-white break-all">{formatCurrency(revenue)}</p>
-                                <p className="text-[10px] text-gray-400 font-semibold mt-1">
-                                    B2B {formatCurrency(b2bRevenue)} + B2C {formatCurrency(b2cRevenue)}
+                                <p className="text-sm text-gray-200 font-bold mt-1">
+                                    B2B <span className="text-white font-black">{formatCurrency(b2bRevenue)}</span> + B2C <span className="text-white font-black">{formatCurrency(b2cRevenue)}</span>
                                 </p>
                             </div>
                             <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/10">
