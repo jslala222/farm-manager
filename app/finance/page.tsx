@@ -115,22 +115,22 @@ export default function FinancePage() {
             const cashEndDate = `${selectedMonth}-${lastDay}`;
 
             // [bkit 전역 결산 엔진 - 3개 쿼리로 분리]
-            // 1. B2C (택배): delivery_method='courier' (입금일) 기준 + is_settled=true 정산완료만
+            // 1. B2C (택배): delivery_method='courier' - settled_at이 NULL이면 recorded_at 사용
             // 2. B2B (거래처): sale_type='b2b' (입금일) 기준 + is_settled=true 정산완료만
             // 3. 미정산 내역: 언제 납품이든 상관없이 전체 조회
             
             // ⚠️ .or()는 복잡할 때 성능 문제 가능 → 별도 쿼리로 분리
             const [recordsB2CResult, recordsB2BResult, recordsUnsettledResult] = await Promise.all([
-                // B2C settled_at 기준 (입금일 기준) - delivery_method='courier' 사용
+                // B2C (택배): settled_at이 NULL인 경우가 많아서 recorded_at도 포함하여 조회
                 supabase
                     .from('sales_records')
                     .select('*, partner:partners(company_name), customer:customers(name)')
                     .eq('farm_id', farm.id)
                     .eq('delivery_method', 'courier')  // ← sale_type 대신 delivery_method 사용
                     .eq('is_settled', true)  // 정산완료만
-                    .gte('settled_at', cashStartDate)
-                    .lte('settled_at', cashEndDate)
-                    .order('settled_at', { ascending: false }),
+                    .gte('recorded_at', cashStartDate)  // recorded_at 기준 (settled_at이 NULL이므로)
+                    .lte('recorded_at', `${selectedMonth}-${lastDay}T23:59:59`)
+                    .order('recorded_at', { ascending: false }),
                 
                 // B2B settled_at 기준 + is_settled=true
                 supabase
@@ -194,10 +194,12 @@ export default function FinancePage() {
             salesData?.forEach((rec: any) => {
                 // [중요] 정산액 기준 - B2B/B2C 모두 동일
                 // - B2B: settled_at (입금 확정 날짜)
-                // - B2C: settled_at (입금 확정 날짜) - B2B와 동일
+                // - B2C: settled_at이 NULL이면 recorded_at 사용 (일단)
                 let dateStr: string | null = null;
-                if ((settlementService.isB2B(rec) || settlementService.isB2C(rec)) && rec.is_settled && rec.settled_at) {
-                    dateStr = String(rec.settled_at).split('T')[0];
+                if ((settlementService.isB2B(rec) || settlementService.isB2C(rec)) && rec.is_settled) {
+                    // settled_at이 있으면 settled_at, 없으면 recorded_at 사용
+                    const dateToUse = rec.settled_at || rec.recorded_at;
+                    dateStr = String(dateToUse).split('T')[0];
                 }
                 const isInSelectedMonth = dateStr?.startsWith(selectedMonth) ?? false;
 
