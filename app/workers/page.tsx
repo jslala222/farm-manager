@@ -437,44 +437,40 @@ export default function WorkersPage() {
 
         return (
             <div key={worker.id}
-                className={`bg-white rounded-2xl border p-5 shadow-sm flex items-center justify-between group transition-all hover:shadow-lg hover:border-gray-200
+                className={`bg-white rounded-xl border p-3 space-y-2 shadow-sm transition-all hover:shadow-lg hover:border-gray-200
                     ${worker.is_active ? 'border-gray-100 bg-white' : 'bg-gray-50 border-gray-200 opacity-60'}`}>
-                <div className="flex items-center gap-4">
-                    <div className={`w-12 sm:w-14 h-12 sm:h-14 rounded-2xl flex flex-col items-center justify-center border relative shadow-inner ${info.bg} ${info.border}`}>
-                        <info.icon className={`w-6 h-6 ${info.color}`} />
-                        <span className={`text-[9px] font-bold absolute bottom-1 ${worker.gender === 'female' ? 'text-pink-500' : 'text-blue-500'}`}>
-                            {worker.gender === 'female' ? '여성' : '남성'}
-                        </span>
+                {/* 헤더: 아이콘 + 이름 + 버튼 */}
+                <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center border shrink-0 ${info.bg} ${info.border}`}>
+                            <info.icon className={`w-5 h-5 ${info.color}`} />
+                        </div>
+                        <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                                <span className="font-bold text-base text-gray-900 truncate">{worker.name}</span>
+                                {!worker.is_active && <span className="text-[8px] font-bold bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded shrink-0">중단</span>}
+                            </div>
+                            <span className={`text-[8px] font-bold ${worker.gender === 'female' ? 'text-pink-500' : 'text-blue-500'}`}>
+                                {worker.gender === 'female' ? '여성' : '남성'}
+                            </span>
+                        </div>
                     </div>
-                    <div>
-                        <div className="flex items-center gap-2 mb-1">
-                            <span className="font-bold text-xl text-gray-900">{worker.name}</span>
-                            {!worker.is_active && <span className="text-[9px] font-bold bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full uppercase">중단</span>}
-                        </div>
-                        <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-2 text-xs font-medium">
-                                <span className={`${info.color} bg-white px-2 py-0.5 rounded-lg border ${info.border} text-[10px]`}>{info.label}</span>
-                                {worker.phone && <span className="text-gray-700 flex items-center gap-1"><Phone className="w-3 h-3" />{worker.phone}</span>}
-                            </div>
-                            {worker.address && <p className="text-[10px] text-gray-700 flex items-start gap-1 px-1 leading-relaxed"><MapPin className="w-3 h-3 mt-0.5 shrink-0" />{worker.address}</p>}
-                            <div className="flex items-center gap-2 mt-1">
-                                <span className="text-[10px] font-black text-rose-500 bg-rose-50 px-2 py-0.5 rounded border border-rose-100 italic">
-                                    일당: {worker.default_daily_wage ? worker.default_daily_wage.toLocaleString() : '0'}원
-                                </span>
-                            </div>
-                        </div>
+                    <div className="flex items-center gap-0.5 shrink-0">
+                        <button onClick={() => toggleWorkerStatus(worker.id, worker.is_active)} className={`p-1.5 rounded-lg transition-all active:scale-90 ${worker.is_active ? 'text-gray-500 hover:bg-gray-100' : 'bg-green-50 text-green-600'}`}>
+                            {worker.is_active ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                        </button>
+                        <button onClick={() => startEdit(worker)} className="p-1.5 text-gray-500 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all active:scale-90">
+                            <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => deleteWorker(worker.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all active:scale-90">
+                            <Trash2 className="w-4 h-4" />
+                        </button>
                     </div>
                 </div>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
-                    <button onClick={() => toggleWorkerStatus(worker.id, worker.is_active)} className={`p-2.5 rounded-xl transition-all active:scale-90 ${worker.is_active ? 'text-gray-600 hover:bg-gray-100 hover:text-gray-700' : 'bg-green-50 text-green-600'}`}>
-                        {worker.is_active ? <UserX className="w-5 h-5" /> : <UserCheck className="w-5 h-5" />}
-                    </button>
-                    <button onClick={() => startEdit(worker)} className="p-2.5 text-gray-600 hover:text-blue-500 hover:bg-blue-50 rounded-xl transition-all active:scale-90">
-                        <Edit2 className="w-5 h-5" />
-                    </button>
-                    <button onClick={() => deleteWorker(worker.id)} className="p-2.5 text-gray-200 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all active:scale-90">
-                        <Trash2 className="w-5 h-5" />
-                    </button>
+                {/* 정보 줄: 직급 | 연락처 */}
+                <div className="flex items-center gap-2 text-[11px] font-medium px-1">
+                    <span className={`${info.color} bg-white px-2 py-0.5 rounded border ${info.border} shrink-0`}>{info.label}</span>
+                    {worker.phone && <span className="text-gray-700 flex items-center gap-1"><Phone className="w-3 h-3" />{worker.phone}</span>}
                 </div>
             </div>
         );
