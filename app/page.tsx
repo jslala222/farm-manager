@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Sprout, Users, TrendingUp, Package, AlertTriangle, ChevronLeft, ChevronRight, BarChart3, Activity } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
+import { useHarvestStore } from "@/store/harvestStore";
 import { supabase } from "@/lib/supabase";
 
 const DAY_NAMES_KR = ['일', '월', '화', '수', '목', '금', '토'];
@@ -14,7 +16,9 @@ type SalesItem = { unit: string; qty: number };
 type RecentActivity = { id: string; type: 'harvest' | 'sales'; label: string; qty: number; unit: string; time: string };
 
 export default function Home() {
+  const router = useRouter();
   const { farm, initialized } = useAuthStore();
+  const { setActiveTab } = useHarvestStore();
 
   const todayStr = toLocalDateStr();
   const [selectedDate, setSelectedDate] = useState(todayStr);
@@ -439,17 +443,17 @@ export default function Home() {
         <h2 className="text-sm font-black text-gray-800 mb-3 ml-1">빠른 기록</h2>
         <div className="grid grid-cols-3 gap-3">
           {[
-            { href: "/harvest", label: "수확 기록", icon: Sprout, color: "red" },
+            { href: "/harvest", label: "수확 기록", icon: Sprout, color: "red", action: () => { setActiveTab('statistics'); router.push('/harvest'); } },
             { href: "/bulk", label: "납품 기록", icon: TrendingUp, color: "green" },
             { href: "/attendance", label: "출근 체크", icon: Users, color: "blue" },
-          ].map(({ href, label, icon: Icon, color }) => (
-            <a key={href} href={href}
+          ].map(({ href, label, icon: Icon, color, action }) => (
+            <button key={href} onClick={action || (() => router.push(href))}
               className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3 flex flex-col items-center gap-2 hover:translate-y-[-3px] active:translate-y-0 transition-all active:scale-95 group">
               <div className={`p-3 bg-${color}-50 rounded-2xl group-hover:bg-${color}-100 transition-colors`}>
                 <Icon className={`w-6 h-6 text-${color}-500`} />
               </div>
               <span className="text-xs font-black text-gray-700 text-center">{label}</span>
-            </a>
+            </button>
           ))}
         </div>
       </div>

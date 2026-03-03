@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Save, Plus, Minus, Trash2, Sprout, Clock, History, Edit2, X, Check, BarChart3, CalendarDays, RefreshCcw, NotebookPen, LayoutGrid, ChevronRight, ChevronLeft } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
+import { useHarvestStore } from "@/store/harvestStore";
 import { supabase, FarmHouse, HarvestRecord } from "@/lib/supabase";
 import Calendar from "@/components/Calendar";
 
@@ -25,6 +26,7 @@ const getLocalISOString = (date: Date) => {
 
 export default function HarvestPage() {
     const { farm, initialized } = useAuthStore();
+    const { activeTab: storeActiveTab } = useHarvestStore();
     const [activeTab, setActiveTab] = useState<'record' | 'analysis' | 'history'>('record');
 
     // Data State
@@ -72,6 +74,14 @@ export default function HarvestPage() {
     const [dateGradeStats, setDateGradeStats] = useState<Record<string, Record<string, number>>>({});
     const [houseGradeStats, setHouseGradeStats] = useState<Record<number, Record<string, number>>>({});
     const [totalHarvest, setTotalHarvest] = useState(0);
+
+    // 스토어에서 activeTab 읽어서 초기화 (대시보드에서 온 경우)
+    useEffect(() => {
+        if (storeActiveTab === 'statistics') {
+            setActiveTab('analysis');
+            setStatsPeriod('month');
+        }
+    }, [storeActiveTab]);
 
     useEffect(() => {
         if (activeTab === 'analysis') {
