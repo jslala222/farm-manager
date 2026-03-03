@@ -617,7 +617,7 @@ export default function FinancePage() {
                                 <p className="text-gray-700 text-[9px] font-bold uppercase mb-1.5">총 매출액</p>
                                 <p className="text-lg font-black text-white break-all">{formatCurrency(revenue)}</p>
                                 <p className="text-sm text-gray-200 font-bold mt-1">
-                                    B2B <span className="text-white font-black">{formatCurrency(b2bRevenue)}</span> + B2C <span className="text-white font-black">{formatCurrency(b2cRevenue)}</span>
+                                    납품 <span className="text-white font-black">{formatCurrency(b2bRevenue)}</span> + 택배 <span className="text-white font-black">{formatCurrency(b2cRevenue)}</span>
                                 </p>
                             </div>
                             <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/10">
@@ -769,7 +769,7 @@ export default function FinancePage() {
                             <div className="flex items-center gap-3">
                                 <div className="p-2 bg-white rounded-xl shadow-sm"><ArrowRightLeft className="w-4 h-4 text-gray-700" /></div>
                                 <div>
-                                    <p className="text-xs font-bold text-gray-700">전체 B2B 납품</p>
+                                    <p className="text-xs font-bold text-gray-700">전체 납품 거래</p>
                                     <p className="text-[10px] text-gray-700 font-medium">총 {settledB2bCount + unsettledB2bCount}건의 거래 발생</p>
                                 </div>
                             </div>
@@ -810,7 +810,7 @@ export default function FinancePage() {
                         {financeTab === 'b2b' ? (
                             unsettledRecords.length === 0 ? (
                                 <div className="bg-gray-50 rounded-3xl border-2 border-dashed border-gray-100 py-10 text-center">
-                                    <p className="text-xs font-bold text-gray-700">모든 B2B 정산이 완료되었습니다! 🍓</p>
+                                    <p className="text-xs font-bold text-gray-700">모든 납품 정산이 완료되었습니다! 🍓</p>
                                 </div>
                             ) : (
                                 unsettledRecords.map((partnerGroup: any, pIdx: number) => {
@@ -1040,7 +1040,7 @@ export default function FinancePage() {
                     <div className="space-y-4">
                         <div className="space-y-2">
                             <div className="flex justify-between items-end">
-                                <span className="text-xs font-black text-gray-700">B2B 대량 납품</span>
+                                <span className="text-xs font-black text-gray-700">납품 (거래처)</span>
                                 <span className="text-sm font-black text-gray-900">{formatCurrency(b2bRevenue)}</span>
                             </div>
                             <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
@@ -1050,7 +1050,7 @@ export default function FinancePage() {
                         </div>
                         <div className="space-y-2">
                             <div className="flex justify-between items-end">
-                                <span className="text-xs font-black text-gray-700">B2C 개별 택배</span>
+                                <span className="text-xs font-black text-gray-700">택배 (개별)</span>
                                 <span className="text-sm font-black text-gray-900">{formatCurrency(b2cRevenue)}</span>
                             </div>
                             <div className="h-3 bg-gray-100 rounded-full overflow-hidden">

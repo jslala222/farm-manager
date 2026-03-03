@@ -225,7 +225,7 @@ export default function ClientsPage() {
                     <div className="min-w-0">
                         <h1 className="text-xl font-black text-gray-900 leading-tight whitespace-nowrap">거래처/고객 관리</h1>
                         <p className="text-xs text-indigo-600 font-bold mt-1 uppercase tracking-widest flex items-center gap-1">
-                            <Star className="w-3 h-3 fill-indigo-600" /> B2B & B2C
+                            <Star className="w-3 h-3 fill-indigo-600" /> 납품 & 택배
                         </p>
                     </div>
                     <button onClick={() => handleOpenModal()}
@@ -239,12 +239,12 @@ export default function ClientsPage() {
                     <button onClick={() => setActiveTab('business')}
                         className={`flex-1 py-3.5 rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-2
                         ${activeTab === 'business' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-700 hover:bg-gray-50'}`}>
-                        <Building2 className="w-4 h-4" /> B2B 거래처
+                        <Building2 className="w-4 h-4" /> 납품 거래처
                     </button>
                     <button onClick={() => setActiveTab('individual')}
                         className={`flex-1 py-3.5 rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-2
                         ${activeTab === 'individual' ? 'bg-green-600 text-white shadow-lg' : 'text-gray-700 hover:bg-gray-50'}`}>
-                        <Users className="w-4 h-4" /> B2C 개인고객
+                        <Users className="w-4 h-4" /> 택배 개인고객
                     </button>
                 </div>
 

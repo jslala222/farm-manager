@@ -232,12 +232,12 @@ export default function SalesPage() {
                     <button onClick={() => { setActiveTab('bulk'); handleResetAllStates(); }}
                         className={`flex-1 py-3 rounded-[0.9rem] text-xs font-black transition-all flex items-center justify-center gap-2
                         ${activeTab === 'bulk' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}>
-                        <Building2 className="w-3.5 h-3.5" /> B2B 납품
+                        <Building2 className="w-3.5 h-3.5" /> 납품
                     </button>
                     <button onClick={() => { setActiveTab('courier'); handleResetAllStates(); }}
                         className={`flex-1 py-3 rounded-[0.9rem] text-xs font-black transition-all flex items-center justify-center gap-2
                         ${activeTab === 'courier' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-400'}`}>
-                        <Truck className="w-3.5 h-3.5" /> B2C 택배
+                        <Truck className="w-3.5 h-3.5" /> 택배
                     </button>
                 </div>
 

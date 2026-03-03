@@ -245,7 +245,7 @@ export default function B2CSettledPage() {
                         <Package2 className="w-5 h-5 text-purple-500 shrink-0" />
                     </h1>
                     <p className="text-[10px] text-gray-700 font-bold mt-0.5">
-                        B2C 택배 입금 현황 · {periodLabel}
+                        택배 입금 현황 · {periodLabel}
                     </p>
                 </div>
                 <button
@@ -418,7 +418,7 @@ export default function B2CSettledPage() {
                     <div className="text-center py-16 bg-gray-50 rounded-[2.5rem] border-2 border-dashed border-gray-100">
                         <Package2 className="w-12 h-12 text-gray-200 mx-auto mb-3" />
                         <p className="text-sm text-gray-700 font-bold">해당 기간에 택배 거래가 없습니다.</p>
-                        <p className="text-[10px] text-gray-600 font-bold mt-1">택배(B2C) 메뉴에서 먼저 기록하세요.</p>
+                        <p className="text-[10px] text-gray-600 font-bold mt-1">택배 메뉴에서 먼저 기록하세요.</p>
                     </div>
                 ) : (
                     filteredRecords.map(rec => {

@@ -649,7 +649,7 @@ export default function BulkSalesPage() {
                 <div className="flex items-center justify-between px-1 gap-2">
                     <div className="flex flex-col min-w-0">
                         <h1 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-1.5 whitespace-nowrap">
-                            납품 (B2B) <Building2 className="w-4 h-4 text-indigo-500" />
+                            납품 <Building2 className="w-4 h-4 text-indigo-500" />
                         </h1>
                         <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
                             <span className="text-[10px] font-black text-white bg-indigo-500 px-2 py-0.5 rounded-full shadow-sm whitespace-nowrap">

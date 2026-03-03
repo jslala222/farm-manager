@@ -438,7 +438,7 @@ export default function CourierSalesPage() {
                             {!inModal && (
                                 <button onClick={handleSave} disabled={saving}
                                     className="w-full py-5 rounded-[1.25rem] text-lg font-black text-white bg-rose-600 shadow-2xl shadow-rose-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2">
-                                    {saving ? <RefreshCcw className="w-6 h-6 animate-spin" /> : <><Save className="w-5 h-5" /> <span>{editingRecordId ? '수정 내용 저장' : 'B2C 택배 기록 저장'}</span></>}
+                                    {saving ? <RefreshCcw className="w-6 h-6 animate-spin" /> : <><Save className="w-5 h-5" /> <span>{editingRecordId ? '수정 내용 저장' : '택배 기록 저장'}</span></>}
                                 </button>
                             )}
                         </div>
@@ -457,7 +457,7 @@ export default function CourierSalesPage() {
                     <div className="flex items-center justify-between px-1 gap-2">
                         <div className="flex flex-wrap items-center gap-2 min-w-0">
                             <h1 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-1.5 whitespace-nowrap">
-                                택배 (B2C) <Truck className="w-4 h-4 text-rose-500" />
+                                택배 <Truck className="w-4 h-4 text-rose-500" />
                             </h1>
                             <div className="bg-rose-500 text-white px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1">
                                 <span className="text-[10px] font-black whitespace-nowrap">
@@ -485,7 +485,7 @@ export default function CourierSalesPage() {
                     {!isEditMode && renderOrderForm(false)}
                     <div className="space-y-3 pb-10">
                         <div className="flex items-center justify-between">
-                            <h2 className="text-sm font-black text-slate-800 flex items-center gap-2 px-1"><History className="w-4 h-4 text-slate-300" /> B2C 택배 내역 (상세)</h2>
+                            <h2 className="text-sm font-black text-slate-800 flex items-center gap-2 px-1"><History className="w-4 h-4 text-slate-300" /> 택배 내역 (상세)</h2>
                             <div className="flex gap-2">
                                 <button
                                     onClick={fetchHistory}

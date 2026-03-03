@@ -261,7 +261,7 @@ export default function BulkSalesPage() {
                 <div className="flex items-center justify-between px-1 gap-2">
                     <div className="flex flex-col min-w-0">
                         <h1 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-1.5 whitespace-nowrap">
-                            납품 (B2B) <Building2 className="w-4 h-4 text-indigo-500" />
+                            납품 <Building2 className="w-4 h-4 text-indigo-500" />
                         </h1>
                         <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
                             <span className="text-[10px] font-black text-white bg-indigo-500 px-2 py-0.5 rounded-full shadow-sm whitespace-nowrap">
@@ -362,7 +362,7 @@ export default function BulkSalesPage() {
                         </div>
                         <button onClick={handleSave} disabled={saving}
                             className="w-full py-5 rounded-[1.25rem] text-lg font-black text-white bg-indigo-600 shadow-2xl shadow-indigo-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2">
-                            {saving ? <RefreshCcw className="w-6 h-6 animate-spin" /> : <><Save className="w-5 h-5" /> <span>{editingRecordId ? '수정 내용 저장' : 'B2B 납품 기록 저장'}</span></>}
+                            {saving ? <RefreshCcw className="w-6 h-6 animate-spin" /> : <><Save className="w-5 h-5" /> <span>{editingRecordId ? '수정 내용 저장' : '납품 기록 저장'}</span></>}
                         </button>
                     </div>
                 </div>
