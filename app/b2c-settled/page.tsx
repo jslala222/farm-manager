@@ -74,6 +74,7 @@ interface CourierRecord {
     payment_method: string | null;
     payment_status: string | null;
     is_settled: boolean | null;
+    settled_at: string | null;
     crop_name: string | null;
     sale_unit: string | null;
     customer_name: string | null;
@@ -469,6 +470,11 @@ export default function B2CSettledPage() {
                                                 <span className="flex items-center gap-1">
                                                     <Calendar className="w-3 h-3" />{formatDate(rec.recorded_at)}
                                                 </span>
+                                                {rec.is_settled && (
+                                                    <span className="flex items-center gap-1 text-emerald-600">
+                                                        ✅ 입금 {formatDate(rec.settled_at || rec.recorded_at)}
+                                                    </span>
+                                                )}
                                                 {rec.shipping_cost && rec.shipping_cost > 0 && (
                                                     <span className="text-red-400">
                                                         택배비 -{formatCurrency(rec.shipping_cost)}
@@ -487,11 +493,6 @@ export default function B2CSettledPage() {
                                             <p className={`text-lg font-black tracking-tight ${isSettled ? 'text-gray-900' : 'text-amber-500'}`}>
                                                 {formatCurrency(amount)}
                                             </p>
-                                            {rec.shipping_cost && rec.shipping_cost > 0 && rec.shipping_fee_type !== '착불' && (
-                                                <p className="text-[10px] text-gray-700 font-bold">
-                                                    실수령 {formatCurrency(amount - rec.shipping_cost)}
-                                                </p>
-                                            )}
                                         </div>
                                         {/* 입금확인 버튼 - 미정산 상태일 때만 표시 */}
                                         {!isSettled && (
