@@ -2,10 +2,13 @@
 // app/settled/page.tsx - 정산완료 내역 페이지 (거래처별 엑셀표 + 수정/삭제)
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { CheckCircle, ChevronDown, ChevronRight, Download, RefreshCcw, Calendar, Edit2, Trash2, X, Save } from 'lucide-react';
+import { CheckCircle, ChevronDown, ChevronRight, Download, RefreshCcw, Calendar, Edit2, Trash2, X, Save, FileText } from 'lucide-react';
 import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
 import { getCropIcon, getCropColor } from "@/lib/utils";
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 // 날짜 범위 기본값: 이번달 1일 ~ 오늘
 const toLocalDateStr = (d: Date = new Date()) =>
@@ -185,33 +188,152 @@ export default function SettledPage() {
         settled: records.reduce((s, r) => s + (r.settled_amount || 0), 0),
     }), [records]);
 
-    // CSV 다운로드
-    const handleDownloadCSV = () => {
-        const header = ['거래처', '날짜', '등급', '수량', '단위', '예상금액', '정산금액', '차액', '차액사유', '결제수단', '메모'];
-        const rows = records.map(r => {
+    // XLSX 다운로드 (품목명 포함)
+    const handleDownloadXLSX = () => {
+        const data = records.map(r => {
             const diff = (r.settled_amount ?? 0) - (r.price ?? 0);
-            return [
-                (r.partner as any)?.company_name || '미지정',
-                r.recorded_at.split('T')[0],
-                r.grade || '',
-                r.quantity,
-                r.sale_unit || '',
-                r.price ?? '',
-                r.settled_amount ?? '',
-                r.price && r.settled_amount ? diff : '',
-                r.harvest_note || '',
-                r.payment_method || '',
-                r.delivery_note || '',
-            ];
+            return {
+                '거래처': (r.partner as any)?.company_name || '미지정',
+                '날짜': r.recorded_at.split('T')[0],
+                '품목': r.crop_name || '미지정',
+                '등급': r.grade || '',
+                '수량': r.quantity,
+                '단위': r.sale_unit || '',
+                '예상금액': r.price ?? '',
+                '정산금액': r.settled_amount ?? '',
+                '차액': r.price && r.settled_amount ? diff : '',
+                '결제수단': r.payment_method || '',
+                '메모': r.delivery_note || '',
+            };
         });
-        const csvContent = [header, ...rows].map(row => row.join(',')).join('\n');
-        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `정산완료_${range.from}_${range.to}.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
+
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, '정산내역');
+        
+        // 열 너비 조정
+        const colWidths = [15, 12, 12, 8, 8, 10, 12, 12, 12, 12, 20];
+        ws['!cols'] = colWidths.map(w => ({ wch: w }));
+
+        XLSX.writeFile(wb, `정산완료_${range.from}_${range.to}.xlsx`);
+    };
+
+    // 결산 리포트 PDF 다운로드 (농장명 + 거래처별 요약)
+    const handleDownloadReport = async () => {
+        try {
+            // 거래처별 그룹핑
+            const grouped = records.reduce((acc, r) => {
+                const key = (r.partner as any)?.company_name || '미지정';
+                if (!acc[key]) {
+                    acc[key] = {
+                        partnerName: key,
+                        rows: [],
+                        totalQty: 0,
+                        totalExpected: 0,
+                        totalSettled: 0,
+                    };
+                }
+                acc[key].rows.push(r);
+                acc[key].totalQty += r.quantity || 0;
+                acc[key].totalExpected += r.price || 0;
+                acc[key].totalSettled += r.settled_amount || 0;
+                return acc;
+            }, {} as Record<string, any>);
+
+            // HTML 생성
+            const reportHTML = `
+                <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+                    <h1 style="text-align: center; margin: 20px 0; color: #1f2937;">정산 리포트</h1>
+                    <h2 style="text-align: center; font-size: 18px; margin: 10px 0; color: #374151;">${farm?.farm_name || '농장'}</h2>
+                    <p style="text-align: center; color: #6b7280; margin-bottom: 20px;">
+                        ${range.from} ~ ${range.to}
+                    </p>
+
+                    ${Object.values(grouped).map((group: any) => `
+                        <div style="page-break-inside: avoid; margin-bottom: 25px;">
+                            <h3 style="background: #10b981; color: white; padding: 10px; border-radius: 5px; margin: 0;">
+                                ${group.partnerName}
+                            </h3>
+                            <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px;">
+                                <tr style="background: #f3f4f6;">
+                                    <td style="border: 1px solid #e5e7eb; padding: 8px;">거래건수</td>
+                                    <td style="border: 1px solid #e5e7eb; padding: 8px; text-align: right;">${group.rows.length}건</td>
+                                    <td style="border: 1px solid #e5e7eb; padding: 8px;">수량합계</td>
+                                    <td style="border: 1px solid #e5e7eb; padding: 8px; text-align: right;">${group.totalQty.toLocaleString()}${group.rows[0]?.sale_unit || '박스'}</td>
+                                </tr>
+                                <tr style="background: #f9fafb;">
+                                    <td style="border: 1px solid #e5e7eb; padding: 8px;">예상금액</td>
+                                    <td style="border: 1px solid #e5e7eb; padding: 8px; text-align: right;">${group.totalExpected.toLocaleString()}원</td>
+                                    <td style="border: 1px solid #e5e7eb; padding: 8px;">정산금액</td>
+                                    <td style="border: 1px solid #e5e7eb; padding: 8px; text-align: right; color: #10b981; font-weight: bold;">${group.totalSettled.toLocaleString()}원</td>
+                                </tr>
+                                <tr style="background: #fef2f2;">
+                                    <td style="border: 1px solid #e5e7eb; padding: 8px; font-weight: bold;">차액</td>
+                                    <td colspan="3" style="border: 1px solid #e5e7eb; padding: 8px; text-align: right; color: ${group.totalSettled - group.totalExpected < 0 ? '#ef4444' : '#10b981'}; font-weight: bold;">
+                                        ${(group.totalSettled - group.totalExpected).toLocaleString()}원
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    `).join('')}
+
+                    <div style="margin-top: 30px; padding: 15px; background: #f0fdf4; border: 2px solid #10b981; border-radius: 5px;">
+                        <p style="margin: 5px 0;"><strong>전체 합계</strong></p>
+                        <p style="margin: 5px 0; font-size: 14px;">거래건수: ${records.length}건</p>
+                        <p style="margin: 5px 0; font-size: 14px;">총 수량: ${grandTotal.qty.toLocaleString()}${records[0]?.sale_unit || '박스'}</p>
+                        <p style="margin: 5px 0; font-size: 14px;">예상금액: ${grandTotal.expected.toLocaleString()}원</p>
+                        <p style="margin: 5px 0; font-size: 16px; color: #10b981; font-weight: bold;">정산총액: ${grandTotal.settled.toLocaleString()}원</p>
+                    </div>
+
+                    <p style="text-align: center; color: #9ca3af; font-size: 12px; margin-top: 30px;">
+                        생성일: ${new Date().toLocaleDateString('ko-KR')} ${new Date().toLocaleTimeString('ko-KR')}
+                    </p>
+                </div>
+            `;
+
+            // 임시 div 생성
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = reportHTML;
+            tempDiv.style.position = 'absolute';
+            tempDiv.style.left = '-9999px';
+            tempDiv.style.width = '210mm';
+            tempDiv.style.background = 'white';
+            document.body.appendChild(tempDiv);
+
+            // Canvas로 변환
+            const canvas = await html2canvas(tempDiv, {
+                scale: 2,
+                backgroundColor: '#ffffff',
+                logging: false,
+            });
+
+            // PDF 생성
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const imgWidth = 210;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            
+            let heightLeft = imgHeight;
+            let position = 0;
+
+            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+            heightLeft -= 297;
+
+            while (heightLeft >= 0) {
+                position = heightLeft - imgHeight;
+                pdf.addPage();
+                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                heightLeft -= 297;
+            }
+
+            pdf.save(`${farm?.farm_name || '농장'}_정산리포트_${range.from}_${range.to}.pdf`);
+
+            // 임시 div 제거
+            document.body.removeChild(tempDiv);
+        } catch (e: any) {
+            console.error('PDF 생성 오류:', e);
+            alert('리포트 생성에 실패했습니다.');
+        }
     };
 
     const togglePartner = (name: string) => {
@@ -369,10 +491,15 @@ export default function SettledPage() {
                             className="p-2 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-slate-600 transition-all">
                             <RefreshCcw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                         </button>
-                        <button onClick={handleDownloadCSV} disabled={records.length === 0}
-                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500 text-white text-xs font-black shadow-sm disabled:opacity-40">
+                        <button onClick={handleDownloadXLSX} disabled={records.length === 0}
+                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500 text-white text-xs font-black shadow-sm disabled:opacity-40 hover:bg-emerald-600 transition-all">
                             <Download className="w-3.5 h-3.5" />
-                            CSV
+                            XLSX
+                        </button>
+                        <button onClick={handleDownloadReport} disabled={records.length === 0}
+                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-500 text-white text-xs font-black shadow-sm disabled:opacity-40 hover:bg-blue-600 transition-all">
+                            <FileText className="w-3.5 h-3.5" />
+                            결산
                         </button>
                     </div>
                 </div>
