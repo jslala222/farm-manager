@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import {
-    Plus, Trash2, UserPlus, Phone,
+    Plus, Trash2, UserPlus, Phone, UserCheck,
     Edit2, Save, X, Users, Heart, Globe, Timer, MapPin, AlignLeft, Check, RefreshCcw, AlertTriangle, User, CreditCard
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
