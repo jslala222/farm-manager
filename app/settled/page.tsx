@@ -565,7 +565,7 @@ export default function SettledPage() {
                                     </div>
 
                                     {/* 모바일 카드 - 표시@모바일만 */}
-                                    <div className="md:hidden space-y-2.5 p-3">
+                                    <div className="md:hidden space-y-1.5 p-2">
                                         {group.rows.map((rec) => {
                                             const rowDiff = (rec.settled_amount !== null && rec.price !== null)
                                                 ? rec.settled_amount - rec.price
@@ -577,60 +577,60 @@ export default function SettledPage() {
                                                 : '미완료';
                                             
                                             return (
-                                                <div key={rec.id} className={`rounded-2xl border transition-all overflow-hidden ${missingSettled ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-100'}`}>
+                                                <div key={rec.id} className={`rounded-lg border transition-all overflow-hidden ${missingSettled ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-100'}`}>
                                                     {/* 헤더: 작물명 | 결제수단 | [수정][삭제] */}
-                                                    <div className="px-4 py-2.5 bg-gradient-to-r from-slate-50 to-white border-b flex items-center justify-between gap-3">
-                                                        <div className="flex items-center gap-2 min-w-0">
-                                                            <span className={`text-lg shrink-0 ${getCropColor(rec.crop_name)}`}>
+                                                    <div className="px-3 py-1.5 bg-gradient-to-r from-slate-50 to-white border-b flex items-center justify-between gap-2">
+                                                        <div className="flex items-center gap-1.5 min-w-0">
+                                                            <span className={`text-base shrink-0 ${getCropColor(rec.crop_name)}`}>
                                                                 {getCropIcon(rec.crop_name)}
                                                             </span>
-                                                            <span className="font-black text-slate-700 text-sm truncate">
+                                                            <span className="font-bold text-slate-700 text-xs truncate">
                                                                 {rec.crop_name || '미분류'}
                                                             </span>
-                                                            <span className="text-slate-400 font-bold">|</span>
-                                                            <span className="bg-slate-200 text-slate-700 font-black px-2 py-1 rounded-md text-[10px] shrink-0">
+                                                            <span className="text-slate-400 font-bold text-xs">|</span>
+                                                            <span className="bg-slate-200 text-slate-700 font-black px-1.5 py-0.5 rounded text-[8px] shrink-0">
                                                                 {rec.payment_method || '-'}
                                                             </span>
                                                         </div>
-                                                        <div className="flex items-center gap-1 shrink-0">
+                                                        <div className="flex items-center gap-0.5 shrink-0">
                                                             <button
                                                                 onClick={() => openEdit(rec)}
-                                                                className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all active:scale-90"
+                                                                className="p-1 rounded text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all active:scale-90"
                                                                 title="수정">
-                                                                <Edit2 className="w-4 h-4" />
+                                                                <Edit2 className="w-3 h-3" />
                                                             </button>
                                                             <button
                                                                 onClick={() => handleDelete(rec)}
-                                                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all active:scale-90"
+                                                                className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all active:scale-90"
                                                                 title="삭제">
-                                                                <Trash2 className="w-4 h-4" />
+                                                                <Trash2 className="w-3 h-3" />
                                                             </button>
                                                         </div>
                                                     </div>
 
                                                     {/* 판매정보 - 한 줄 (결제수단 제거) */}
-                                                    <div className="px-4 py-2 border-b bg-slate-50/50 text-[11px] font-medium text-slate-700 overflow-x-auto whitespace-nowrap">
-                                                        <span className="font-black text-slate-600 mr-2.5">📤 판매:</span>
+                                                    <div className="px-3 py-1 border-b bg-slate-50/50 text-[9px] font-medium text-slate-700 overflow-x-auto whitespace-nowrap">
+                                                        <span className="font-black text-slate-600 mr-1.5">📤</span>
                                                         <span>{recordDateStr}</span>
-                                                        <span className="text-slate-400 mx-1.5">|</span>
-                                                        <span className="bg-indigo-50 text-indigo-600 font-black px-1.5 py-0.5 rounded-md inline-block">{rec.grade || '-'}</span>
-                                                        <span className="text-slate-400 mx-1.5">|</span>
-                                                        <span className="font-black">{(rec.quantity || 0).toLocaleString()}{rec.sale_unit || '박스'}</span>
-                                                        <span className="text-slate-400 mx-1.5">|</span>
-                                                        <span className="font-black text-slate-800">예상 {(rec.price || 0).toLocaleString()}원</span>
+                                                        <span className="text-slate-400 mx-1">|</span>
+                                                        <span className="bg-indigo-50 text-indigo-600 font-black px-1 py-0.5 rounded text-[7px] inline-block">{rec.grade || '-'}</span>
+                                                        <span className="text-slate-400 mx-1">|</span>
+                                                        <span className="font-black">{(rec.quantity || 0).toLocaleString()}{rec.sale_unit || '박'}</span>
+                                                        <span className="text-slate-400 mx-1">|</span>
+                                                        <span className="font-black text-slate-800">{(rec.price || 0).toLocaleString()}원</span>
                                                     </div>
 
                                                     {/* 입금정보 - 한 줄 (마지막) */}
-                                                    <div className={`px-4 py-2 text-[11px] font-medium overflow-x-auto whitespace-nowrap ${missingSettled ? 'bg-amber-100/30 text-amber-700' : 'bg-emerald-50/50 text-emerald-700'}`}>
-                                                        <span className={`font-black mr-2.5 ${missingSettled ? 'text-amber-600' : 'text-emerald-600'}`}>📥 입금:</span>
+                                                    <div className={`px-3 py-1 text-[9px] font-medium overflow-x-auto whitespace-nowrap ${missingSettled ? 'bg-amber-100/30 text-amber-700' : 'bg-emerald-50/50 text-emerald-700'}`}>
+                                                        <span className={`font-black mr-1 ${missingSettled ? 'text-amber-600' : 'text-emerald-600'}`}>📥</span>
                                                         <span className={missingSettled ? 'text-amber-600 font-black' : ''}>{settledDateStr}{!missingSettled && ' ✓'}</span>
-                                                        <span className="text-slate-400 mx-1.5">|</span>
+                                                        <span className="text-slate-400 mx-1">|</span>
                                                         <span className={`font-black ${missingSettled ? 'text-amber-600' : 'text-emerald-600'}`}>
-                                                            정산 {rec.settled_amount !== null ? `${rec.settled_amount.toLocaleString()}원` : '미입력'}
+                                                            {rec.settled_amount !== null ? `${rec.settled_amount.toLocaleString()}원` : '미입력'}
                                                         </span>
-                                                        <span className="text-slate-400 mx-1.5">|</span>
+                                                        <span className="text-slate-400 mx-1">|</span>
                                                         <span className={`font-black ${rowDiff === null ? 'text-slate-400' : rowDiff < 0 ? 'text-rose-600' : rowDiff > 0 ? 'text-emerald-600' : 'text-slate-500'}`}>
-                                                            차액 {rowDiff !== null ? `${rowDiff > 0 ? '+' : ''}${rowDiff.toLocaleString()}원` : '-'}
+                                                            {rowDiff !== null ? `${rowDiff > 0 ? '+' : ''}${rowDiff.toLocaleString()}원` : '-'}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -638,25 +638,25 @@ export default function SettledPage() {
                                         })}
 
                                         {/* 모바일 소계 */}
-                                        <div className="bg-emerald-50 border-2 border-emerald-100 rounded-2xl p-3 mt-3">
-                                            <div className="flex justify-between items-center">
-                                                <span className="font-black text-emerald-700 text-sm">소계</span>
-                                                <div className="flex gap-4 text-right">
+                                        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2 mt-2">
+                                            <div className="flex justify-between items-center gap-2">
+                                                <span className="font-black text-emerald-700 text-xs">소계</span>
+                                                <div className="flex gap-2 text-right text-[8px]">
                                                     <div>
-                                                        <p className="text-[9px] font-bold text-emerald-600 mb-0.5">수량</p>
-                                                        <p className="font-black text-emerald-700 text-xs">{group.totalQty.toLocaleString()}박스</p>
+                                                        <p className="font-bold text-emerald-600 mb-0.5">수량</p>
+                                                        <p className="font-black text-emerald-700">{group.totalQty.toLocaleString()}박</p>
                                                     </div>
                                                     <div>
-                                                        <p className="text-[9px] font-bold text-slate-600 mb-0.5">예상</p>
-                                                        <p className="font-bold text-slate-600 text-xs">{group.totalExpected.toLocaleString()}원</p>
+                                                        <p className="font-bold text-slate-600 mb-0.5">예상</p>
+                                                        <p className="font-bold text-slate-600">{group.totalExpected.toLocaleString()}원</p>
                                                     </div>
                                                     <div>
-                                                        <p className="text-[9px] font-bold text-emerald-600 mb-0.5">정산</p>
-                                                        <p className="font-black text-emerald-700 text-xs">{group.totalSettled.toLocaleString()}원</p>
+                                                        <p className="font-bold text-emerald-600 mb-0.5">정산</p>
+                                                        <p className="font-black text-emerald-700">{group.totalSettled.toLocaleString()}원</p>
                                                     </div>
                                                     <div>
-                                                        <p className="text-[9px] font-bold text-slate-600 mb-0.5">차액</p>
-                                                        <p className={`font-black text-xs ${diff < 0 ? 'text-rose-500' : diff > 0 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                                        <p className="font-bold text-slate-600 mb-0.5">차액</p>
+                                                        <p className={`font-black ${diff < 0 ? 'text-rose-500' : diff > 0 ? 'text-emerald-600' : 'text-slate-400'}`}>
                                                             {diff > 0 ? '+' : ''}{diff.toLocaleString()}원
                                                         </p>
                                                     </div>
