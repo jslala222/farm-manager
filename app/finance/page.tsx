@@ -115,18 +115,18 @@ export default function FinancePage() {
             const cashEndDate = `${selectedMonth}-${lastDay}`;
 
             // [bkit 전역 결산 엔진 - 3개 쿼리로 분리]
-            // 1. B2C (현금): settled_at (입금일) 기준 + is_settled=true 정산완료만
-            // 2. B2B (거래처): settled_at (입금일) 기준 + is_settled=true 정산완료만
+            // 1. B2C (택배): delivery_method='courier' (입금일) 기준 + is_settled=true 정산완료만
+            // 2. B2B (거래처): sale_type='b2b' (입금일) 기준 + is_settled=true 정산완료만
             // 3. 미정산 내역: 언제 납품이든 상관없이 전체 조회
             
             // ⚠️ .or()는 복잡할 때 성능 문제 가능 → 별도 쿼리로 분리
             const [recordsB2CResult, recordsB2BResult, recordsUnsettledResult] = await Promise.all([
-                // B2C settled_at 기준 (입금일 기준) - B2B와 동일
+                // B2C settled_at 기준 (입금일 기준) - delivery_method='courier' 사용
                 supabase
                     .from('sales_records')
                     .select('*, partner:partners(company_name), customer:customers(name)')
                     .eq('farm_id', farm.id)
-                    .eq('sale_type', 'b2c')
+                    .eq('delivery_method', 'courier')  // ← sale_type 대신 delivery_method 사용
                     .eq('is_settled', true)  // 정산완료만
                     .gte('settled_at', cashStartDate)
                     .lte('settled_at', cashEndDate)
@@ -261,10 +261,16 @@ export default function FinancePage() {
             ) || [];
             const totalExp = normalExpenses.reduce((acc: any, curr: any) => acc + (curr.amount || 0), 0) || 0;
 
+            // [중요] 순이익 계산 로직 수정
+            // 순이익 = (B2B 매출 + B2C 매출) - (인건비 + 식대 + 택배/자재비 + 기타 경비)
+            // totalShipping(택배비)를 경비에 포함시켜야 함
+            const totalCost = finalWages + finalMeals + totalShipping + totalExp;
+            const netProfit = totalRev - totalCost;
+
             setRevenue(totalRev);
             setB2bRevenue(b2bRev);
             setB2cRevenue(b2cRev);
-            setShippingCost(totalShipping);
+            setShippingCost(totalShipping);  // 택배/자재비 별도 표시
             setLaborCost(finalWages);
             setMealCost(finalMeals);
             setExpense(totalExp);
