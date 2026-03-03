@@ -91,6 +91,8 @@ export default function B2CSettledPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedPayment, setSelectedPayment] = useState<string | null>(null);
     const [settleFilter, setSettleFilter] = useState<SettleFilter>('all');
+    const [confirmingId, setConfirmingId] = useState<string | null>(null); // 입금확인 처리 중인 거래 ID
+    const [confirmMessage, setConfirmMessage] = useState<{ id: string; text: string } | null>(null); // 입금확인 완료 메시지
 
     // 기간 프리셋 변경 시 날짜 범위 자동 계산
     useEffect(() => {
@@ -132,6 +134,34 @@ export default function B2CSettledPage() {
     useEffect(() => {
         if (initialized && farm?.id) fetchData();
     }, [fetchData, initialized, farm?.id]);
+
+    // ────── 입금확인 (미정산 → 정산완료) ──────
+    const handleConfirmPayment = async (rec: CourierRecord) => {
+        if (!rec.id || rec.is_settled) return;
+        
+        setConfirmingId(rec.id);
+        try {
+            const { error } = await supabase
+                .from('sales_records')
+                .update({ is_settled: true })
+                .eq('id', rec.id)
+                .eq('farm_id', farm?.id);
+
+            if (error) throw error;
+
+            // 메시지 표시 (2초 후 자동 해제)
+            setConfirmMessage({ id: rec.id, text: '입금 확인 완료 ✓' });
+            setTimeout(() => setConfirmMessage(null), 2000);
+
+            // 목록 새로고침
+            fetchData();
+        } catch (e: any) {
+            console.error('입금확인 오류:', e);
+            alert('입금 확인 실패: ' + (e?.message || '알 수 없는 오류'));
+        } finally {
+            setConfirmingId(null);
+        }
+    };
 
     // 필터 처리 (검색 + 결제수단 + 정산상태)
     const filteredRecords = useMemo(() => {
@@ -428,14 +458,34 @@ export default function B2CSettledPage() {
                                             )}
                                         </div>
                                     </div>
-                                    {/* 금액 */}
-                                    <div className="text-right shrink-0">
-                                        <p className={`text-lg font-black tracking-tight ${isSettled ? 'text-gray-900' : 'text-amber-500'}`}>
-                                            {formatCurrency(amount)}
-                                        </p>
-                                        {rec.shipping_cost && rec.shipping_cost > 0 && rec.shipping_fee_type !== '착불' && (
-                                            <p className="text-[10px] text-gray-700 font-bold">
-                                                실수령 {formatCurrency(amount - rec.shipping_cost)}
+                                    {/* 금액 + 입금확인 버튼 */}
+                                    <div className="text-right shrink-0 flex flex-col items-end gap-2">
+                                        <div>
+                                            <p className={`text-lg font-black tracking-tight ${isSettled ? 'text-gray-900' : 'text-amber-500'}`}>
+                                                {formatCurrency(amount)}
+                                            </p>
+                                            {rec.shipping_cost && rec.shipping_cost > 0 && rec.shipping_fee_type !== '착불' && (
+                                                <p className="text-[10px] text-gray-700 font-bold">
+                                                    실수령 {formatCurrency(amount - rec.shipping_cost)}
+                                                </p>
+                                            )}
+                                        </div>
+                                        {/* 입금확인 버튼 - 미정산 상태일 때만 표시 */}
+                                        {!isSettled && (
+                                            <button
+                                                onClick={() => handleConfirmPayment(rec)}
+                                                disabled={confirmingId === rec.id}
+                                                className={`text-xs font-black px-3 py-1.5 rounded-lg transition-all whitespace-nowrap min-w-max
+                                                    ${confirmingId === rec.id 
+                                                        ? 'bg-gray-200 text-gray-600 cursor-not-allowed' 
+                                                        : 'bg-emerald-500 text-white hover:bg-emerald-600 active:scale-95'}`}
+                                            >
+                                                {confirmingId === rec.id ? '처리 중...' : '입금확인'}
+                                            </button>
+                                        )}
+                                        {confirmMessage?.id === rec.id && (
+                                            <p className="text-[10px] font-black text-emerald-600 animate-pulse">
+                                                {confirmMessage.text}
                                             </p>
                                         )}
                                     </div>
