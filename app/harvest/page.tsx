@@ -421,18 +421,18 @@ export default function HarvestPage() {
                 {/* 탭 전환 버튼 */}
                 <div className="flex bg-gray-100 p-1 rounded-xl shrink-0 gap-1">
                     <button onClick={() => setActiveTab('record')}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border-2 border-red-600 ${activeTab === 'record' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-700 bg-gray-50'}`}>
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border-3 border-red-700 ${activeTab === 'record' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-700 bg-gray-50'}`}>
                         수확하기
                     </button>
                     <button onClick={() => {
                         setActiveTab('history');
                         fetchAllDiaries();
                     }}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border-2 border-blue-600 ${activeTab === 'history' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-700 bg-gray-50'}`}>
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border-3 border-blue-700 ${activeTab === 'history' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-700 bg-gray-50'}`}>
                         영농일지
                     </button>
                     <button onClick={() => setActiveTab('analysis')}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border-2 border-green-600 ${activeTab === 'analysis' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-700 bg-gray-50'}`}>
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border-3 border-green-700 ${activeTab === 'analysis' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-700 bg-gray-50'}`}>
                         통계보기
                     </button>
                 </div>
