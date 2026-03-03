@@ -123,6 +123,18 @@ export interface FarmCrop {
     available_units: string[];
     sort_order: number;
     is_active: boolean;
+    category: 'crop' | 'processed'; // 'crop' = 원물, 'processed' = 가공품
+    created_at: string;
+}
+
+// [안3] 기타수입 관리 (영농지원금, 농지임대, 재난지원금 등)
+export interface OtherIncome {
+    id: string;
+    farm_id: string;
+    amount: number;
+    income_type: string;
+    description: string | null;
+    income_date: string;
     created_at: string;
 }
 

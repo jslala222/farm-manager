@@ -200,22 +200,27 @@ export default function SalesPage() {
 
                 {/* [작물 자동 등분 레이아웃] */}
                 <div className="bg-white/80 backdrop-blur-md p-3 rounded-3xl border border-white shadow-sm space-y-3">
-                    <div className="flex gap-1.5">
-                        {farmCrops.map((crop) => (
+                    <div className="flex gap-1.5 flex-wrap">
+                        {farmCrops.map((crop) => {
+                            const isProcessed = crop.category === 'processed';
+                            return (
                             <button key={crop.id}
                                 onClick={() => {
                                     setCropName(crop.crop_name);
-                                    // [핵심] 작물 선택 시 해당 작물의 첫 번째 단위로 강제 업데이트
                                     if (crop.available_units && crop.available_units.length > 0) {
                                         setSaleUnit(crop.available_units[0]);
                                     }
                                 }}
-                                className={`flex-1 flex flex-col items-center justify-center py-2.5 rounded-2xl border-2 transition-all gap-1 min-w-0 animate-in zoom-in-95 duration-200
-                                ${cropName === crop.crop_name ? 'bg-emerald-50 border-emerald-500 shadow-sm ring-2 ring-emerald-100' : 'bg-white border-slate-50 opacity-40'}`}>
+                                className={`flex-1 min-w-[60px] flex flex-col items-center justify-center py-2.5 rounded-2xl border-2 transition-all gap-1 animate-in zoom-in-95 duration-200
+                                ${cropName === crop.crop_name
+                                    ? (isProcessed ? 'bg-amber-50 border-amber-500 shadow-sm ring-2 ring-amber-100' : 'bg-emerald-50 border-emerald-500 shadow-sm ring-2 ring-emerald-100')
+                                    : 'bg-white border-slate-50 opacity-40'}`}>
                                 <span className="text-2xl leading-none">{crop.crop_icon || '📦'}</span>
                                 <span className="text-[9px] font-black text-slate-800 tracking-tighter truncate w-full text-center px-1">{crop.crop_name}</span>
+                                {isProcessed && <span className="text-[7px] font-black text-amber-500 -mt-0.5">가공품</span>}
                             </button>
-                        ))}
+                            );
+                        })}
                     </div>
                     {/* [인라인 단위 선택] - 작물에 종속되어 표시됨 */}
                     <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-hide bg-slate-50/50 p-1 rounded-xl border border-slate-100">

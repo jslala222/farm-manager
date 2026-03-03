@@ -21,7 +21,8 @@ import {
     Truck,
     CheckCircle,
     Package2,
-    ClipboardList
+    ClipboardList,
+    Wallet
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { useEffect, useState } from "react";
@@ -35,6 +36,7 @@ const navItems = [
     { href: "/bulk", label: "납품", icon: Building2 },
     { href: "/courier", label: "택배", icon: Truck },
     { href: "/expenses", label: "지출 관리", icon: Receipt },
+    { href: "/other-income", label: "기타수입", icon: Wallet },
     { href: "/settled", label: "정산완료(거래처)", icon: CheckCircle },
     { href: "/b2c-settled", label: "정산완료(택배거래)", icon: Package2 },
     { href: "/labor", label: "일일 현황", icon: ClipboardList },

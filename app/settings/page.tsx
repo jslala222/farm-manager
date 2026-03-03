@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Save, Plus, Trash2, Home, LayoutGrid, AlertCircle, Building2, CheckCircle2, Sprout, GripVertical } from "lucide-react";
+import { Save, Plus, Trash2, Home, LayoutGrid, AlertCircle, Building2, CheckCircle2, Sprout, GripVertical, Factory } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { supabase, Farm, FarmHouse, FarmCrop } from "@/lib/supabase";
 import { formatPhone, formatBusinessNumber } from "@/lib/utils";
@@ -22,6 +22,10 @@ export default function SettingsPage() {
     const [newCropName, setNewCropName] = useState('');
     const [newCropIcon, setNewCropIcon] = useState('🌱');
     const [loadingCrops, setLoadingCrops] = useState(false);
+
+    // [안3] 가공품 관리 상태
+    const [newProcessedName, setNewProcessedName] = useState('');
+    const [newProcessedIcon, setNewProcessedIcon] = useState('🍯');
 
     // 컴포넌트 마운트 시 초기화 확인
     useEffect(() => {
@@ -244,37 +248,42 @@ export default function SettingsPage() {
         setLoadingCrops(false);
     };
 
-    const addCrop = async () => {
-        if (!newCropName.trim() || !storeFarm?.id) return;
-        const exists = farmCrops.some(c => c.crop_name === newCropName.trim());
-        if (exists) { alert('이미 등록된 작물입니다.'); return; }
+    const addCrop = async (category: 'crop' | 'processed' = 'crop') => {
+        const name = category === 'crop' ? newCropName : newProcessedName;
+        const icon = category === 'crop' ? newCropIcon : newProcessedIcon;
+        if (!name.trim() || !storeFarm?.id) return;
+        const exists = farmCrops.some(c => c.crop_name === name.trim());
+        if (exists) { alert('이미 등록된 항목입니다.'); return; }
 
-        const defaultUnits = newCropName.trim() === '딸기' ? ['박스', 'kg', '다라'] : ['kg', '박스', '포대'];
+        const defaultUnits = name.trim() === '딸기' ? ['박스', 'kg', '다라'] :
+            category === 'processed' ? ['개', '병', '박스', 'kg'] : ['kg', '박스', '포대'];
         const { error } = await supabase.from('farm_crops').insert({
             farm_id: storeFarm.id,
-            crop_name: newCropName.trim(),
-            crop_icon: newCropIcon,
+            crop_name: name.trim(),
+            crop_icon: icon,
             default_unit: defaultUnits[0],
             available_units: defaultUnits,
             sort_order: farmCrops.length,
+            category,
         });
-        if (error) { alert(`작물 추가 실패: ${error.message}`); return; }
-        setNewCropName('');
-        setNewCropIcon('🌱');
+        if (error) { alert(`추가 실패: ${error.message}`); return; }
+        if (category === 'crop') { setNewCropName(''); setNewCropIcon('🌱'); }
+        else { setNewProcessedName(''); setNewProcessedIcon('🍯'); }
         fetchCrops();
     };
 
-    const deleteCrop = async (id: string, name: string) => {
-        if (!confirm(`"${name}" 작물을 삭제하시겠습니까? (기존 판매/수확 데이터는 유지됩니다)`)) return;
+    const deleteCrop = async (id: string, name: string, isProcessed = false) => {
+        const label = isProcessed ? '가공품' : '작물';
+        if (!confirm(`"${name}" ${label}을 삭제하시겠습니까? (기존 판매/수확 데이터는 유지됩니다)`)) return;
         await supabase.from('farm_crops').delete().eq('id', id);
         fetchCrops();
     };
 
-    const addPresetCrops = async (presets: { name: string; icon: string; units: string[] }[]) => {
+    const addPresetCrops = async (presets: { name: string; icon: string; units: string[] }[], category: 'crop' | 'processed' = 'crop') => {
         if (!storeFarm?.id) return;
         const existing = farmCrops.map(c => c.crop_name);
         const newOnes = presets.filter(p => !existing.includes(p.name));
-        if (newOnes.length === 0) { alert('모든 추천 작물이 이미 등록되어 있습니다.'); return; }
+        if (newOnes.length === 0) { alert('모든 항목이 이미 등록되어 있습니다.'); return; }
         const inserts = newOnes.map((p, i) => ({
             farm_id: storeFarm.id,
             crop_name: p.name,
@@ -282,6 +291,7 @@ export default function SettingsPage() {
             default_unit: p.units[0],
             available_units: p.units,
             sort_order: farmCrops.length + i,
+            category,
         }));
         const { error } = await supabase.from('farm_crops').insert(inserts);
         if (error) { alert(`프리셋 추가 실패: ${error.message}`); return; }
@@ -310,6 +320,30 @@ export default function SettingsPage() {
             { name: '두릉', icon: '🌱', units: ['kg', '근', '단'] },
         ],
     } as Record<string, { name: string; icon: string; units: string[] }[]>;
+
+    // 가공품 추천 프리셋 (안3)
+    const PROCESSED_PRESETS = {
+        '딸기 가공품': [
+            { name: '딸기잼', icon: '🍯', units: ['개', '병', '박스'] },
+            { name: '딸기청', icon: '🫙', units: ['병', '박스'] },
+            { name: '딸기즙', icon: '🧃', units: ['팩', '박스'] },
+            { name: '냉동딸기', icon: '🧊', units: ['kg', '박스'] },
+        ],
+        '주스/음료류': [
+            { name: '포도주스', icon: '🍇', units: ['병', '박스'] },
+            { name: '사과주스', icon: '🍎', units: ['병', '박스'] },
+            { name: '토마토주스', icon: '🍅', units: ['병', '박스'] },
+        ],
+        '건조/절임류': [
+            { name: '건고추', icon: '🌶️', units: ['kg', '근', '박스'] },
+            { name: '말린고구마', icon: '🍠', units: ['봉', '박스'] },
+            { name: '절임류', icon: '🥒', units: ['kg', '통', '박스'] },
+        ],
+    } as Record<string, { name: string; icon: string; units: string[] }[]>;
+
+    // 작물 필터링 (원물 / 가공품)
+    const cropItems = farmCrops.filter(c => (c.category || 'crop') === 'crop');
+    const processedItems = farmCrops.filter(c => c.category === 'processed');
 
 
     const field = (label: string, key: keyof Farm, type = "text", placeholder = "") => (
@@ -459,7 +493,7 @@ export default function SettingsPage() {
                             재배 작물 관리
                         </h2>
                         <span className="px-3 py-1 bg-green-50 text-green-600 rounded-full text-xs font-bold">
-                            {farmCrops.length}개 등록
+                            {cropItems.length}개 등록
                         </span>
                     </div>
 
@@ -470,7 +504,7 @@ export default function SettingsPage() {
                             <input type="text" value={newCropName}
                                 onChange={(e) => setNewCropName(e.target.value)}
                                 placeholder="작물명 입력 (예: 딸기, 송이버섯, 참외...)"
-                                onKeyDown={(e) => e.key === 'Enter' && addCrop()}
+                                onKeyDown={(e) => e.key === 'Enter' && addCrop('crop')}
                                 className="w-full p-4 pl-12 bg-gray-50 border border-transparent rounded-2xl focus:bg-white focus:border-green-200 focus:ring-4 focus:ring-green-50/50 outline-none transition-all shadow-inner" />
                         </div>
                         <select value={newCropIcon} onChange={(e) => setNewCropIcon(e.target.value)}
@@ -487,7 +521,7 @@ export default function SettingsPage() {
                             <option value="🌱">🌱</option>
                             <option value="📦">📦</option>
                         </select>
-                        <button onClick={addCrop}
+                        <button onClick={() => addCrop('crop')}
                             className="bg-green-600 text-white px-6 py-4 rounded-2xl font-bold hover:bg-green-700 active:scale-95 transition-all shadow-lg shadow-green-100 flex items-center gap-2 shrink-0">
                             <Plus className="w-5 h-5" />
                             <span>추가</span>
@@ -499,7 +533,7 @@ export default function SettingsPage() {
                         <p className="text-[10px] font-black text-gray-700 uppercase tracking-widest ml-1">한국 농장 프리셋 (클릭하면 자동 추가)</p>
                         <div className="flex gap-2 flex-wrap">
                             {Object.entries(PRESETS).map(([label, crops]) => (
-                                <button key={label} onClick={() => addPresetCrops([...crops])}
+                                <button key={label} onClick={() => addPresetCrops([...crops], 'crop')}
                                     className="px-4 py-2.5 bg-gray-50 hover:bg-green-50 border border-gray-100 hover:border-green-200 rounded-xl text-xs font-bold text-gray-700 hover:text-green-600 transition-all">
                                     {label}
                                 </button>
@@ -511,7 +545,7 @@ export default function SettingsPage() {
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                         {loadingCrops ? (
                             <div className="col-span-full py-10 text-center text-gray-600">작물 목록 로딩 중...</div>
-                        ) : farmCrops.length === 0 ? (
+                        ) : cropItems.length === 0 ? (
                             <div className="col-span-full text-center py-16 bg-gray-50/50 rounded-[2rem] border-2 border-dashed border-gray-100">
                                 <Sprout className="w-12 h-12 text-gray-200 mx-auto mb-4" />
                                 <p className="text-gray-700 font-medium">등록된 작물이 없습니다.<br />
@@ -519,13 +553,106 @@ export default function SettingsPage() {
                                 </p>
                             </div>
                         ) : (
-                            farmCrops.map((crop) => (
+                            cropItems.map((crop) => (
                                 <div key={crop.id}
                                     className="group flex flex-col items-center justify-center p-5 rounded-[1.5rem] border-2 bg-white border-green-50 shadow-sm hover:shadow-green-100/50 hover:border-green-200 transition-all relative">
                                     <button onClick={() => deleteCrop(crop.id, crop.crop_name)}
                                         className="absolute top-2 right-2 text-gray-600 hover:text-red-500 transition-all p-1.5 opacity-0 group-hover:opacity-100 scale-75 hover:scale-100">
                                         <Trash2 className="w-4 h-4" />
                                     </button>
+                                    <span className="text-3xl mb-1">{crop.crop_icon}</span>
+                                    <span className="text-sm font-black text-gray-800">{crop.crop_name}</span>
+                                    <span className="text-[9px] text-gray-700 font-bold mt-0.5">
+                                        {crop.available_units?.join(' · ') || crop.default_unit}
+                                    </span>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </section>
+            )}
+
+            {/* [안3] 가공품 관리 섹션 */}
+            {storeFarm?.id && (
+                <section className="bg-white rounded-[2rem] shadow-xl shadow-amber-50/30 border border-amber-100 p-3 md:p-10 space-y-8 animate-in slide-in-from-bottom-8 duration-700">
+                    <div className="flex items-center justify-between gap-4">
+                        <h2 className="text-xl font-bold text-gray-800 flex items-center gap-3">
+                            <span className="w-2 h-7 bg-amber-400 rounded-full"></span>
+                            가공품 관리
+                        </h2>
+                        <span className="px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-xs font-bold">
+                            {processedItems.length}개 등록
+                        </span>
+                    </div>
+
+                    <p className="text-xs text-gray-500 font-medium leading-relaxed bg-amber-50/50 p-3 rounded-xl border border-amber-100">
+                        🏭 딸기잼, 포도주스, 냉동딸기 등 <strong>가공품</strong>을 등록하면 납품/택배 매출에서 <strong>원물 vs 가공품</strong>을 구분하여 관리할 수 있습니다.
+                    </p>
+
+                    {/* 가공품 추가 입력 */}
+                    <div className="flex gap-3">
+                        <div className="relative flex-1 group">
+                            <Factory className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-amber-300 group-focus-within:text-amber-500 transition-colors" />
+                            <input type="text" value={newProcessedName}
+                                onChange={(e) => setNewProcessedName(e.target.value)}
+                                placeholder="가공품명 입력 (예: 딸기잼, 포도주스...)"
+                                onKeyDown={(e) => e.key === 'Enter' && addCrop('processed')}
+                                className="w-full p-4 pl-12 bg-gray-50 border border-transparent rounded-2xl focus:bg-white focus:border-amber-200 focus:ring-4 focus:ring-amber-50/50 outline-none transition-all shadow-inner" />
+                        </div>
+                        <select value={newProcessedIcon} onChange={(e) => setNewProcessedIcon(e.target.value)}
+                            className="w-16 text-center text-2xl bg-gray-50 border border-transparent rounded-2xl focus:border-amber-200 outline-none cursor-pointer">
+                            <option value="🍯">🍯</option>
+                            <option value="🫙">🫙</option>
+                            <option value="🧃">🧃</option>
+                            <option value="🧊">🧊</option>
+                            <option value="🍇">🍇</option>
+                            <option value="🍎">🍎</option>
+                            <option value="🌶️">🌶️</option>
+                            <option value="🍠">🍠</option>
+                            <option value="🥒">🥒</option>
+                            <option value="🏭">🏭</option>
+                            <option value="📦">📦</option>
+                        </select>
+                        <button onClick={() => addCrop('processed')}
+                            className="bg-amber-600 text-white px-6 py-4 rounded-2xl font-bold hover:bg-amber-700 active:scale-95 transition-all shadow-lg shadow-amber-100 flex items-center gap-2 shrink-0">
+                            <Plus className="w-5 h-5" />
+                            <span>추가</span>
+                        </button>
+                    </div>
+
+                    {/* 가공품 추천 프리셋 */}
+                    <div className="space-y-2">
+                        <p className="text-[10px] font-black text-gray-700 uppercase tracking-widest ml-1">가공품 프리셋 (클릭하면 자동 추가)</p>
+                        <div className="flex gap-2 flex-wrap">
+                            {Object.entries(PROCESSED_PRESETS).map(([label, items]) => (
+                                <button key={label} onClick={() => addPresetCrops([...items], 'processed')}
+                                    className="px-4 py-2.5 bg-gray-50 hover:bg-amber-50 border border-gray-100 hover:border-amber-200 rounded-xl text-xs font-bold text-gray-700 hover:text-amber-600 transition-all">
+                                    🏭 {label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* 등록된 가공품 목록 */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                        {processedItems.length === 0 ? (
+                            <div className="col-span-full text-center py-16 bg-amber-50/30 rounded-[2rem] border-2 border-dashed border-amber-100">
+                                <Factory className="w-12 h-12 text-amber-200 mx-auto mb-4" />
+                                <p className="text-gray-700 font-medium">등록된 가공품이 없습니다.<br />
+                                    <span className="text-xs text-gray-600">위의 프리셋을 누르거나 직접 입력해 주세요!</span>
+                                </p>
+                            </div>
+                        ) : (
+                            processedItems.map((crop) => (
+                                <div key={crop.id}
+                                    className="group flex flex-col items-center justify-center p-5 rounded-[1.5rem] border-2 bg-white border-amber-50 shadow-sm hover:shadow-amber-100/50 hover:border-amber-200 transition-all relative">
+                                    <button onClick={() => deleteCrop(crop.id, crop.crop_name, true)}
+                                        className="absolute top-2 right-2 text-gray-600 hover:text-red-500 transition-all p-1.5 opacity-0 group-hover:opacity-100 scale-75 hover:scale-100">
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                    <div className="absolute top-2 left-2">
+                                        <span className="text-[8px] font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-200">가공품</span>
+                                    </div>
                                     <span className="text-3xl mb-1">{crop.crop_icon}</span>
                                     <span className="text-sm font-black text-gray-800">{crop.crop_name}</span>
                                     <span className="text-[9px] text-gray-700 font-bold mt-0.5">

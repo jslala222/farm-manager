@@ -23,8 +23,11 @@ import {
     RefreshCcw,
     X,
     Utensils,
+    Wallet,
+    Factory,
     Calendar as CalendarIcon
 } from "lucide-react";
+import Link from "next/link";
 import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
 import { formatCurrency } from "@/lib/utils";
@@ -46,6 +49,13 @@ export default function FinancePage() {
     const [unsettledB2B, setUnsettledB2B] = useState(0); // 미결산 B2B
     const [unsettledRecords, setUnsettledRecords] = useState<any[]>([]); // 미결산 상세 내역
     const [dbError, setDbError] = useState<string | null>(null); // DB 스키마 오류 상태
+
+    // [안3] 원물/가공품/기타수입 분리
+    const [cropRevenue, setCropRevenue] = useState(0);       // 원물 매출
+    const [processedRevenue, setProcessedRevenue] = useState(0); // 가공품 매출
+    const [otherIncomeTotal, setOtherIncomeTotal] = useState(0); // 기타수입 합계
+    const [otherIncomeCount, setOtherIncomeCount] = useState(0); // 기타수입 건수
+    const [processedCropNames, setProcessedCropNames] = useState<string[]>([]); // 가공품 이름 목록
 
     // Detailed Stats
     const [b2bRevenue, setB2bRevenue] = useState(0);
@@ -191,21 +201,49 @@ export default function FinancePage() {
 
 
             // 2. 지출 데이터 (Expenditures) - 카테고리 포함 조회
-            const { data: expensesData } = await supabase
-                .from('expenditures')
-                .select('amount, category, main_category, expense_date, notes, payment_method')
-                .eq('farm_id', farm.id)
-                .gte('expense_date', startStr.split('T')[0])
-                .lte('expense_date', endStr.split('T')[0]);
+            const [expensesResult, attendanceResult, farmCropsResult, otherIncomesResult] = await Promise.all([
+                supabase
+                    .from('expenditures')
+                    .select('amount, category, main_category, expense_date, notes, payment_method')
+                    .eq('farm_id', farm.id)
+                    .gte('expense_date', startStr.split('T')[0])
+                    .lte('expense_date', endStr.split('T')[0]),
+                // 3. 인건비 데이터 (Attendance)
+                supabase
+                    .from('attendance_records')
+                    .select('daily_wage, headcount, worker_name, work_date')
+                    .eq('farm_id', farm.id)
+                    .eq('is_present', true)
+                    .gte('work_date', startStr.split('T')[0])
+                    .lte('work_date', endStr.split('T')[0]),
+                // 4. [안3] farm_crops 로드 (원물/가공품 구분용)
+                supabase
+                    .from('farm_crops')
+                    .select('crop_name, category')
+                    .eq('farm_id', farm.id)
+                    .is('is_active', true),
+                // 5. [안3] 기타수입 로드
+                supabase
+                    .from('other_incomes')
+                    .select('amount, income_type, income_date')
+                    .eq('farm_id', farm.id)
+                    .gte('income_date', cashStartDate)
+                    .lte('income_date', cashEndDate)
+            ]);
 
-            // 3. 인건비 데이터 (Attendance)
-            const { data: attendanceData } = await supabase
-                .from('attendance_records')
-                .select('daily_wage, headcount, worker_name, work_date')
-                .eq('farm_id', farm.id)
-                .eq('is_present', true)
-                .gte('work_date', startStr.split('T')[0])
-                .lte('work_date', endStr.split('T')[0]);
+            const expensesData = expensesResult.data;
+            const attendanceData = attendanceResult.data;
+
+            // [안3] 가공품 crop_name 목록 추출
+            const processedNames = (farmCropsResult.data || [])
+                .filter((c: any) => c.category === 'processed')
+                .map((c: any) => c.crop_name);
+            setProcessedCropNames(processedNames);
+
+            // [안3] 기타수입 합계
+            const otherInc = (otherIncomesResult.data || []).reduce((sum: number, i: any) => sum + (i.amount || 0), 0);
+            setOtherIncomeTotal(otherInc);
+            setOtherIncomeCount((otherIncomesResult.data || []).length);
 
             let totalRev = 0;
             let b2bRev = 0;
@@ -217,31 +255,32 @@ export default function FinancePage() {
             const uRecords: any[] = [];
             const newUnsettledB2c: any[] = [];
 
+            // [안3] 원물 vs 가공품 매출 분리 추적
+            let rawCropRev = 0;    // 원물 매출
+            let procCropRev = 0;   // 가공품 매출
+
             salesData?.forEach((rec: any) => {
                 const price = settlementService.calculateRecordTotal(rec);
                 const isB2C = settlementService.isB2C(rec);
-                const isB2B = !isB2C && settlementService.isB2B(rec); // B2C가 아닌 경우에만 B2B 판별
+                const isB2B = !isB2C && settlementService.isB2B(rec);
 
-                // [방안1] 간단하고 명확한 처리 로직
-                // B2C(택배)를 먼저 판별: delivery_method='courier'이면 partner_id 유무와 무관하게 B2C
-                // B2B: 택배가 아닌 거래처 납품 (settled_at 기준)
+                // [안3] 가공품 여부 판단: crop_name이 processedNames에 포함되면 가공품
+                const isProcessedItem = processedNames.includes(rec.crop_name);
                 
                 if (isB2C) {
-                    // [안2 현금주의] B2C 월 귀속: settled_at(입금일) 기준
-                    // 입금된 건만 매출 반영, 미입금은 어떤 달에도 매출 미반영
                     if (rec.is_settled) {
-                        // settled_at 기준 월 검증 (쿼리에서 이미 필터했지만 안전장치)
                         const settledDate = String(rec.settled_at || rec.recorded_at || '').split('T')[0];
                         const settledMonth = settledDate.slice(0, 7);
                         
                         if (settledMonth === selectedMonth) {
                             totalRev += price;
                             b2cRev += price;
-                            // 택배비도 입금월 기준으로 귀속
                             totalShipping += (rec.shipping_cost || 0) + (rec.packaging_cost || 0);
+                            // [안3] 원물/가공품 분리
+                            if (isProcessedItem) procCropRev += price;
+                            else rawCropRev += price;
                         }
                     } else {
-                        // 미정산 B2C: 매출 미반영, 미결재 목록에만 표시
                         newUnsettledB2c.push(rec);
                     }
                 } else if (isB2B) {
@@ -251,6 +290,9 @@ export default function FinancePage() {
                             totalRev += price;
                             b2bRev += price;
                             settledCount++;
+                            // [안3] 원물/가공품 분리
+                            if (isProcessedItem) procCropRev += price;
+                            else rawCropRev += price;
                         }
                     } else if (!rec.is_settled) {
                         unsettledAmt += price;
@@ -259,6 +301,10 @@ export default function FinancePage() {
                     }
                 }
             });
+
+            // [안3] 원물/가공품 매출 state 업데이트
+            setCropRevenue(rawCropRev);
+            setProcessedRevenue(procCropRev);
 
             // [bkit 데이터 출처 정밀화] 
             // 1. 인건비 및 식대 분리 집계
@@ -300,10 +346,10 @@ export default function FinancePage() {
             const totalHousehold = householdExpenses.reduce((acc: any, curr: any) => acc + (curr.amount || 0), 0) || 0;
 
             // [중요] 순이익 계산 로직 수정
-            // 순이익 = (B2B 매출 + B2C 매출) - (인건비 + 식대 + 택배/자재비 + 영농지출 + 가계)
+            // 순이익 = (B2B 매출 + B2C 매출 + 기타수입) - (인건비 + 식대 + 택배/자재비 + 영농지출 + 가계)
             // totalShipping(택배비)를 경비에 포함시켜야 함
             const totalCost = finalWages + finalMeals + totalShipping + totalExp + totalHousehold;
-            const netProfit = totalRev - totalCost;
+            const netProfit = totalRev + otherInc - totalCost;
 
             setRevenue(totalRev);
             setB2bRevenue(b2bRev);
@@ -544,8 +590,9 @@ export default function FinancePage() {
         // ... (Legacy or fallback)
     };
 
-    const netProfit = revenue - laborCost - expense - shippingCost - householdCost;
-    const profitMargin = revenue > 0 ? (netProfit / revenue) * 100 : 0;
+    const netProfit = revenue + otherIncomeTotal - laborCost - expense - shippingCost - householdCost - mealCost;
+    const totalIncome = revenue + otherIncomeTotal;
+    const profitMargin = totalIncome > 0 ? (netProfit / totalIncome) * 100 : 0;
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20 md:pb-12">
@@ -619,12 +666,37 @@ export default function FinancePage() {
                                 <p className="text-sm text-gray-200 font-bold mt-1">
                                     납품 <span className="text-white font-black">{formatCurrency(b2bRevenue)}</span> + 택배 <span className="text-white font-black">{formatCurrency(b2cRevenue)}</span>
                                 </p>
+                                {/* [안3] 원물/가공품 분리 표시 */}
+                                {processedRevenue > 0 && (
+                                    <p className="text-xs text-gray-300 font-bold mt-1.5 flex items-center gap-1">
+                                        <span className="inline-block w-1.5 h-1.5 bg-green-400 rounded-full"></span>
+                                        원물 <span className="text-white font-black">{formatCurrency(cropRevenue)}</span>
+                                        <span className="mx-1 text-white/30">|</span>
+                                        <span className="inline-block w-1.5 h-1.5 bg-amber-400 rounded-full"></span>
+                                        가공품 <span className="text-amber-300 font-black">{formatCurrency(processedRevenue)}</span>
+                                    </p>
+                                )}
+                                {/* [안3] 기타수입 표시 */}
+                                {otherIncomeTotal > 0 && (
+                                    <p className="text-xs text-gray-300 font-bold mt-1 flex items-center gap-1">
+                                        <span className="inline-block w-1.5 h-1.5 bg-teal-400 rounded-full"></span>
+                                        기타수입 <span className="text-teal-300 font-black">{formatCurrency(otherIncomeTotal)}</span>
+                                        <span className="text-[10px] text-gray-400 ml-1">({otherIncomeCount}건)</span>
+                                    </p>
+                                )}
                             </div>
                             <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/10">
                                 <div>
                                     <p className="text-gray-700 text-[8px] font-bold uppercase mb-0.5">총 지출액</p>
                                     <p className="text-xs font-black text-gray-200 break-all">{formatCurrency(laborCost + mealCost + expense + shippingCost + householdCost)}</p>
                                 </div>
+                                {/* [안3] 총 수입 (매출+기타수입) */}
+                                {otherIncomeTotal > 0 && (
+                                    <div className="text-right">
+                                        <p className="text-gray-700 text-[8px] font-bold uppercase mb-0.5">총 수입</p>
+                                        <p className="text-xs font-black text-teal-300 break-all">{formatCurrency(revenue + otherIncomeTotal)}</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -686,15 +758,16 @@ export default function FinancePage() {
                         <p className="text-[9px] text-gray-700 font-bold">생활비/병원비/경조사 등</p>
                     </button>
 
-                    {/* 특이사항 카드 (비활성) */}
-                    <div className="bg-white p-4 rounded-[2rem] border-2 border-orange-100 shadow-sm space-y-1.5 relative overflow-hidden opacity-60">
+                    {/* [안3] 기타수입 카드 (활성) */}
+                    <Link href="/other-income" className="bg-white p-4 rounded-[2rem] border-2 border-teal-100 shadow-sm space-y-1.5 relative overflow-hidden text-left hover:border-teal-300 hover:shadow-md active:scale-[0.97] transition-all block">
                         <div className="flex items-center gap-1.5 mb-1">
-                            <div className="p-1.5 bg-orange-50 rounded-lg shrink-0"><AlertTriangle className="w-3.5 h-3.5 text-orange-600" /></div>
-                            <span className="text-[9px] font-black text-gray-700 uppercase tracking-wide truncate">특이사항</span>
+                            <div className="p-1.5 bg-teal-50 rounded-lg shrink-0"><Wallet className="w-3.5 h-3.5 text-teal-600" /></div>
+                            <span className="text-[9px] font-black text-gray-700 uppercase tracking-wide truncate">기타수입</span>
+                            <ChevronRight className="w-3 h-3 text-gray-400 ml-auto shrink-0" />
                         </div>
-                        <p className="text-sm font-black text-gray-900 break-all">0원</p>
-                        <p className="text-[9px] text-gray-700 font-bold">비정기/돌발 지출</p>
-                    </div>
+                        <p className="text-sm font-black text-gray-900 break-all">{formatCurrency(otherIncomeTotal)}</p>
+                        <p className="text-[9px] text-gray-700 font-bold">영농지원금/임대수익 ({otherIncomeCount}건)</p>
+                    </Link>
                 </div>
 
                 {/* [bkit 판매 달력 토글] */}
@@ -1059,6 +1132,52 @@ export default function FinancePage() {
                             </div>
                         </div>
                     </div>
+
+                    {/* [안3] 원물/가공품 매출 비중 */}
+                    {processedRevenue > 0 && (
+                        <div className="pt-3 mt-3 border-t border-gray-100 space-y-3">
+                            <h4 className="text-xs font-black text-gray-600 flex items-center gap-1.5">
+                                <Factory className="w-3.5 h-3.5 text-gray-500" /> 상품 유형별
+                            </h4>
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-end">
+                                    <span className="text-xs font-black text-emerald-700 flex items-center gap-1">
+                                        <span className="w-2 h-2 bg-emerald-500 rounded-full"></span> 원물
+                                    </span>
+                                    <span className="text-sm font-black text-gray-900">{formatCurrency(cropRevenue)}</span>
+                                </div>
+                                <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                                    <div className="h-full bg-emerald-500 rounded-full transition-all duration-1000"
+                                        style={{ width: `${(cropRevenue / (revenue || 1)) * 100}%` }}></div>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-end">
+                                    <span className="text-xs font-black text-amber-700 flex items-center gap-1">
+                                        <span className="w-2 h-2 bg-amber-500 rounded-full"></span> 가공품
+                                    </span>
+                                    <span className="text-sm font-black text-gray-900">{formatCurrency(processedRevenue)}</span>
+                                </div>
+                                <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                                    <div className="h-full bg-amber-500 rounded-full transition-all duration-1000"
+                                        style={{ width: `${(processedRevenue / (revenue || 1)) * 100}%` }}></div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* [안3] 기타수입 비중 */}
+                    {otherIncomeTotal > 0 && (
+                        <div className="pt-3 mt-1 border-t border-gray-100">
+                            <div className="flex justify-between items-center">
+                                <span className="text-xs font-black text-teal-700 flex items-center gap-1">
+                                    <Wallet className="w-3 h-3 text-teal-500" /> 기타수입
+                                </span>
+                                <Link href="/other-income" className="text-sm font-black text-teal-600 hover:underline">{formatCurrency(otherIncomeTotal)}</Link>
+                            </div>
+                            <p className="text-[10px] text-gray-500 mt-0.5">영농지원금·임대수익 등 ({otherIncomeCount}건)</p>
+                        </div>
+                    )}
                 </section>
 
                 {/* 기타 지출 상세 */}
