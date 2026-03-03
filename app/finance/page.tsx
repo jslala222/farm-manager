@@ -19,6 +19,7 @@ import {
     Download,
     BarChart3,
     AlertTriangle,
+    Home,
     RefreshCcw,
     X,
     Utensils,
@@ -39,7 +40,8 @@ export default function FinancePage() {
     const [revenue, setRevenue] = useState(0);        // 총 매출
     const [laborCost, setLaborCost] = useState(0);    // 총 인건비
     const [mealCost, setMealCost] = useState(0);      // 식대 및 새참비
-    const [expense, setExpense] = useState(0);        // 일반 지출
+    const [expense, setExpense] = useState(0);        // 일반 지출 (영농)
+    const [householdCost, setHouseholdCost] = useState(0); // 가계 지출 (생활비/병원비 등)
     const [shippingCost, setShippingCost] = useState(0); // 택배비(자재비 포함)
     const [unsettledB2B, setUnsettledB2B] = useState(0); // 미결산 B2B
     const [unsettledRecords, setUnsettledRecords] = useState<any[]>([]); // 미결산 상세 내역
@@ -66,6 +68,21 @@ export default function FinancePage() {
     const [expandedPartners, setExpandedPartners] = useState<string[]>([]);
     const [showCalendar, setShowCalendar] = useState(false);
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+
+    // B2C 입금확인 모달용 상태
+    const [b2cConfirmModal, setB2cConfirmModal] = useState(false);
+    const [b2cConfirmRecord, setB2cConfirmRecord] = useState<any>(null);
+    const [b2cConfirmDate, setB2cConfirmDate] = useState(new Date().toISOString().split('T')[0]);
+    const [b2cConfirmLoading, setB2cConfirmLoading] = useState(false);
+
+    // 지출 상세 모달용 상태
+    const [expenseDetailModal, setExpenseDetailModal] = useState<'labor' | 'meal' | 'shipping' | 'farming' | 'household' | null>(null);
+    const [wageDetails, setWageDetails] = useState<any[]>([]);
+    const [mealDetails, setMealDetails] = useState<any[]>([]);
+    const [shippingDetails, setShippingDetails] = useState<any[]>([]);
+    const [farmingDetails, setFarmingDetails] = useState<any[]>([]);
+    const [householdDetails, setHouseholdDetails] = useState<any[]>([]);
+    const [attendanceDetails, setAttendanceDetails] = useState<any[]>([]);
 
     useEffect(() => {
         if (initialized && farm?.id) {
@@ -114,23 +131,25 @@ export default function FinancePage() {
             const cashStartDate = `${selectedMonth}-01`;
             const cashEndDate = `${selectedMonth}-${lastDay}`;
 
-            // [bkit 전역 결산 엔진 - 3개 쿼리로 분리]
-            // 1. B2C (택배): delivery_method='courier' (recorded_at 기준만) - is_settled 무관
-            // 2. B2B (거래처): sale_type='b2b' (입금일 settled_at) 기준 + is_settled=true
-            // 3. 미정산 내역: 언제 납품이든 상관없이 전체 조회
+            // [bkit 전역 결산 엔진 - 3개 쿼리로 분리] (안2: 현금주의)
+            // 1. B2C (택배): settled_at 기준 (입금일 기준) + is_settled=true만
+            //    → 입금된 달에 매출 반영 (현금주의)
+            // 2. B2B (거래처): settled_at 기준 + is_settled=true
+            // 3. 미정산 내역: 전체 조회 (B2C + B2B 모두)
             
             // ⚠️ .or()는 복잡할 때 성능 문제 가능 → 별도 쿼리로 분리
             const [recordsB2CResult, recordsB2BResult, recordsUnsettledResult] = await Promise.all([
-                // [방안1] B2C (택배): recorded_at 기준만 사용 - is_settled 조건 제거!
+                // [안2] B2C (택배): settled_at 기준 (입금일 = 매출 귀속 월)
+                // 입금 완료된 건만 해당 월 매출로 인정
                 supabase
                     .from('sales_records')
                     .select('*, partner:partners(company_name), customer:customers(name)')
                     .eq('farm_id', farm.id)
-                    .eq('delivery_method', 'courier')  // ← sale_type 대신 delivery_method 사용
-                    // ← is_settled 조건 완전 제거 (정산여부 무관)
-                    .gte('recorded_at', `${cashStartDate}T00:00:00`)
-                    .lte('recorded_at', `${selectedMonth}-${lastDay}T23:59:59`)
-                    .order('recorded_at', { ascending: false }),
+                    .eq('delivery_method', 'courier')
+                    .eq('is_settled', true)
+                    .gte('settled_at', cashStartDate)
+                    .lte('settled_at', cashEndDate)
+                    .order('settled_at', { ascending: false }),
                 
                 // B2B settled_at 기준 + is_settled=true
                 supabase
@@ -143,7 +162,7 @@ export default function FinancePage() {
                     .lte('settled_at', cashEndDate)
                     .order('settled_at', { ascending: false }),
                 
-                // 미정산 (전체 날짜)
+                // 미정산 (전체 날짜 - B2C + B2B 모두)
                 supabase
                     .from('sales_records')
                     .select('*, partner:partners(company_name), customer:customers(name)')
@@ -174,7 +193,7 @@ export default function FinancePage() {
             // 2. 지출 데이터 (Expenditures) - 카테고리 포함 조회
             const { data: expensesData } = await supabase
                 .from('expenditures')
-                .select('amount, category, main_category')
+                .select('amount, category, main_category, expense_date, notes, payment_method')
                 .eq('farm_id', farm.id)
                 .gte('expense_date', startStr.split('T')[0])
                 .lte('expense_date', endStr.split('T')[0]);
@@ -182,7 +201,7 @@ export default function FinancePage() {
             // 3. 인건비 데이터 (Attendance)
             const { data: attendanceData } = await supabase
                 .from('attendance_records')
-                .select('daily_wage, headcount')
+                .select('daily_wage, headcount, worker_name, work_date')
                 .eq('farm_id', farm.id)
                 .eq('is_present', true)
                 .gte('work_date', startStr.split('T')[0])
@@ -200,14 +219,32 @@ export default function FinancePage() {
 
             salesData?.forEach((rec: any) => {
                 const price = settlementService.calculateRecordTotal(rec);
-                const isB2B = settlementService.isB2B(rec);
                 const isB2C = settlementService.isB2C(rec);
+                const isB2B = !isB2C && settlementService.isB2B(rec); // B2C가 아닌 경우에만 B2B 판별
 
                 // [방안1] 간단하고 명확한 처리 로직
-                // B2B: settled_at 기준 (입금 확정)
-                // B2C: recorded_at 기준 (판매일) - 쿼리에서 이미 월별 필터링됨
+                // B2C(택배)를 먼저 판별: delivery_method='courier'이면 partner_id 유무와 무관하게 B2C
+                // B2B: 택배가 아닌 거래처 납품 (settled_at 기준)
                 
-                if (isB2B) {
+                if (isB2C) {
+                    // [안2 현금주의] B2C 월 귀속: settled_at(입금일) 기준
+                    // 입금된 건만 매출 반영, 미입금은 어떤 달에도 매출 미반영
+                    if (rec.is_settled) {
+                        // settled_at 기준 월 검증 (쿼리에서 이미 필터했지만 안전장치)
+                        const settledDate = String(rec.settled_at || rec.recorded_at || '').split('T')[0];
+                        const settledMonth = settledDate.slice(0, 7);
+                        
+                        if (settledMonth === selectedMonth) {
+                            totalRev += price;
+                            b2cRev += price;
+                            // 택배비도 입금월 기준으로 귀속
+                            totalShipping += (rec.shipping_cost || 0) + (rec.packaging_cost || 0);
+                        }
+                    } else {
+                        // 미정산 B2C: 매출 미반영, 미결재 목록에만 표시
+                        newUnsettledB2c.push(rec);
+                    }
+                } else if (isB2B) {
                     if (rec.is_settled && rec.settled_at) {
                         const dateStr = String(rec.settled_at).split('T')[0];
                         if (dateStr.startsWith(selectedMonth)) {
@@ -220,23 +257,6 @@ export default function FinancePage() {
                         unsettledCount++;
                         uRecords.push(rec);
                     }
-                } else if (isB2C) {
-                    // B2C 월 귀속 검증: recorded_at이 선택된 월인지 확인
-                    // 쿼리3(미정산 전체)에서 다른 월의 B2C가 섞여들어올 수 있음
-                    const recDate = String(rec.recorded_at || '').split('T')[0]; // "2026-03-02"
-                    const recMonth = recDate.slice(0, 7); // "2026-03"
-                    
-                    if (recMonth === selectedMonth) {
-                        // 이번 달 B2C: 정산 여부와 무관하게 매출 인정 (recorded_at 기준)
-                        totalRev += price;
-                        b2cRev += price;
-                        totalShipping += (rec.shipping_cost || 0) + (rec.packaging_cost || 0);
-                        
-                        if (!rec.is_settled) {
-                            newUnsettledB2c.push(rec);
-                        }
-                    }
-                    // 다른 달 B2C(쿼리3에서 온 미정산): 매출에 합산하지 않음, 무시
                 }
             });
 
@@ -272,12 +292,17 @@ export default function FinancePage() {
             const normalExpenses = expensesData?.filter((e: any) =>
                 !wagesExpenses.includes(e) && !mealsExpenses.includes(e)
             ) || [];
-            const totalExp = normalExpenses.reduce((acc: any, curr: any) => acc + (curr.amount || 0), 0) || 0;
+
+            // 가계 지출 (생활비/병원비 등) 분리
+            const householdExpenses = normalExpenses.filter((e: any) => e.main_category === '가계생활');
+            const farmingExpenses = normalExpenses.filter((e: any) => e.main_category !== '가계생활');
+            const totalExp = farmingExpenses.reduce((acc: any, curr: any) => acc + (curr.amount || 0), 0) || 0;
+            const totalHousehold = householdExpenses.reduce((acc: any, curr: any) => acc + (curr.amount || 0), 0) || 0;
 
             // [중요] 순이익 계산 로직 수정
-            // 순이익 = (B2B 매출 + B2C 매출) - (인건비 + 식대 + 택배/자재비 + 기타 경비)
+            // 순이익 = (B2B 매출 + B2C 매출) - (인건비 + 식대 + 택배/자재비 + 영농지출 + 가계)
             // totalShipping(택배비)를 경비에 포함시켜야 함
-            const totalCost = finalWages + finalMeals + totalShipping + totalExp;
+            const totalCost = finalWages + finalMeals + totalShipping + totalExp + totalHousehold;
             const netProfit = totalRev - totalCost;
 
             setRevenue(totalRev);
@@ -287,6 +312,32 @@ export default function FinancePage() {
             setLaborCost(finalWages);
             setMealCost(finalMeals);
             setExpense(totalExp);
+            setHouseholdCost(totalHousehold);
+
+            // 상세 모달용 데이터 저장
+            setWageDetails(wagesExpenses);
+            setMealDetails(mealsExpenses);
+            setAttendanceDetails(attendanceData || []);
+            setFarmingDetails(farmingExpenses);
+            setHouseholdDetails(householdExpenses);
+
+            // 택배/자재비 상세: 입금 완료된 B2C 중 해당 월에 입금된 건만
+            const shippingDetailRecords = salesData.filter((rec: any) => {
+                if (!settlementService.isB2C(rec)) return false;
+                if (!rec.is_settled) return false; // 미정산은 제외
+                const settledDate = String(rec.settled_at || rec.recorded_at || '').split('T')[0];
+                const settledMonth = settledDate.slice(0, 7);
+                if (settledMonth !== selectedMonth) return false;
+                return (rec.shipping_cost || 0) + (rec.packaging_cost || 0) > 0;
+            }).map((rec: any) => ({
+                customer_name: rec.customer?.name || rec.customer_name || '미지정',
+                recorded_at: rec.recorded_at,
+                settled_at: rec.settled_at,
+                shipping_cost: rec.shipping_cost || 0,
+                packaging_cost: rec.packaging_cost || 0,
+                total: (rec.shipping_cost || 0) + (rec.packaging_cost || 0)
+            }));
+            setShippingDetails(shippingDetailRecords);
             setUnsettledB2B(unsettledAmt);
             setUnsettledB2bCount(unsettledCount);
             setSettledB2bCount(settledCount);
@@ -339,6 +390,7 @@ export default function FinancePage() {
             setLaborCost(finalWages);
             setMealCost(finalMeals);
             setExpense(totalExp);
+            setHouseholdCost(totalHousehold);
             setDbError(null);
 
         } catch (error: any) {
@@ -492,7 +544,7 @@ export default function FinancePage() {
         // ... (Legacy or fallback)
     };
 
-    const netProfit = revenue - laborCost - expense - shippingCost;
+    const netProfit = revenue - laborCost - expense - shippingCost - householdCost;
     const profitMargin = revenue > 0 ? (netProfit / revenue) * 100 : 0;
 
     return (
@@ -571,7 +623,7 @@ export default function FinancePage() {
                             <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/10">
                                 <div>
                                     <p className="text-gray-700 text-[8px] font-bold uppercase mb-0.5">총 지출액</p>
-                                    <p className="text-xs font-black text-gray-200 break-all">{formatCurrency(laborCost + mealCost + expense + shippingCost)}</p>
+                                    <p className="text-xs font-black text-gray-200 break-all">{formatCurrency(laborCost + mealCost + expense + shippingCost + householdCost)}</p>
                                 </div>
                             </div>
                         </div>
@@ -579,42 +631,69 @@ export default function FinancePage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                    {/* 인건비 섹션 */}
-                    <div className="bg-white p-4 rounded-[2rem] border border-gray-100 shadow-sm space-y-1.5 relative overflow-hidden">
+                    {/* 인건비 버튼 */}
+                    <button onClick={() => setExpenseDetailModal('labor')} className="bg-white p-4 rounded-[2rem] border border-gray-100 shadow-sm space-y-1.5 relative overflow-hidden text-left hover:border-blue-300 hover:shadow-md active:scale-[0.97] transition-all">
                         <div className="flex items-center gap-1.5 mb-1">
                             <div className="p-1.5 bg-blue-50 rounded-lg shrink-0"><Users className="w-3.5 h-3.5 text-blue-600" /></div>
                             <span className="text-[9px] font-black text-gray-700 uppercase tracking-wide truncate">순수 인건비</span>
+                            <ChevronRight className="w-3 h-3 text-gray-400 ml-auto shrink-0" />
                         </div>
                         <p className="text-sm font-black text-gray-900 break-all">{formatCurrency(laborCost)}</p>
                         <p className="text-[9px] text-gray-700 font-bold">일당/월급 등</p>
-                    </div>
+                    </button>
 
-                    {/* 식대 섹션 */}
-                    <div className="bg-white p-4 rounded-[2rem] border border-gray-100 shadow-sm space-y-1.5 relative overflow-hidden">
+                    {/* 식대 버튼 */}
+                    <button onClick={() => setExpenseDetailModal('meal')} className="bg-white p-4 rounded-[2rem] border border-gray-100 shadow-sm space-y-1.5 relative overflow-hidden text-left hover:border-amber-300 hover:shadow-md active:scale-[0.97] transition-all">
                         <div className="flex items-center gap-1.5 mb-1">
                             <div className="p-1.5 bg-amber-50 rounded-lg shrink-0"><Utensils className="w-3.5 h-3.5 text-amber-600" /></div>
                             <span className="text-[9px] font-black text-gray-700 uppercase tracking-wide truncate">식대/새참비</span>
+                            <ChevronRight className="w-3 h-3 text-gray-400 ml-auto shrink-0" />
                         </div>
                         <p className="text-sm font-black text-gray-900 break-all">{formatCurrency(mealCost)}</p>
                         <p className="text-[9px] text-gray-700 font-bold">식당/새참 비용</p>
-                    </div>
+                    </button>
 
-                    <div className="bg-white p-4 rounded-[2rem] border border-gray-100 shadow-sm space-y-1.5 relative overflow-hidden">
+                    {/* 택배/자재비 버튼 */}
+                    <button onClick={() => setExpenseDetailModal('shipping')} className="bg-white p-4 rounded-[2rem] border border-gray-100 shadow-sm space-y-1.5 relative overflow-hidden text-left hover:border-pink-300 hover:shadow-md active:scale-[0.97] transition-all">
                         <div className="flex items-center gap-1.5 mb-1">
                             <div className="p-1.5 bg-pink-50 rounded-lg shrink-0"><Truck className="w-3.5 h-3.5 text-pink-600" /></div>
                             <span className="text-[9px] font-black text-gray-700 uppercase tracking-wide truncate">택배/자재비</span>
+                            <ChevronRight className="w-3 h-3 text-gray-400 ml-auto shrink-0" />
                         </div>
                         <p className="text-sm font-black text-gray-900 break-all">{formatCurrency(shippingCost)}</p>
                         <p className="text-[9px] text-gray-700 font-bold">택배/자재비</p>
-                    </div>
+                    </button>
 
-                    <div className="bg-white p-4 rounded-[2rem] border border-gray-100 shadow-sm space-y-1.5 relative overflow-hidden">
+                    {/* 영농지출 버튼 */}
+                    <button onClick={() => setExpenseDetailModal('farming')} className="bg-white p-4 rounded-[2rem] border border-gray-100 shadow-sm space-y-1.5 relative overflow-hidden text-left hover:border-indigo-300 hover:shadow-md active:scale-[0.97] transition-all">
                         <div className="flex items-center gap-1.5 mb-1">
                             <div className="p-1.5 bg-indigo-50 rounded-lg shrink-0"><Download className="w-3.5 h-3.5 text-indigo-600" /></div>
-                            <span className="text-[9px] font-black text-gray-700 uppercase tracking-wide truncate">기타 영농지출</span>
+                            <span className="text-[9px] font-black text-gray-700 uppercase tracking-wide truncate">영농지출/포장재/소모품</span>
+                            <ChevronRight className="w-3 h-3 text-gray-400 ml-auto shrink-0" />
                         </div>
                         <p className="text-sm font-black text-gray-900 break-all">{formatCurrency(expense)}</p>
-                        <p className="text-[9px] text-gray-700 font-bold">공과금/유류비</p>
+                        <p className="text-[9px] text-gray-700 font-bold">공과금/포장재/소모품</p>
+                    </button>
+
+                    {/* 가계 지출 버튼 */}
+                    <button onClick={() => setExpenseDetailModal('household')} className="bg-white p-4 rounded-[2rem] border-2 border-sky-100 shadow-sm space-y-1.5 relative overflow-hidden text-left hover:border-sky-300 hover:shadow-md active:scale-[0.97] transition-all">
+                        <div className="flex items-center gap-1.5 mb-1">
+                            <div className="p-1.5 bg-sky-50 rounded-lg shrink-0"><Home className="w-3.5 h-3.5 text-sky-600" /></div>
+                            <span className="text-[9px] font-black text-gray-700 uppercase tracking-wide truncate">가계 지출</span>
+                            <ChevronRight className="w-3 h-3 text-gray-400 ml-auto shrink-0" />
+                        </div>
+                        <p className="text-sm font-black text-gray-900 break-all">{formatCurrency(householdCost)}</p>
+                        <p className="text-[9px] text-gray-700 font-bold">생활비/병원비/경조사 등</p>
+                    </button>
+
+                    {/* 특이사항 카드 (비활성) */}
+                    <div className="bg-white p-4 rounded-[2rem] border-2 border-orange-100 shadow-sm space-y-1.5 relative overflow-hidden opacity-60">
+                        <div className="flex items-center gap-1.5 mb-1">
+                            <div className="p-1.5 bg-orange-50 rounded-lg shrink-0"><AlertTriangle className="w-3.5 h-3.5 text-orange-600" /></div>
+                            <span className="text-[9px] font-black text-gray-700 uppercase tracking-wide truncate">특이사항</span>
+                        </div>
+                        <p className="text-sm font-black text-gray-900 break-all">0원</p>
+                        <p className="text-[9px] text-gray-700 font-bold">비정기/돌발 지출</p>
                     </div>
                 </div>
 
@@ -867,10 +946,10 @@ export default function FinancePage() {
                                                 </div>
                                             </div>
                                             <button
-                                                onClick={async () => {
-                                                    if (!confirm("입금 확인 처리를 하시겠습니까?")) return;
-                                                    const { error } = await supabase.from('sales_records').update({ is_settled: true, payment_status: 'completed' }).eq('id', rec.id);
-                                                    if (!error) fetchFinanceData();
+                                                onClick={() => {
+                                                    setB2cConfirmRecord(rec);
+                                                    setB2cConfirmDate(new Date().toISOString().split('T')[0]);
+                                                    setB2cConfirmModal(true);
                                                 }}
                                                 className="bg-pink-600 text-white px-4 py-2 rounded-xl text-[10px] font-black shadow-lg shadow-pink-100 active:scale-95 transition-all"
                                             >
@@ -883,6 +962,75 @@ export default function FinancePage() {
                         )}
                     </div>
                 </section>
+
+                {/* B2C 입금확인 날짜 선택 모달 */}
+                {b2cConfirmModal && b2cConfirmRecord && (
+                    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+                        <div className="bg-white rounded-3xl w-full max-w-sm p-6 space-y-5 shadow-2xl animate-in zoom-in-95 duration-200">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-base font-black text-gray-900">택배 입금 확인</h3>
+                                <button onClick={() => setB2cConfirmModal(false)} className="p-1.5 hover:bg-gray-100 rounded-xl transition-colors">
+                                    <X className="w-5 h-5 text-gray-400" />
+                                </button>
+                            </div>
+
+                            <div className="bg-pink-50 rounded-2xl p-4 space-y-2">
+                                <p className="text-xs font-black text-pink-700">
+                                    {b2cConfirmRecord.customer?.name || b2cConfirmRecord.customer_name}
+                                </p>
+                                <p className="text-[10px] text-gray-600 font-bold">
+                                    판매일: {b2cConfirmRecord.recorded_at?.split('T')[0]} · {b2cConfirmRecord.quantity || 1}{b2cConfirmRecord.sale_unit || '박스'}
+                                </p>
+                                <p className="text-lg font-black text-pink-600">{formatCurrency(b2cConfirmRecord.price || 0)}</p>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-xs font-black text-gray-700 block">입금 확인 날짜</label>
+                                <input
+                                    type="date"
+                                    value={b2cConfirmDate}
+                                    onChange={(e) => setB2cConfirmDate(e.target.value)}
+                                    className="w-full bg-gray-50 border-2 border-gray-200 rounded-xl px-4 py-3 text-sm font-black text-gray-800 outline-none focus:border-pink-400 transition-all"
+                                />
+                            </div>
+
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setB2cConfirmModal(false)}
+                                    className="flex-1 py-3 rounded-xl text-sm font-black text-gray-600 bg-gray-100 hover:bg-gray-200 transition-all"
+                                >
+                                    취소
+                                </button>
+                                <button
+                                    disabled={b2cConfirmLoading}
+                                    onClick={async () => {
+                                        setB2cConfirmLoading(true);
+                                        const { error } = await supabase
+                                            .from('sales_records')
+                                            .update({
+                                                is_settled: true,
+                                                settled_at: b2cConfirmDate,
+                                                payment_status: 'completed'
+                                            })
+                                            .eq('id', b2cConfirmRecord.id);
+                                        setB2cConfirmLoading(false);
+                                        if (!error) {
+                                            setB2cConfirmModal(false);
+                                            setB2cConfirmRecord(null);
+                                            fetchFinanceData();
+                                        } else {
+                                            alert('입금 확인 실패: ' + error.message);
+                                        }
+                                    }}
+                                    className={`flex-1 py-3 rounded-xl text-sm font-black text-white shadow-lg transition-all
+                                        ${b2cConfirmLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-pink-600 hover:bg-pink-700 active:scale-95 shadow-pink-200'}`}
+                                >
+                                    {b2cConfirmLoading ? '처리중...' : '입금 확인'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* 판매 채널별 매출 비중 */}
                 <section className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm p-3 space-y-3">
@@ -1099,6 +1247,167 @@ export default function FinancePage() {
                                         {loading ? "처리중..." : "정산 확정하기"}
                                     </button>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* 지출 상세 모달 */}
+                {expenseDetailModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setExpenseDetailModal(null)}>
+                        <div className="bg-white rounded-3xl w-full max-w-md max-h-[80vh] overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                            {/* 모달 헤더 */}
+                            <div className={`p-4 flex items-center justify-between ${
+                                expenseDetailModal === 'labor' ? 'bg-blue-50 border-b border-blue-100' :
+                                expenseDetailModal === 'meal' ? 'bg-amber-50 border-b border-amber-100' :
+                                expenseDetailModal === 'shipping' ? 'bg-pink-50 border-b border-pink-100' :
+                                expenseDetailModal === 'farming' ? 'bg-indigo-50 border-b border-indigo-100' :
+                                'bg-sky-50 border-b border-sky-100'
+                            }`}>
+                                <div className="flex items-center gap-2">
+                                    <div className={`p-2 rounded-xl ${
+                                        expenseDetailModal === 'labor' ? 'bg-blue-100' :
+                                        expenseDetailModal === 'meal' ? 'bg-amber-100' :
+                                        expenseDetailModal === 'shipping' ? 'bg-pink-100' :
+                                        expenseDetailModal === 'farming' ? 'bg-indigo-100' :
+                                        'bg-sky-100'
+                                    }`}>
+                                        {expenseDetailModal === 'labor' && <Users className="w-4 h-4 text-blue-600" />}
+                                        {expenseDetailModal === 'meal' && <Utensils className="w-4 h-4 text-amber-600" />}
+                                        {expenseDetailModal === 'shipping' && <Truck className="w-4 h-4 text-pink-600" />}
+                                        {expenseDetailModal === 'farming' && <Download className="w-4 h-4 text-indigo-600" />}
+                                        {expenseDetailModal === 'household' && <Home className="w-4 h-4 text-sky-600" />}
+                                    </div>
+                                    <div>
+                                        <h3 className="text-sm font-black text-gray-900">
+                                            {expenseDetailModal === 'labor' && '순수 인건비 상세'}
+                                            {expenseDetailModal === 'meal' && '식대/새참비 상세'}
+                                            {expenseDetailModal === 'shipping' && '택배/자재비 상세'}
+                                            {expenseDetailModal === 'farming' && '영농지출 상세'}
+                                            {expenseDetailModal === 'household' && '가계 지출 상세'}
+                                        </h3>
+                                        <p className="text-[10px] text-gray-500 font-bold">{selectedMonth} 기준</p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setExpenseDetailModal(null)} className="p-2 hover:bg-white/80 rounded-xl transition-colors">
+                                    <X className="w-4 h-4 text-gray-500" />
+                                </button>
+                            </div>
+
+                            {/* 모달 총액 */}
+                            <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-bold text-gray-500">합계</span>
+                                    <span className="text-base font-black text-gray-900">
+                                        {expenseDetailModal === 'labor' && formatCurrency(laborCost)}
+                                        {expenseDetailModal === 'meal' && formatCurrency(mealCost)}
+                                        {expenseDetailModal === 'shipping' && formatCurrency(shippingCost)}
+                                        {expenseDetailModal === 'farming' && formatCurrency(expense)}
+                                        {expenseDetailModal === 'household' && formatCurrency(householdCost)}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* 모달 리스트 */}
+                            <div className="overflow-y-auto max-h-[55vh] p-4 space-y-2">
+                                {/* 인건비 상세 */}
+                                {expenseDetailModal === 'labor' && (
+                                    <>
+                                        {wageDetails.length > 0 ? wageDetails.map((item: any, i: number) => (
+                                            <div key={`wage-${i}`} className="flex items-center justify-between py-2.5 px-3 bg-white border border-gray-100 rounded-xl">
+                                                <div>
+                                                    <p className="text-xs font-black text-gray-900">{item.category || '인건비'}</p>
+                                                    <p className="text-[10px] text-gray-500 font-bold">{item.expense_date || ''}{item.notes ? ` · ${item.notes}` : ''}</p>
+                                                </div>
+                                                <p className="text-xs font-black text-blue-700">{formatCurrency(item.amount)}</p>
+                                            </div>
+                                        )) : (
+                                            <p className="text-center text-xs text-gray-400 font-bold py-8">등록된 인건비가 없습니다</p>
+                                        )}
+                                    </>
+                                )}
+
+                                {/* 식대 상세 */}
+                                {expenseDetailModal === 'meal' && (
+                                    <>
+                                        {mealDetails.length > 0 ? mealDetails.map((item: any, i: number) => (
+                                            <div key={`meal-${i}`} className="flex items-center justify-between py-2.5 px-3 bg-white border border-gray-100 rounded-xl">
+                                                <div>
+                                                    <p className="text-xs font-black text-gray-900">{item.category || '식대'}</p>
+                                                    <p className="text-[10px] text-gray-500 font-bold">{item.expense_date || ''}{item.notes ? ` · ${item.notes}` : ''}</p>
+                                                </div>
+                                                <p className="text-xs font-black text-amber-700">{formatCurrency(item.amount)}</p>
+                                            </div>
+                                        )) : (
+                                            <p className="text-center text-xs text-gray-400 font-bold py-8">등록된 식대가 없습니다</p>
+                                        )}
+                                    </>
+                                )}
+
+                                {/* 택배/자재비 상세 */}
+                                {expenseDetailModal === 'shipping' && (
+                                    <>
+                                        {shippingDetails.length > 0 ? shippingDetails.map((item: any, i: number) => (
+                                            <div key={`ship-${i}`} className="flex items-center justify-between py-2.5 px-3 bg-white border border-gray-100 rounded-xl">
+                                                <div>
+                                                    <p className="text-xs font-black text-gray-900">{item.customer_name}</p>
+                                                    <p className="text-[10px] text-gray-500 font-bold">
+                                                        {String(item.recorded_at || '').split('T')[0]}
+                                                        {item.shipping_cost > 0 && ` · 택배 ${formatCurrency(item.shipping_cost)}`}
+                                                        {item.packaging_cost > 0 && ` · 포장 ${formatCurrency(item.packaging_cost)}`}
+                                                    </p>
+                                                </div>
+                                                <p className="text-xs font-black text-pink-700">{formatCurrency(item.total)}</p>
+                                            </div>
+                                        )) : (
+                                            <p className="text-center text-xs text-gray-400 font-bold py-8">이번 달 택배/자재비가 없습니다</p>
+                                        )}
+                                    </>
+                                )}
+
+                                {/* 영농지출 상세 */}
+                                {expenseDetailModal === 'farming' && (
+                                    <>
+                                        {farmingDetails.length > 0 ? farmingDetails.map((item: any, i: number) => (
+                                            <div key={`farm-${i}`} className="flex items-center justify-between py-2.5 px-3 bg-white border border-gray-100 rounded-xl">
+                                                <div>
+                                                    <p className="text-xs font-black text-gray-900">{item.category || item.main_category || '영농지출'}</p>
+                                                    <p className="text-[10px] text-gray-500 font-bold">{item.expense_date || ''}{item.notes ? ` · ${item.notes}` : ''}</p>
+                                                </div>
+                                                <p className="text-xs font-black text-indigo-700">{formatCurrency(item.amount)}</p>
+                                            </div>
+                                        )) : (
+                                            <p className="text-center text-xs text-gray-400 font-bold py-8">등록된 영농지출이 없습니다</p>
+                                        )}
+                                    </>
+                                )}
+
+                                {/* 가계 지출 상세 */}
+                                {expenseDetailModal === 'household' && (
+                                    <>
+                                        {householdDetails.length > 0 ? householdDetails.map((item: any, i: number) => (
+                                            <div key={`house-${i}`} className="flex items-center justify-between py-2.5 px-3 bg-white border border-gray-100 rounded-xl">
+                                                <div>
+                                                    <p className="text-xs font-black text-gray-900">{item.category || '가계생활'}</p>
+                                                    <p className="text-[10px] text-gray-500 font-bold">{item.expense_date || ''}{item.notes ? ` · ${item.notes}` : ''}</p>
+                                                </div>
+                                                <p className="text-xs font-black text-sky-700">{formatCurrency(item.amount)}</p>
+                                            </div>
+                                        )) : (
+                                            <p className="text-center text-xs text-gray-400 font-bold py-8">등록된 가계 지출이 없습니다</p>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+
+                            {/* 모달 하단 닫기 */}
+                            <div className="p-4 border-t border-gray-100">
+                                <button
+                                    onClick={() => setExpenseDetailModal(null)}
+                                    className="w-full py-3 bg-gray-100 hover:bg-gray-200 rounded-2xl text-sm font-black text-gray-700 transition-colors active:scale-[0.97]"
+                                >
+                                    닫기
+                                </button>
                             </div>
                         </div>
                     </div>
