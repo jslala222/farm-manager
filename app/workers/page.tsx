@@ -455,10 +455,12 @@ export default function WorkersPage() {
                             }`}>
                                 {worker.gender === 'female' ? '♀' : '♂'}
                             </span>
-                            {/* 상태 배지 - 확대됨 */}
+                            {/* 상태 배지 */}
                             <button onClick={() => toggleWorkerStatus(worker.id, worker.is_active)} className={`text-sm font-bold px-3 py-1 rounded-md transition-all active:scale-95 cursor-pointer shrink-0 ${worker.is_active ? 'bg-green-600 text-white shadow-sm hover:bg-green-700' : 'bg-amber-600 text-white shadow-sm hover:bg-amber-700'}`}>
                                 {worker.is_active ? '근무중' : '휴직중'}
                             </button>
+                            {/* 전화번호 */}
+                            {worker.phone && <span className="text-sm font-bold text-gray-700 shrink-0 flex items-center gap-1"><Phone className="w-4 h-4" />{worker.phone}</span>}
                         </div>
                     </div>
                     <div className="flex items-center gap-0.5 shrink-0">
@@ -470,11 +472,7 @@ export default function WorkersPage() {
                         </button>
                     </div>
                 </div>
-                {/* 정보 줄: 직급 | 연락처 */}
-                <div className="flex items-center gap-2 text-[11px] font-medium px-1">
-                    <span className={`${info.color} bg-white px-2 py-0.5 rounded border ${info.border} shrink-0`}>{info.label}</span>
-                    {worker.phone && <span className="text-gray-700 flex items-center gap-1"><Phone className="w-3 h-3" />{worker.phone}</span>}
-                </div>
+
             </div>
         );
     };
