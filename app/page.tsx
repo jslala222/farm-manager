@@ -136,7 +136,7 @@ export default function Home() {
           .lte('expense_date', monthEnd),
 
         supabase.from('sales_records')
-          .select('id, delivery_method, sale_type, partner_id')
+          .select('id, delivery_method, sale_type, partner_id, recorded_at')
           .eq('farm_id', farm.id)
           .eq('is_settled', false),
 
@@ -190,9 +190,17 @@ export default function Home() {
       // 이번달 지출
       setMonthExpenses((monthlyExpRes.data ?? []).reduce((sum, r) => sum + (r.amount || 0), 0));
 
-      // 미결재 B2B + B2C
+      // 미결재 B2B (거래처별 날짜 그룹 수) + B2C (레코드 수) - finance 페이지와 동일 방식
       const unpaidData = unpaidRes.data ?? [];
-      setUnpaidB2BCount(unpaidData.filter(r => r.delivery_method !== 'courier' && (r.sale_type === 'b2b' || r.partner_id)).length);
+      const b2bRecords = unpaidData.filter(r => r.delivery_method !== 'courier' && (r.sale_type === 'b2b' || r.partner_id));
+      // 거래처+날짜 그룹 수 계산 (finance 페이지의 dailyGroups.length 합계와 동일)
+      const dailyGroupSet = new Set<string>();
+      b2bRecords.forEach(r => {
+        const date = String(r.recorded_at || '').split('T')[0];
+        const key = `${r.partner_id || 'no-id'}_${date}`;
+        dailyGroupSet.add(key);
+      });
+      setUnpaidB2BCount(dailyGroupSet.size);
       setUnpaidB2CCount(unpaidData.filter(r => r.delivery_method === 'courier').length);
 
       // 최근 활동
@@ -383,7 +391,7 @@ export default function Home() {
             <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
             <div className="flex-1">
               <p className="text-sm font-black text-amber-800">처리 필요</p>
-              <p className="text-xs font-bold text-amber-700 mt-0.5">미결재 {unpaidB2BCount > 0 ? `B2B ${unpaidB2BCount}건` : ''}{unpaidB2BCount > 0 && unpaidB2CCount > 0 ? ' / ' : ''}{unpaidB2CCount > 0 ? `B2C ${unpaidB2CCount}건` : ''}이 있습니다</p>
+              <p className="text-xs font-bold text-amber-700 mt-0.5">미결재 {unpaidB2BCount > 0 ? `거래처 ${unpaidB2BCount}건` : ''}{unpaidB2BCount > 0 && unpaidB2CCount > 0 ? ' / ' : ''}{unpaidB2CCount > 0 ? `택배거래 ${unpaidB2CCount}건` : ''}이 있습니다</p>
             </div>
             <span className="text-xs font-black text-amber-600">확인 →</span>
           </div>
