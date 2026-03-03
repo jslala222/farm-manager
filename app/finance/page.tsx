@@ -547,14 +547,19 @@ export default function FinancePage() {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3 pt-4 border-t border-white/10">
-                            <div className="min-w-0">
-                                <p className="text-gray-700 text-[9px] font-bold uppercase mb-1">총 매출액</p>
-                                <p className="text-sm font-black text-white break-all">{formatCurrency(revenue)}</p>
+                        <div className="space-y-2 pt-4 border-t border-white/10">
+                            <div>
+                                <p className="text-gray-700 text-[9px] font-bold uppercase mb-1.5">총 매출액</p>
+                                <p className="text-lg font-black text-white break-all">{formatCurrency(revenue)}</p>
+                                <p className="text-[10px] text-gray-400 font-semibold mt-1">
+                                    B2B {formatCurrency(b2bRevenue)} + B2C {formatCurrency(b2cRevenue)}
+                                </p>
                             </div>
-                            <div className="text-right min-w-0">
-                                <p className="text-gray-700 text-[9px] font-bold uppercase mb-1">총 지출액</p>
-                                <p className="text-sm font-black text-gray-600 break-all">{formatCurrency(laborCost + mealCost + expense + shippingCost)}</p>
+                            <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/10">
+                                <div>
+                                    <p className="text-gray-700 text-[8px] font-bold uppercase mb-0.5">총 지출액</p>
+                                    <p className="text-xs font-black text-gray-200 break-all">{formatCurrency(laborCost + mealCost + expense + shippingCost)}</p>
+                                </div>
                             </div>
                         </div>
                     </div>
