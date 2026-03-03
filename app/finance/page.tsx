@@ -323,6 +323,34 @@ export default function FinancePage() {
         try {
             const promises: Promise<any>[] = [];
 
+            // [bkit 수정] 각 record의 예상 합계를 미리 계산
+            const recordPrices: number[] = [];
+            let totalExpectedPrice = 0;
+
+            selectedGroup.records.forEach((record: any, recIdx: number) => {
+                let gradeEntries: { grade: string; qty: number }[] = [];
+                if (record.grade && record.grade.includes(':')) {
+                    gradeEntries = record.grade.split(',').map((g: string) => {
+                        const [label, qty] = g.split(':');
+                        return { grade: label, qty: Number(qty) || 0 };
+                    });
+                } else {
+                    gradeEntries = [{ grade: record.grade || '특/상', qty: record.quantity || 0 }];
+                }
+
+                let recordTotal = 0;
+                gradeEntries.forEach(entry => {
+                    const priceEl = document.getElementById(`modal-price-${recIdx}-${entry.grade}`) as HTMLInputElement;
+                    const p = priceEl ? (parseInt(priceEl.value.replace(/[^0-9]/g, "")) || 0) : 0;
+                    const qtyEl = document.getElementById(`modal-qty-${recIdx}-${entry.grade}`) as HTMLInputElement;
+                    const q = qtyEl ? (parseInt(qtyEl.value) || 0) : entry.qty;
+                    recordTotal += (q * p);
+                });
+
+                recordPrices.push(recordTotal);
+                totalExpectedPrice += recordTotal;
+            });
+
             // 각 record(품목)별로 처리
             selectedGroup.records.forEach((record: any, recIdx: number) => {
                 let gradeEntries: { grade: string; qty: number }[] = [];
@@ -353,12 +381,19 @@ export default function FinancePage() {
                     updatedGrades.push(`${entry.grade}:${q}`);
                 });
 
-                // 실제 입금액이 있는 경우: 첫 번째 레코드에 전체 금액 할당, 나머지는 0
-                // 실제 입금액이 없는 경우: 계산된 totalPrice 사용
+                // [bkit 수정] 실제 입금액이 있는 경우: 예상금액 비율에 따라 분배
                 let finalSettledAmt = 0;
                 if (actualAmt > 0) {
-                    finalSettledAmt = (recIdx === 0) ? actualAmt : 0;
+                    if (totalExpectedPrice > 0) {
+                        // 비율 분배: 입금액 × (이 건의 예상금액 / 전체 예상금액)
+                        const ratio = recordPrices[recIdx] / totalExpectedPrice;
+                        finalSettledAmt = Math.round(actualAmt * ratio);
+                    } else {
+                        // 예상금액이 없으면 균등 분배
+                        finalSettledAmt = Math.round(actualAmt / selectedGroup.records.length);
+                    }
                 } else {
+                    // 입금액이 없으면 계산된 totalPrice 사용
                     finalSettledAmt = totalPrice;
                 }
 
@@ -906,8 +941,8 @@ export default function FinancePage() {
 
                                                                 {/* 단가 (7) */}
                                                                 <div className="flex-[7] relative flex items-center">
-                                                                    <input type="text" id={`modal-price-${recIdx}-${entry.grade}`} placeholder="단가 입력"
-                                                                        className="w-full bg-gray-50 border-2 border-blue-400 rounded-xl py-3 px-3 text-right text-base font-black text-gray-900 focus:ring-4 focus:ring-blue-100 outline-none"
+                                                                    <input type="text" id={`modal-price-${recIdx}-${entry.grade}`} placeholder="단가입력"
+                                                                        className="w-full bg-gray-50 border-2 border-blue-400 rounded-xl py-3 px-3 text-center text-base font-black text-gray-900 focus:ring-4 focus:ring-blue-100 outline-none"
                                                                         onChange={(e) => {
                                                                             const val = e.target.value.replace(/[^0-9]/g, '');
                                                                             e.target.value = val ? formatCurrency(val) : '';
@@ -975,13 +1010,13 @@ export default function FinancePage() {
                                                     const val = e.target.value.replace(/[^0-9]/g, "");
                                                     setActualSettleAmount(val ? formatCurrency(val) : "");
                                                 }}
-                                                className="w-full bg-white border-2 border-blue-500 rounded-2xl p-3.5 text-right text-sm font-black text-gray-900 outline-none focus:ring-4 focus:ring-blue-100 shadow-sm placeholder:text-gray-600"
+                                                className="w-full bg-white border-2 border-blue-500 rounded-2xl p-3.5 text-center text-sm font-black text-gray-900 outline-none focus:ring-4 focus:ring-blue-100 shadow-sm placeholder:text-gray-600"
                                             />
                                         </div>
                                     </div>
                                     <div className="bg-blue-50/50 p-3 rounded-2xl border border-blue-100">
                                         <p className="text-[10px] text-blue-600 font-bold leading-relaxed break-keep">
-                                            단가를 모르신다면 <strong>입금 날짜</strong>와 <strong>실제 입금액</strong>만 적고 [정산 확정]을 하셔도 매출에 정상 반영됩니다.
+                                            💡 <strong>여러 건을 한 번에 정산할 때:</strong> 입금액을 적으면 예상금액 비율에 따라 자동으로 분배됩니다. 단가를 모르신다면 <strong>입금 날짜</strong>와 <strong>실제 입금액</strong>만 적고 [정산 확정]을 하셔도 매출에 정상 반영됩니다.
                                         </p>
                                     </div>
                                 </section>

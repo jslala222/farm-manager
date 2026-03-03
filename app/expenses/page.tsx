@@ -14,6 +14,9 @@ const CATEGORY_MAP: Record<string, string[]> = {
     '가계생활': ["부모님용돈/효도", "병원/의료비", "식비/생필품", "교육/학원비", "주거/통신/세금", "취미/경조사", "주유", "기타 생활비"]
 };
 
+const toLocalDateStr = (d: Date = new Date()) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 export default function ExpensesPage() {
     const { farm, initialized } = useAuthStore();
     const queryClient = useQueryClient();
@@ -22,7 +25,7 @@ export default function ExpensesPage() {
     const [activeTab, setActiveTab] = useState<'list' | 'analysis'>('list');
 
     // Filter State
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    const [selectedDate, setSelectedDate] = useState(toLocalDateStr());
     const [mainFilter, setMainFilter] = useState<string | null>(null);
     const [showCalendar, setShowCalendar] = useState(false); // Default to false for cleaner look
 
@@ -45,7 +48,7 @@ export default function ExpensesPage() {
     const [subCategory, setSubCategory] = useState<string>(CATEGORY_MAP["농작관리"][0]);
     const [amount, setAmount] = useState("");
     const [notes, setNotes] = useState("");
-    const [expenseDate, setExpenseDate] = useState(new Date().toISOString().split('T')[0]);
+    const [expenseDate, setExpenseDate] = useState(toLocalDateStr());
     const [paymentMethod, setPaymentMethod] = useState<"현금" | "카드">("카드");
 
     // [bkit] 사장님 요청: 상단 달력 날짜 선택 시 기록 날짜 동기화

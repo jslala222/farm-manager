@@ -58,25 +58,28 @@ const EMPTY_WORKERS: Worker[] = [];
 const EMPTY_ATTENDANCE: AttendanceRecord[] = [];
 const EMPTY_COSTS: LaborCost[] = [];
 
+const toLocalDateStr = (d: Date = new Date()) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 // ─── 컴포넌트 ──────────────────────────────────────────────────────────────────
 export default function LaborPage() {
     const { farm, initialized } = useAuthStore();
     const queryClient = useQueryClient();
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalDateStr();
     const [selectedDate, setSelectedDate] = useState(today);
 
     const moveDate = (days: number) => {
-        const d = new Date(selectedDate);
+        const d = new Date(selectedDate + 'T00:00:00');
         d.setDate(d.getDate() + days);
-        const next = d.toISOString().split('T')[0];
+        const next = toLocalDateStr(d);
         if (next <= today) setSelectedDate(next);
     };
 
     const moveWeek = (direction: number) => {
         const d = new Date(selectedDate + 'T00:00:00');
         d.setDate(d.getDate() + direction * 7);
-        const next = d.toISOString().split('T')[0];
+        const next = toLocalDateStr(d);
         if (next <= today) setSelectedDate(next);
     };
     const [rows, setRows] = useState<LaborRow[]>([]);
@@ -140,7 +143,7 @@ export default function LaborPage() {
         return Array.from({ length: 7 }, (_, i) => {
             const dd = new Date(monday);
             dd.setDate(monday.getDate() + i);
-            return dd.toISOString().split('T')[0];
+            return toLocalDateStr(dd);
         });
     }, [selectedDate]);
 

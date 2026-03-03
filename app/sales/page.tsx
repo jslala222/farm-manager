@@ -9,6 +9,9 @@ import { formatCurrency } from "@/lib/utils";
 import AddressSearch from "@/components/AddressSearch";
 import CalendarComponent from "@/components/Calendar";
 
+const toLocalDateStr = (d: Date = new Date()) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 export default function SalesPage() {
     const { farm, initialized } = useAuthStore();
     const [activeTab, setActiveTab] = useState<'bulk' | 'courier'>('bulk');
@@ -17,7 +20,7 @@ export default function SalesPage() {
     const [history, setHistory] = useState<SalesRecord[]>([]);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    const [selectedDate, setSelectedDate] = useState(toLocalDateStr());
     const [showCalendar, setShowCalendar] = useState(false);
     const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
     const [showUnsettledOnly, setShowUnsettledOnly] = useState(false);

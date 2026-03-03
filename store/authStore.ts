@@ -30,7 +30,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     initialize: async (force = false) => {
         if (get().initialized && !force) return;
-        set({ loading: true });
+        // set initialized early to prevent duplicate calls during async init
+        set({ loading: true, initialized: true });
 
         // 1. 세션 확인
         const { data: { session } } = await supabase.auth.getSession();
@@ -49,7 +50,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             await loadUserData(session.user, set);
         }
 
-        set({ initialized: true, loading: false });
+        set({ loading: false });
 
         // 실시간 상태 변경 감지
         supabase.auth.onAuthStateChange(async (_event, session) => {

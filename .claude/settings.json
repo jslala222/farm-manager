@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find \"c:\\\\Users\\\\User\\\\Desktop\\\\제미나이 3\\\\연습\\\\claude\\\\projects_001\\\\farm-manager\\\\scripts\" -name \"*.sql\" -exec basename {} ;)",
+      "Bash(cmd /c \"taskkill /IM node.exe /F\")",
+      "Bash(git add components/NavBar.tsx lib/supabase.ts app/labor/ scripts/create_labor_costs_table.sql)",
+      "Bash(git commit:*)",
+      "Bash(git push origin main)",
+      "mcp__dev-server-manager__restart_dev_server",
+      "Bash(git add app/attendance/page.tsx app/clients/page.tsx app/courier/page.tsx app/expenses/page.tsx app/finance/page.tsx app/harvest/page.tsx app/labor/page.tsx app/login/page.tsx app/page.tsx app/pending/page.tsx app/register/page.tsx app/sales/page.tsx app/settings/page.tsx app/workers/page.tsx components/NavBar.tsx)",
+      "Bash(git add app/admin/page.tsx app/attendance/page.tsx app/b2c-settled/page.tsx app/bulk/page.tsx app/clients/page.tsx app/courier/page.tsx app/expenses/page.tsx app/finance/page.tsx app/harvest/page.tsx app/labor/page.tsx app/login/page.tsx app/page.tsx app/pending/page.tsx app/register/page.tsx app/sales/page.tsx app/settings/page.tsx app/settled/page.tsx app/workers/page.tsx components/AddressSearch.tsx components/BottomNav.tsx components/Calendar.tsx components/DbStatus.tsx components/NavBar.tsx)",
+      "Bash(git add app/labor/page.tsx)",
+      "Bash(git add app/page.tsx)",
+      "Bash(ls \"C:\\\\Users\\\\User\\\\.claude\\\\projects\\\\c--Users-User-Desktop------3----claude-projects-001-farm-manager\"\" 2>/dev/null || echo \"Directory not found \")"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\User\\Desktop\\제미나이 3\\연습\\claude\\projects_001\\farm-manager\\.next\\dev",
+      "c:\\Users\\User\\Desktop\\제미나이 3\\연습\\claude\\projects_001\\farm-manager\\app\\admin\\cleanup"
+    ]
+  }
+}

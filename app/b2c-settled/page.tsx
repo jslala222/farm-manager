@@ -25,11 +25,13 @@ import { supabase } from "@/lib/supabase";
 import { formatCurrency } from "@/lib/utils";
 
 // 날짜 범위 기본값: 이번달 1일 ~ 오늘
+const toLocalDateStr = (d: Date = new Date()) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 const getDefaultRange = () => {
     const now = new Date();
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-    const toStr = (d: Date) => d.toISOString().split('T')[0];
-    return { from: toStr(firstDay), to: toStr(now) };
+    return { from: toLocalDateStr(firstDay), to: toLocalDateStr(now) };
 };
 
 type PeriodPreset = 'this_month' | 'last_month' | 'custom';
@@ -95,13 +97,11 @@ export default function B2CSettledPage() {
         const now = new Date();
         if (period === 'this_month') {
             const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-            const toStr = (d: Date) => d.toISOString().split('T')[0];
-            setRange({ from: toStr(firstDay), to: toStr(now) });
+            setRange({ from: toLocalDateStr(firstDay), to: toLocalDateStr(now) });
         } else if (period === 'last_month') {
             const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1);
             const lastDay = new Date(now.getFullYear(), now.getMonth(), 0);
-            const toStr = (d: Date) => d.toISOString().split('T')[0];
-            setRange({ from: toStr(firstDay), to: toStr(lastDay) });
+            setRange({ from: toLocalDateStr(firstDay), to: toLocalDateStr(lastDay) });
         }
     }, [period]);
 

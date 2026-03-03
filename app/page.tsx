@@ -6,6 +6,8 @@ import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
 
 const DAY_NAMES_KR = ['일', '월', '화', '수', '목', '금', '토'];
+const toLocalDateStr = (d: Date = new Date()) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 type HarvestItem = { crop: string; unit: string; qty: number };
 type SalesItem = { unit: string; qty: number };
@@ -14,7 +16,7 @@ type RecentActivity = { id: string; type: 'harvest' | 'sales'; label: string; qt
 export default function Home() {
   const { farm, initialized } = useAuthStore();
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = toLocalDateStr();
   const [selectedDate, setSelectedDate] = useState(todayStr);
 
   const [harvestItems, setHarvestItems] = useState<HarvestItem[]>([]);
@@ -37,14 +39,14 @@ export default function Home() {
     return Array.from({ length: 7 }, (_, i) => {
       const dd = new Date(monday);
       dd.setDate(monday.getDate() + i);
-      return dd.toISOString().split('T')[0];
+      return toLocalDateStr(dd);
     });
   }, [selectedDate]);
 
   const moveWeek = (direction: number) => {
     const d = new Date(selectedDate + 'T00:00:00');
     d.setDate(d.getDate() + direction * 7);
-    const next = d.toISOString().split('T')[0];
+    const next = toLocalDateStr(d);
     if (next <= todayStr) setSelectedDate(next);
   };
 

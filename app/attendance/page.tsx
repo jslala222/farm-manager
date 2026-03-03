@@ -6,6 +6,9 @@ import { useAuthStore } from "@/store/authStore";
 import { supabase, Worker, AttendanceRecord } from "@/lib/supabase";
 import Link from "next/link";
 
+const toLocalDateStr = (d: Date = new Date()) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 export default function AttendancePage() {
     const { farm, initialized } = useAuthStore();
     const [workers, setWorkers] = useState<Worker[]>([]);
@@ -14,7 +17,7 @@ export default function AttendancePage() {
     const [hours, setHours] = useState<Record<string, string>>({});
     const [notes, setNotes] = useState<Record<string, string>>({});
     const [headcounts, setHeadcounts] = useState<Record<string, string>>({});
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    const [selectedDate, setSelectedDate] = useState(toLocalDateStr());
     const [history, setHistory] = useState<AttendanceRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);

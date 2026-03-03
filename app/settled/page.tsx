@@ -5,18 +5,22 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { CheckCircle, ChevronDown, ChevronRight, Download, RefreshCcw, Calendar, Edit2, Trash2, X, Save } from 'lucide-react';
 import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
+import { getCropIcon, getCropColor } from "@/lib/utils";
 
 // 날짜 범위 기본값: 이번달 1일 ~ 오늘
+const toLocalDateStr = (d: Date = new Date()) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 const getDefaultRange = () => {
     const now = new Date();
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-    const toStr = (d: Date) => d.toISOString().split('T')[0];
-    return { from: toStr(firstDay), to: toStr(now) };
+    return { from: toLocalDateStr(firstDay), to: toLocalDateStr(now) };
 };
 
 interface SettledRecord {
     id: string;
     recorded_at: string;
+    settled_at: string | null;
     quantity: number;
     grade: string | null;
     price: number | null;
@@ -59,13 +63,13 @@ export default function SettledPage() {
         try {
             const { data, error } = await supabase
                 .from('sales_records')
-                .select('*, partner:partners(company_name)')
+                .select('*, settled_at, partner:partners(company_name)')
                 .eq('farm_id', farm.id)
                 .eq('is_settled', true)
                 .eq('sale_type', 'b2b')
-                .gte('recorded_at', range.from + 'T00:00:00')
-                .lte('recorded_at', range.to + 'T23:59:59')
-                .order('recorded_at', { ascending: false });
+                .gte('settled_at', range.from)
+                .lte('settled_at', range.to)
+                .order('settled_at', { ascending: false });
 
             if (error) throw error;
             setRecords(data || []);
@@ -452,110 +456,215 @@ export default function SettledPage() {
                                 }
                             </button>
 
-                            {/* 상세 테이블 */}
+                            {/* 상세 테이블/카드 */}
                             {isExpanded && (
-                                <div className="border-t border-slate-100 overflow-x-auto">
-                                    <table className="w-full text-xs min-w-[620px]">
-                                        <thead>
-                                            <tr className="bg-slate-50 border-b border-slate-100">
-                                                {['날짜', '등급', '수량', '예상금액', '정산금액', '차액', '결제', '사유', ''].map((h, i) => (
-                                                    <th key={i} className="px-3 py-2.5 text-[10px] font-black text-slate-400 text-right first:text-left last:text-center">
-                                                        {h}
-                                                    </th>
-                                                ))}
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {group.rows.map((rec, idx) => {
-                                                const rowDiff = (rec.settled_amount !== null && rec.price !== null)
-                                                    ? rec.settled_amount - rec.price
-                                                    : null;
-                                                const missingSettled = rec.settled_amount === null;
-                                                return (
-                                                    <tr key={rec.id}
-                                                        className={`border-b border-slate-50 transition-all ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'}
-                                                        ${missingSettled ? 'bg-amber-50/60' : ''}`}>
-                                                        {/* 날짜 */}
-                                                        <td className="px-3 py-2.5 font-bold text-slate-600 whitespace-nowrap">
-                                                            {new Date(rec.recorded_at).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit', weekday: 'short' })}
-                                                        </td>
-                                                        {/* 등급 */}
-                                                        <td className="px-3 py-2.5 text-right">
-                                                            <span className="font-black text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded-lg">
-                                                                {rec.grade || '-'}
-                                                            </span>
-                                                        </td>
-                                                        {/* 수량 */}
-                                                        <td className="px-3 py-2.5 text-right font-black text-slate-800">
-                                                            {(rec.quantity || 0).toLocaleString()}{rec.sale_unit || '박스'}
-                                                        </td>
-                                                        {/* 예상금액 */}
-                                                        <td className="px-3 py-2.5 text-right font-bold text-slate-600">
-                                                            {rec.price ? rec.price.toLocaleString() + '원' : '-'}
-                                                        </td>
-                                                        {/* 정산금액 — 없으면 주황 강조 */}
-                                                        <td className="px-3 py-2.5 text-right font-black">
-                                                            {rec.settled_amount != null
-                                                                ? <span className="text-emerald-600">{rec.settled_amount.toLocaleString()}원</span>
-                                                                : <span className="text-amber-500 text-[10px] font-black bg-amber-100 px-1.5 py-0.5 rounded-lg">미입력</span>
-                                                            }
-                                                        </td>
-                                                        {/* 차액 */}
-                                                        <td className="px-3 py-2.5 text-right font-black">
-                                                            {rowDiff !== null
-                                                                ? <span className={rowDiff < 0 ? 'text-rose-500' : rowDiff > 0 ? 'text-emerald-500' : 'text-slate-400'}>
-                                                                    {rowDiff > 0 ? '+' : ''}{rowDiff.toLocaleString()}원
+                                <div className="border-t border-slate-100">
+                                    {/* PC 테이블 - 숨김@모바일 */}
+                                    <div className="hidden md:block overflow-x-auto">
+                                        <table className="w-full text-xs min-w-[620px]">
+                                            <thead>
+                                                <tr className="bg-slate-50 border-b border-slate-100">
+                                                    {['날짜', '등급', '수량', '예상금액', '정산금액', '차액', '결제', '사유', ''].map((h, i) => (
+                                                        <th key={i} className="px-3 py-2.5 text-[10px] font-black text-slate-400 text-right first:text-left last:text-center">
+                                                            {h}
+                                                        </th>
+                                                    ))}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {group.rows.map((rec, idx) => {
+                                                    const rowDiff = (rec.settled_amount !== null && rec.price !== null)
+                                                        ? rec.settled_amount - rec.price
+                                                        : null;
+                                                    const missingSettled = rec.settled_amount === null;
+                                                    return (
+                                                        <tr key={rec.id}
+                                                            className={`border-b border-slate-50 transition-all ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'}
+                                                            ${missingSettled ? 'bg-amber-50/60' : ''}`}>
+                                                            {/* 날짜 */}
+                                                            <td className="px-3 py-2.5 font-bold text-slate-600 whitespace-nowrap">
+                                                                {new Date(rec.recorded_at).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit', weekday: 'short' })}
+                                                            </td>
+                                                            {/* 등급 */}
+                                                            <td className="px-3 py-2.5 text-right">
+                                                                <span className="font-black text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded-lg">
+                                                                    {rec.grade || '-'}
                                                                 </span>
-                                                                : <span className="text-slate-300">-</span>
-                                                            }
-                                                        </td>
-                                                        {/* 결제수단 */}
-                                                        <td className="px-3 py-2.5 text-right">
-                                                            <span className="font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-lg text-[10px]">
-                                                                {rec.payment_method || '-'}
-                                                            </span>
-                                                        </td>
-                                                        {/* 차액사유 */}
-                                                        <td className="px-3 py-2.5 text-right font-medium text-slate-400 text-[10px]">
-                                                            {rec.harvest_note || '-'}
-                                                        </td>
-                                                        {/* 수정/삭제 버튼 */}
-                                                        <td className="px-2 py-2.5 text-center">
-                                                            <div className="flex items-center justify-center gap-1">
-                                                                <button
-                                                                    onClick={() => openEdit(rec)}
-                                                                    className="p-1.5 rounded-lg text-slate-300 hover:text-indigo-500 hover:bg-indigo-50 transition-all"
-                                                                    title="수정">
-                                                                    <Edit2 className="w-3.5 h-3.5" />
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleDelete(rec)}
-                                                                    className="p-1.5 rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-all"
-                                                                    title="삭제">
-                                                                    <Trash2 className="w-3.5 h-3.5" />
-                                                                </button>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                        {/* 소계 행 */}
-                                        <tfoot>
-                                            <tr className="bg-emerald-50 border-t-2 border-emerald-100">
-                                                <td colSpan={2} className="px-3 py-2.5 font-black text-emerald-700 text-[11px]">소계</td>
-                                                <td className="px-3 py-2.5 text-right font-black text-emerald-700">{group.totalQty.toLocaleString()}박스</td>
-                                                <td className="px-3 py-2.5 text-right font-black text-slate-600">{group.totalExpected.toLocaleString()}원</td>
-                                                <td className="px-3 py-2.5 text-right font-black text-emerald-700">{group.totalSettled.toLocaleString()}원</td>
-                                                <td className="px-3 py-2.5 text-right font-black">
-                                                    <span className={diff < 0 ? 'text-rose-500' : diff > 0 ? 'text-emerald-600' : 'text-slate-400'}>
-                                                        {diff > 0 ? '+' : ''}{diff.toLocaleString()}원
-                                                    </span>
-                                                </td>
-                                                <td colSpan={3} />
-                                            </tr>
-                                        </tfoot>
-                                    </table>
+                                                            </td>
+                                                            {/* 수량 */}
+                                                            <td className="px-3 py-2.5 text-right font-black text-slate-800">
+                                                                {(rec.quantity || 0).toLocaleString()}{rec.sale_unit || '박스'}
+                                                            </td>
+                                                            {/* 예상금액 */}
+                                                            <td className="px-3 py-2.5 text-right font-bold text-slate-600">
+                                                                {rec.price ? rec.price.toLocaleString() + '원' : '-'}
+                                                            </td>
+                                                            {/* 정산금액 — 없으면 주황 강조 */}
+                                                            <td className="px-3 py-2.5 text-right font-black">
+                                                                {rec.settled_amount != null
+                                                                    ? <span className="text-emerald-600">{rec.settled_amount.toLocaleString()}원</span>
+                                                                    : <span className="text-amber-500 text-[10px] font-black bg-amber-100 px-1.5 py-0.5 rounded-lg">미입력</span>
+                                                                }
+                                                            </td>
+                                                            {/* 차액 */}
+                                                            <td className="px-3 py-2.5 text-right font-black">
+                                                                {rowDiff !== null
+                                                                    ? <span className={rowDiff < 0 ? 'text-rose-500' : rowDiff > 0 ? 'text-emerald-500' : 'text-slate-400'}>
+                                                                        {rowDiff > 0 ? '+' : ''}{rowDiff.toLocaleString()}원
+                                                                    </span>
+                                                                    : <span className="text-slate-300">-</span>
+                                                                }
+                                                            </td>
+                                                            {/* 결제수단 */}
+                                                            <td className="px-3 py-2.5 text-right">
+                                                                <span className="font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-lg text-[10px]">
+                                                                    {rec.payment_method || '-'}
+                                                                </span>
+                                                            </td>
+                                                            {/* 차액사유 */}
+                                                            <td className="px-3 py-2.5 text-right font-medium text-slate-400 text-[10px]">
+                                                                {rec.harvest_note || '-'}
+                                                            </td>
+                                                            {/* 수정/삭제 버튼 */}
+                                                            <td className="px-2 py-2.5 text-center">
+                                                                <div className="flex items-center justify-center gap-1">
+                                                                    <button
+                                                                        onClick={() => openEdit(rec)}
+                                                                        className="p-1.5 rounded-lg text-slate-300 hover:text-indigo-500 hover:bg-indigo-50 transition-all"
+                                                                        title="수정">
+                                                                        <Edit2 className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleDelete(rec)}
+                                                                        className="p-1.5 rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-all"
+                                                                        title="삭제">
+                                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                            {/* 소계 행 */}
+                                            <tfoot>
+                                                <tr className="bg-emerald-50 border-t-2 border-emerald-100">
+                                                    <td colSpan={2} className="px-3 py-2.5 font-black text-emerald-700 text-[11px]">소계</td>
+                                                    <td className="px-3 py-2.5 text-right font-black text-emerald-700">{group.totalQty.toLocaleString()}박스</td>
+                                                    <td className="px-3 py-2.5 text-right font-black text-slate-600">{group.totalExpected.toLocaleString()}원</td>
+                                                    <td className="px-3 py-2.5 text-right font-black text-emerald-700">{group.totalSettled.toLocaleString()}원</td>
+                                                    <td className="px-3 py-2.5 text-right font-black">
+                                                        <span className={diff < 0 ? 'text-rose-500' : diff > 0 ? 'text-emerald-600' : 'text-slate-400'}>
+                                                            {diff > 0 ? '+' : ''}{diff.toLocaleString()}원
+                                                        </span>
+                                                    </td>
+                                                    <td colSpan={3} />
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+
+                                    {/* 모바일 카드 - 표시@모바일만 */}
+                                    <div className="md:hidden space-y-2.5 p-3">
+                                        {group.rows.map((rec) => {
+                                            const rowDiff = (rec.settled_amount !== null && rec.price !== null)
+                                                ? rec.settled_amount - rec.price
+                                                : null;
+                                            const missingSettled = rec.settled_amount === null;
+                                            const recordDateStr = new Date(rec.recorded_at).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit', weekday: 'short' });
+                                            const settledDateStr = rec.settled_at 
+                                                ? new Date(rec.settled_at).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit', weekday: 'short' })
+                                                : '미완료';
+                                            
+                                            return (
+                                                <div key={rec.id} className={`rounded-2xl border transition-all overflow-hidden ${missingSettled ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-100'}`}>
+                                                    {/* 헤더: 작물명 */}
+                                                    <div className="px-4 py-2.5 bg-gradient-to-r from-slate-50 to-white border-b flex items-center gap-2">
+                                                        <span className={`text-lg ${getCropColor(rec.crop_name)}`}>
+                                                            {getCropIcon(rec.crop_name)}
+                                                        </span>
+                                                        <span className="font-black text-slate-700 text-sm">
+                                                            {rec.crop_name || '미분류'}
+                                                        </span>
+                                                    </div>
+
+                                                    {/* 판매정보 - 한 줄 */}
+                                                    <div className="px-4 py-2 border-b bg-slate-50/50 text-[11px] font-medium text-slate-700 overflow-x-auto whitespace-nowrap">
+                                                        <span className="font-black text-slate-600 mr-2.5">📤 판매:</span>
+                                                        <span>{recordDateStr}</span>
+                                                        <span className="text-slate-400 mx-1.5">|</span>
+                                                        <span className="bg-indigo-50 text-indigo-600 font-black px-1.5 py-0.5 rounded-md inline-block">{rec.grade || '-'}</span>
+                                                        <span className="text-slate-400 mx-1.5">|</span>
+                                                        <span className="font-black">{(rec.quantity || 0).toLocaleString()}{rec.sale_unit || '박스'}</span>
+                                                        <span className="text-slate-400 mx-1.5">|</span>
+                                                        <span className="font-black text-slate-800">예상 {(rec.price || 0).toLocaleString()}원</span>
+                                                    </div>
+
+                                                    {/* 입금정보 - 한 줄 */}
+                                                    <div className={`px-4 py-2 text-[11px] font-medium overflow-x-auto whitespace-nowrap ${missingSettled ? 'bg-amber-100/30 text-amber-700' : 'bg-emerald-50/50 text-emerald-700'}`}>
+                                                        <span className={`font-black mr-2.5 ${missingSettled ? 'text-amber-600' : 'text-emerald-600'}`}>📥 입금:</span>
+                                                        <span className={missingSettled ? 'text-amber-600 font-black' : ''}>{settledDateStr}{!missingSettled && ' ✓'}</span>
+                                                        <span className="text-slate-400 mx-1.5">|</span>
+                                                        <span className={`font-black ${missingSettled ? 'text-amber-600' : 'text-emerald-600'}`}>
+                                                            정산 {rec.settled_amount !== null ? `${rec.settled_amount.toLocaleString()}원` : '미입력'}
+                                                        </span>
+                                                        <span className="text-slate-400 mx-1.5">|</span>
+                                                        <span className={`font-black ${rowDiff === null ? 'text-slate-400' : rowDiff < 0 ? 'text-rose-600' : rowDiff > 0 ? 'text-emerald-600' : 'text-slate-500'}`}>
+                                                            차액 {rowDiff !== null ? `${rowDiff > 0 ? '+' : ''}${rowDiff.toLocaleString()}원` : '-'}
+                                                        </span>
+                                                    </div>
+
+                                                    {/* 결제수단 + 버튼 */}
+                                                    <div className="px-4 py-2.5 flex items-center justify-between">
+                                                        <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded-lg">
+                                                            {rec.payment_method || '-'}
+                                                        </span>
+                                                        <div className="flex items-center gap-1">
+                                                            <button
+                                                                onClick={() => openEdit(rec)}
+                                                                className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all active:scale-90"
+                                                                title="수정">
+                                                                <Edit2 className="w-3.5 h-3.5" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDelete(rec)}
+                                                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all active:scale-90"
+                                                                title="삭제">
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+
+                                        {/* 모바일 소계 */}
+                                        <div className="bg-emerald-50 border-2 border-emerald-100 rounded-2xl p-3 mt-3">
+                                            <div className="flex justify-between items-center">
+                                                <span className="font-black text-emerald-700 text-sm">소계</span>
+                                                <div className="flex gap-4 text-right">
+                                                    <div>
+                                                        <p className="text-[9px] font-bold text-emerald-600 mb-0.5">수량</p>
+                                                        <p className="font-black text-emerald-700 text-xs">{group.totalQty.toLocaleString()}박스</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[9px] font-bold text-slate-600 mb-0.5">예상</p>
+                                                        <p className="font-bold text-slate-600 text-xs">{group.totalExpected.toLocaleString()}원</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[9px] font-bold text-emerald-600 mb-0.5">정산</p>
+                                                        <p className="font-black text-emerald-700 text-xs">{group.totalSettled.toLocaleString()}원</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[9px] font-bold text-slate-600 mb-0.5">차액</p>
+                                                        <p className={`font-black text-xs ${diff < 0 ? 'text-rose-500' : diff > 0 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                                            {diff > 0 ? '+' : ''}{diff.toLocaleString()}원
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </div>

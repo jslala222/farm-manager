@@ -10,6 +10,9 @@ import { supabase, Worker } from "@/lib/supabase";
 import { formatPhone } from "@/lib/utils";
 import AddressSearch from "@/components/AddressSearch";
 
+const toLocalDateStr = (d: Date = new Date()) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 export default function WorkersPage() {
     const { farm, initialized } = useAuthStore();
     const [workers, setWorkers] = useState<Worker[]>([]);
@@ -42,7 +45,7 @@ export default function WorkersPage() {
     const [editDailyWage, setEditDailyWage] = useState(""); // 수정용 기본 일당
 
     // Attendance State
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    const [selectedDate, setSelectedDate] = useState(toLocalDateStr());
     const [attendanceMap, setAttendanceMap] = useState<Record<string, any>>({});
 
     // Payroll State
@@ -662,9 +665,9 @@ export default function WorkersPage() {
                     {/* 날짜 선택기 */}
                     <div className="bg-white p-4 rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between">
                         <button onClick={() => {
-                            const d = new Date(selectedDate);
+                            const d = new Date(selectedDate + 'T00:00:00');
                             d.setDate(d.getDate() - 1);
-                            setSelectedDate(d.toISOString().split('T')[0]);
+                            setSelectedDate(toLocalDateStr(d));
                         }} className="p-2 hover:bg-gray-100 rounded-xl transition-all"><X className="w-5 h-5 rotate-45" /></button>
                         <div className="flex flex-col items-center">
                             <span className="text-[10px] font-black text-gray-700 uppercase tracking-widest">Work Date</span>
@@ -672,9 +675,9 @@ export default function WorkersPage() {
                                 className="text-lg font-black text-gray-900 bg-transparent outline-none text-center" />
                         </div>
                         <button onClick={() => {
-                            const d = new Date(selectedDate);
+                            const d = new Date(selectedDate + 'T00:00:00');
                             d.setDate(d.getDate() + 1);
-                            setSelectedDate(d.toISOString().split('T')[0]);
+                            setSelectedDate(toLocalDateStr(d));
                         }} className="p-2 hover:bg-gray-100 rounded-xl transition-all"><Plus className="w-5 h-5" /></button>
                     </div>
 

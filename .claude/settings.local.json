@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev)",
+      "Bash(netstat -ano)",
+      "Read(//c/Users/User/.claude/**)",
+      "Bash(npm install)",
+      "Bash(cd /c/Users/User/Desktop/제미나이 3/연습/claude/projects_001/farm-manager)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\User\\.claude"
+    ]
+  }
+}
