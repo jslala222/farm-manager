@@ -1,0 +1,10 @@
+{
+  "servers": {
+    "farm-supabase": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["supabase-mcp/mcp-server.js"],
+      "cwd": "${workspaceFolder}"
+    }
+  }
+}

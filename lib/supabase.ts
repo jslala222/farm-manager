@@ -124,6 +124,7 @@ export interface FarmCrop {
     sort_order: number;
     is_active: boolean;
     category: 'crop' | 'processed'; // 'crop' = 원물, 'processed' = 가공품
+    available_specs: string[]; // 가공품 규격 목록 (['350g', '1kg'] 등)
     created_at: string;
 }
 
@@ -180,6 +181,7 @@ export interface SalesRecord {
     payment_method?: string | null; // 결제 수단 (카드, 현금 등)
     settled_amount?: number; // 정산 완료 시 확정된 금액 (정산 완료/후불 건 등)
     grade?: string | null; // 등급 (특/상/보통/하/미지정)
+    product_spec?: string | null; // 가공품 규격 (350g, 1kg, 500ml 등)
     clients?: { name: string; client_type: string }; // Legacy Join Result
     partner?: { company_name: string; manager_contact?: string }; // B2B Join
     customer?: { name: string; contact?: string; address?: string; is_vip?: boolean }; // B2C Join

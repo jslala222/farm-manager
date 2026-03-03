@@ -27,6 +27,7 @@ export default function SalesPage() {
     const [farmCrops, setFarmCrops] = useState<any[]>([]);
     const [isAddingProcessed, setIsAddingProcessed] = useState(false);
     const [newProcessedInput, setNewProcessedInput] = useState('');
+    const [showCropPicker, setShowCropPicker] = useState(true);
 
     // B2B State (다중 주문행)
     const [selectedClientId, setSelectedClientId] = useState<string>("");
@@ -275,89 +276,102 @@ export default function SalesPage() {
                     </div>
                 )}
 
-                {/* [품목 선택: 원물 / 가공품 2줄 분리] */}
+                {/* [품목 선택: 접힘/펼침] */}
                 <div className="bg-white/80 backdrop-blur-md p-3 rounded-3xl border border-white shadow-sm space-y-3">
-                    {/* 원물 */}
-                    {farmCrops.filter(c => c.category !== 'processed').length > 0 && (
-                        <div className="space-y-1">
-                            <span className="text-[9px] font-black text-emerald-500 uppercase ml-1">🌱 원물</span>
-                            <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1">
-                                {farmCrops.filter(c => c.category !== 'processed').map((crop) => (
-                                    <button key={crop.id}
-                                        onClick={() => {
-                                            setCropName(crop.crop_name);
-                                            setProductSpec('');
-                                            if (crop.available_units && crop.available_units.length > 0) {
-                                                setSaleUnit(crop.available_units[0]);
-                                            }
-                                        }}
-                                        className={`min-w-[68px] flex flex-col items-center justify-center py-2 px-1 rounded-2xl border-2 transition-all gap-0.5 shrink-0
-                                        ${cropName === crop.crop_name
-                                            ? 'bg-emerald-50 border-emerald-500 shadow-sm ring-2 ring-emerald-100'
-                                            : 'bg-white border-slate-50 opacity-40'}`}>
-                                        <span className="text-2xl leading-none">{crop.crop_icon || '🌱'}</span>
-                                        <span className="text-[9px] font-black text-slate-800 whitespace-nowrap">{crop.crop_name}</span>
+                    {showCropPicker ? (
+                        <div className="space-y-2 animate-in fade-in duration-200">
+                            {/* 원물 */}
+                            {farmCrops.filter(c => c.category !== 'processed').length > 0 && (
+                                <div className="space-y-1">
+                                    <span className="text-[9px] font-black text-emerald-500 uppercase ml-1">🌱 원물</span>
+                                    <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1">
+                                        {farmCrops.filter(c => c.category !== 'processed').map((crop) => (
+                                            <button key={crop.id}
+                                                onClick={() => {
+                                                    setCropName(crop.crop_name);
+                                                    setProductSpec('');
+                                                    if (crop.available_units?.length > 0) setSaleUnit(crop.available_units[0]);
+                                                    setShowCropPicker(false);
+                                                }}
+                                                className={`min-w-[68px] flex flex-col items-center justify-center py-2 px-1 rounded-2xl border-2 transition-all gap-0.5 shrink-0
+                                                ${cropName === crop.crop_name ? 'bg-emerald-50 border-emerald-500 shadow-sm ring-2 ring-emerald-100' : 'bg-white border-slate-50 opacity-40 hover:opacity-100'}`}>
+                                                <span className="text-2xl leading-none">{crop.crop_icon || '🌱'}</span>
+                                                <span className="text-[9px] font-black text-slate-800 whitespace-nowrap">{crop.crop_name}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                            {/* 가공품 */}
+                            <div className="space-y-1">
+                                <span className="text-[9px] font-black text-amber-500 uppercase ml-1">🏭 가공품</span>
+                                <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1">
+                                    {farmCrops.filter(c => c.category === 'processed').map((crop) => (
+                                        <button key={crop.id}
+                                            onClick={() => {
+                                                setCropName(crop.crop_name);
+                                                setProductSpec('');
+                                                setIsAddingProcessed(false);
+                                                if (crop.available_units?.length > 0) setSaleUnit(crop.available_units[0]);
+                                                setShowCropPicker(false);
+                                            }}
+                                            className={`min-w-[68px] flex flex-col items-center justify-center py-2 px-1 rounded-2xl border-2 transition-all gap-0.5 shrink-0
+                                            ${cropName === crop.crop_name && !isAddingProcessed ? 'bg-amber-50 border-amber-500 shadow-sm ring-2 ring-amber-100' : 'bg-white border-amber-50 opacity-40 hover:opacity-100'}`}>
+                                            <span className="text-2xl leading-none">{crop.crop_icon || '📦'}</span>
+                                            <span className="text-[9px] font-black text-slate-800 whitespace-nowrap">{crop.crop_name}</span>
+                                        </button>
+                                    ))}
+                                    {/* [+직접입력] */}
+                                    <button onClick={() => setIsAddingProcessed(!isAddingProcessed)}
+                                        className={`min-w-[68px] flex flex-col items-center justify-center py-2 px-1 rounded-2xl border-2 border-dashed transition-all gap-0.5 shrink-0
+                                        ${isAddingProcessed ? 'bg-amber-50 border-amber-400 shadow-sm' : 'bg-white border-amber-200 opacity-60 hover:opacity-100'}`}>
+                                        <span className="text-2xl leading-none">{isAddingProcessed ? '✏️' : '➕'}</span>
+                                        <span className="text-[9px] font-black text-amber-600 whitespace-nowrap">직접입력</span>
                                     </button>
-                                ))}
+                                </div>
+                                {/* 즉석 입력 모드 */}
+                                {isAddingProcessed && (
+                                    <div className="flex gap-1.5 items-center animate-in slide-in-from-top-1 duration-200">
+                                        <input type="text" value={newProcessedInput}
+                                            onChange={(e) => setNewProcessedInput(e.target.value)}
+                                            onKeyDown={(e) => { if (e.key === 'Enter') handleAddProcessed(); }}
+                                            placeholder="가공품명 입력 (예: 딸기케이크)" autoFocus
+                                            className="flex-1 px-3 py-2.5 bg-amber-50/50 border-2 border-amber-200 rounded-xl text-sm font-black text-slate-800 outline-none focus:border-amber-400 placeholder:text-amber-300 placeholder:font-bold" />
+                                        <button onClick={handleAddProcessed}
+                                            className="px-4 py-2.5 bg-amber-500 text-white rounded-xl text-xs font-black shadow-md active:scale-95 transition-all whitespace-nowrap">추가</button>
+                                        <button onClick={() => { setIsAddingProcessed(false); setNewProcessedInput(''); }}
+                                            className="p-2.5 bg-slate-100 text-slate-400 rounded-xl active:scale-95 transition-all"><X className="w-4 h-4" /></button>
+                                    </div>
+                                )}
                             </div>
                         </div>
-                    )}
-                    {/* 가공품 (하이브리드: 등록 버튼 + 즉석 추가) */}
-                    <div className="space-y-1">
-                        <span className="text-[9px] font-black text-amber-500 uppercase ml-1">🏭 가공품</span>
-                        <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1">
-                            {farmCrops.filter(c => c.category === 'processed').map((crop) => (
-                                <button key={crop.id}
-                                    onClick={() => {
-                                        setCropName(crop.crop_name);
-                                        setProductSpec('');
-                                        setIsAddingProcessed(false);
-                                        if (crop.available_units && crop.available_units.length > 0) {
-                                            setSaleUnit(crop.available_units[0]);
-                                        }
-                                    }}
-                                    className={`min-w-[68px] flex flex-col items-center justify-center py-2 px-1 rounded-2xl border-2 transition-all gap-0.5 shrink-0
-                                    ${cropName === crop.crop_name && !isAddingProcessed
-                                        ? 'bg-amber-50 border-amber-500 shadow-sm ring-2 ring-amber-100'
-                                        : 'bg-white border-amber-50 opacity-40'}`}>
-                                    <span className="text-2xl leading-none">{crop.crop_icon || '📦'}</span>
-                                    <span className="text-[9px] font-black text-slate-800 whitespace-nowrap">{crop.crop_name}</span>
-                                </button>
-                            ))}
-                            {/* [+직접입력] 버튼 */}
-                            <button
-                                onClick={() => setIsAddingProcessed(!isAddingProcessed)}
-                                className={`min-w-[68px] flex flex-col items-center justify-center py-2 px-1 rounded-2xl border-2 border-dashed transition-all gap-0.5 shrink-0
-                                ${isAddingProcessed
-                                    ? 'bg-amber-50 border-amber-400 shadow-sm'
-                                    : 'bg-white border-amber-200 opacity-60 hover:opacity-100'}`}>
-                                <span className="text-2xl leading-none">{isAddingProcessed ? '✏️' : '➕'}</span>
-                                <span className="text-[9px] font-black text-amber-600 whitespace-nowrap">직접입력</span>
+                    ) : (
+                        <div className="flex items-center gap-2 animate-in fade-in duration-200">
+                            {(() => {
+                                const sel = farmCrops.find(c => c.crop_name === cropName);
+                                const isProc = sel?.category === 'processed';
+                                const borderColor = isProc ? 'border-amber-200' : 'border-emerald-200';
+                                const bgColor = isProc ? 'bg-amber-50/80' : 'bg-emerald-50/80';
+                                const tagColor = isProc ? 'text-amber-500 bg-amber-100' : 'text-emerald-600 bg-emerald-100';
+                                return (
+                                    <div className={`flex items-center gap-2.5 flex-1 ${bgColor} px-3 py-2.5 rounded-2xl border ${borderColor}`}>
+                                        <span className="text-2xl leading-none">{sel?.crop_icon || '📦'}</span>
+                                        <div className="min-w-0">
+                                            <p className="text-sm font-black text-slate-800 truncate">{cropName}</p>
+                                            <div className="flex items-center gap-1">
+                                                <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full ${tagColor}`}>{isProc ? '가공품' : '원물'}</span>
+                                                <span className="text-[9px] font-bold text-slate-400">{saleUnit}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+                            <button onClick={() => setShowCropPicker(true)}
+                                className="px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-[10px] font-black text-slate-500 active:scale-95 transition-all hover:bg-slate-50 whitespace-nowrap shadow-sm">
+                                🔄 변경
                             </button>
                         </div>
-                        {/* 즉석 입력 모드 */}
-                        {isAddingProcessed && (
-                            <div className="flex gap-1.5 items-center animate-in slide-in-from-top-1 duration-200">
-                                <input
-                                    type="text"
-                                    value={newProcessedInput}
-                                    onChange={(e) => setNewProcessedInput(e.target.value)}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') handleAddProcessed(); }}
-                                    placeholder="가공품명 입력 (예: 딸기케이크)"
-                                    autoFocus
-                                    className="flex-1 px-3 py-2.5 bg-amber-50/50 border-2 border-amber-200 rounded-xl text-sm font-black text-slate-800 outline-none focus:border-amber-400 placeholder:text-amber-300 placeholder:font-bold"
-                                />
-                                <button onClick={handleAddProcessed}
-                                    className="px-4 py-2.5 bg-amber-500 text-white rounded-xl text-xs font-black shadow-md active:scale-95 transition-all whitespace-nowrap">
-                                    추가
-                                </button>
-                                <button onClick={() => { setIsAddingProcessed(false); setNewProcessedInput(''); }}
-                                    className="p-2.5 bg-slate-100 text-slate-400 rounded-xl active:scale-95 transition-all">
-                                    <X className="w-4 h-4" />
-                                </button>
-                            </div>
-                        )}
-                    </div>
+                    )}
                     {/* [인라인 단위 선택] - 작물에 종속되어 표시됨 */}
                     <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-hide bg-slate-50/50 p-1 rounded-xl border border-slate-100">
                         {farmCrops.find(c => c.crop_name === cropName)?.available_units?.map((unit: string) => (
@@ -597,7 +611,7 @@ export default function SalesPage() {
                                     <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-lg shadow-inner ${settlementService.isB2B(item) ? 'bg-indigo-50 text-indigo-500' : 'bg-rose-50 text-rose-500'}`}> {farmCrops.find((c: any) => c.crop_name === item.crop_name)?.crop_icon || '🍓'} </div>
                                     <div className="leading-tight">
                                         <div className="flex items-center gap-1.5 mb-0.5"><p className="text-xs font-black text-slate-800">{item.partner?.company_name || item.customer?.name || item.customer_name || '미지정'}</p><span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full ${item.is_settled ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>{item.is_settled ? '완료' : '미정산'}</span></div>
-                                        <p className="text-[10px] font-bold text-slate-400">{item.quantity}{item.sale_unit}{item.product_spec ? ` (${item.product_spec})` : ''} · {formatCurrency(item.price || 0)}</p>
+                                        <p className="text-[10px] font-bold text-slate-400">{item.quantity}{item.sale_unit}{(item as any).product_spec ? ` (${(item as any).product_spec})` : ''} · {formatCurrency(item.price || 0)}</p>
                                     </div>
                                 </div>
                                 <div className="flex gap-1 items-center">

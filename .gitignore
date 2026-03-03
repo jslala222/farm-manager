@@ -33,6 +33,10 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# supabase-mcp (service_role key 보호)
+supabase-mcp/.env
+supabase-mcp/node_modules/
+
 # vercel
 .vercel
 

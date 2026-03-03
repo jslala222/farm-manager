@@ -1,0 +1,14 @@
+{
+  "name": "farm-supabase-mcp",
+  "version": "1.0.0",
+  "description": "Farm Manager Supabase MCP Server",
+  "main": "mcp-server.js",
+  "scripts": {
+    "start": "node mcp-server.js"
+  },
+  "type": "commonjs",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.98.0",
+    "dotenv": "^17.3.1"
+  }
+}
