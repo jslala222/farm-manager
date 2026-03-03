@@ -515,7 +515,7 @@ export default function FinancePage() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                     {/* 인건비 섹션 */}
                     <div className="bg-white p-4 rounded-[2rem] border border-gray-100 shadow-sm space-y-1.5 relative overflow-hidden">
                         <div className="flex items-center gap-1.5 mb-1">
