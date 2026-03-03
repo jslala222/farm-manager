@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import {
-    Plus, Trash2, UserPlus, Phone, UserCheck, UserX,
+    Plus, Trash2, UserPlus, Phone,
     Edit2, Save, X, Users, Heart, Globe, Timer, MapPin, AlignLeft, Check, RefreshCcw, AlertTriangle, User, CreditCard
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
@@ -439,7 +439,7 @@ export default function WorkersPage() {
             <div key={worker.id}
                 className={`bg-white rounded-xl border p-3 space-y-2 shadow-sm transition-all hover:shadow-lg hover:border-gray-200
                     ${worker.is_active ? 'border-gray-100 bg-white' : 'bg-gray-50 border-gray-200 opacity-60'}`}>
-                {/* 헤더: 아이콘 + 이름 + 버튼 */}
+                {/* 헤더: 아이콘 + 이름 + 상태배지 + 버튼 */}
                 <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center border shrink-0 ${info.bg} ${info.border}`}>
@@ -448,7 +448,9 @@ export default function WorkersPage() {
                         <div className="min-w-0">
                             <div className="flex items-center gap-2">
                                 <span className="font-bold text-base text-gray-900 truncate">{worker.name}</span>
-                                {!worker.is_active && <span className="text-[8px] font-bold bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded shrink-0">중단</span>}
+                                <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded shrink-0 ${worker.is_active ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-amber-50 text-amber-600 border border-amber-200'}`}>
+                                    {worker.is_active ? '근무중' : '휴직중'}
+                                </span>
                             </div>
                             <span className={`text-[8px] font-bold ${worker.gender === 'female' ? 'text-pink-500' : 'text-blue-500'}`}>
                                 {worker.gender === 'female' ? '여성' : '남성'}
@@ -456,9 +458,6 @@ export default function WorkersPage() {
                         </div>
                     </div>
                     <div className="flex items-center gap-0.5 shrink-0">
-                        <button onClick={() => toggleWorkerStatus(worker.id, worker.is_active)} className={`p-1.5 rounded-lg transition-all active:scale-90 ${worker.is_active ? 'text-gray-500 hover:bg-gray-100' : 'bg-green-50 text-green-600'}`}>
-                            {worker.is_active ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
-                        </button>
                         <button onClick={() => startEdit(worker)} className="p-1.5 text-gray-500 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all active:scale-90">
                             <Edit2 className="w-4 h-4" />
                         </button>
