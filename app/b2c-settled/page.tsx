@@ -311,16 +311,16 @@ export default function B2CSettledPage() {
                             <p className="text-[9px] text-orange-100 font-bold">{settledCount}건</p>
                         </div>
                         
-                        {/* 정산 완료 택배비 */}
+                        {/* 택배비 (선지출 - is_settled 무관) */}
                         <div className="bg-white/10 rounded-2xl p-2.5">
                             <div className="flex items-center gap-1 mb-1">
                                 <Truck className="w-3 h-3 text-pink-200" />
                                 <span className="text-[9px] text-orange-100 font-bold">배송비</span>
                             </div>
                             <p className="text-sm font-black text-pink-200 truncate">
-                                {formatCurrency(records.filter(r => r.is_settled).reduce((sum, r) => sum + (r.shipping_cost || 0), 0))}
+                                {formatCurrency(records.reduce((sum, r) => sum + (r.shipping_cost || 0), 0))}
                             </p>
-                            <p className="text-[9px] text-orange-100 font-bold">(정산완료)</p>
+                            <p className="text-[9px] text-orange-100 font-bold">(선지출)</p>
                         </div>
                         
                         {/* 미정산 */}
