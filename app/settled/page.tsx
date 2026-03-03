@@ -578,17 +578,37 @@ export default function SettledPage() {
                                             
                                             return (
                                                 <div key={rec.id} className={`rounded-2xl border transition-all overflow-hidden ${missingSettled ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-100'}`}>
-                                                    {/* 헤더: 작물명 */}
-                                                    <div className="px-4 py-2.5 bg-gradient-to-r from-slate-50 to-white border-b flex items-center gap-2">
-                                                        <span className={`text-lg ${getCropColor(rec.crop_name)}`}>
-                                                            {getCropIcon(rec.crop_name)}
-                                                        </span>
-                                                        <span className="font-black text-slate-700 text-sm">
-                                                            {rec.crop_name || '미분류'}
-                                                        </span>
+                                                    {/* 헤더: 작물명 | 결제수단 | [수정][삭제] */}
+                                                    <div className="px-4 py-2.5 bg-gradient-to-r from-slate-50 to-white border-b flex items-center justify-between gap-3">
+                                                        <div className="flex items-center gap-2 min-w-0">
+                                                            <span className={`text-lg shrink-0 ${getCropColor(rec.crop_name)}`}>
+                                                                {getCropIcon(rec.crop_name)}
+                                                            </span>
+                                                            <span className="font-black text-slate-700 text-sm truncate">
+                                                                {rec.crop_name || '미분류'}
+                                                            </span>
+                                                            <span className="text-slate-400 font-bold">|</span>
+                                                            <span className="bg-slate-200 text-slate-700 font-black px-2 py-1 rounded-md text-[10px] shrink-0">
+                                                                {rec.payment_method || '-'}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1 shrink-0">
+                                                            <button
+                                                                onClick={() => openEdit(rec)}
+                                                                className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all active:scale-90"
+                                                                title="수정">
+                                                                <Edit2 className="w-4 h-4" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDelete(rec)}
+                                                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all active:scale-90"
+                                                                title="삭제">
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
                                                     </div>
 
-                                                    {/* 판매정보 - 한 줄 (결제수단 포함) */}
+                                                    {/* 판매정보 - 한 줄 (결제수단 제거) */}
                                                     <div className="px-4 py-2 border-b bg-slate-50/50 text-[11px] font-medium text-slate-700 overflow-x-auto whitespace-nowrap">
                                                         <span className="font-black text-slate-600 mr-2.5">📤 판매:</span>
                                                         <span>{recordDateStr}</span>
@@ -598,14 +618,10 @@ export default function SettledPage() {
                                                         <span className="font-black">{(rec.quantity || 0).toLocaleString()}{rec.sale_unit || '박스'}</span>
                                                         <span className="text-slate-400 mx-1.5">|</span>
                                                         <span className="font-black text-slate-800">예상 {(rec.price || 0).toLocaleString()}원</span>
-                                                        <span className="text-slate-400 mx-1.5">|</span>
-                                                        <span className="bg-slate-200 text-slate-700 font-black px-2 py-1 rounded-md inline-block">
-                                                            {rec.payment_method || '-'}
-                                                        </span>
                                                     </div>
 
-                                                    {/* 입금정보 - 한 줄 */}
-                                                    <div className={`px-4 py-2 border-b text-[11px] font-medium overflow-x-auto whitespace-nowrap ${missingSettled ? 'bg-amber-100/30 text-amber-700' : 'bg-emerald-50/50 text-emerald-700'}`}>
+                                                    {/* 입금정보 - 한 줄 (마지막) */}
+                                                    <div className={`px-4 py-2 text-[11px] font-medium overflow-x-auto whitespace-nowrap ${missingSettled ? 'bg-amber-100/30 text-amber-700' : 'bg-emerald-50/50 text-emerald-700'}`}>
                                                         <span className={`font-black mr-2.5 ${missingSettled ? 'text-amber-600' : 'text-emerald-600'}`}>📥 입금:</span>
                                                         <span className={missingSettled ? 'text-amber-600 font-black' : ''}>{settledDateStr}{!missingSettled && ' ✓'}</span>
                                                         <span className="text-slate-400 mx-1.5">|</span>
@@ -616,22 +632,6 @@ export default function SettledPage() {
                                                         <span className={`font-black ${rowDiff === null ? 'text-slate-400' : rowDiff < 0 ? 'text-rose-600' : rowDiff > 0 ? 'text-emerald-600' : 'text-slate-500'}`}>
                                                             차액 {rowDiff !== null ? `${rowDiff > 0 ? '+' : ''}${rowDiff.toLocaleString()}원` : '-'}
                                                         </span>
-                                                    </div>
-
-                                                    {/* 수정/삭제 버튼만 */}
-                                                    <div className="px-4 py-2.5 flex items-center justify-center gap-2">
-                                                        <button
-                                                            onClick={() => openEdit(rec)}
-                                                            className="p-2 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all active:scale-90"
-                                                            title="수정">
-                                                            <Edit2 className="w-4 h-4" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDelete(rec)}
-                                                            className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all active:scale-90"
-                                                            title="삭제">
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
                                                     </div>
                                                 </div>
                                             );
