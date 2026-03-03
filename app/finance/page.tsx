@@ -107,15 +107,18 @@ export default function FinancePage() {
             const lastDay = new Date(year, month, 0).getDate();
             const startStr = `${selectedMonth}-01T00:00:00`;
             const endStr = `${selectedMonth}-${lastDay}T23:59:59`;
+            const cashStartDate = `${selectedMonth}-01`;
+            const cashEndDate = `${selectedMonth}-${lastDay}`;
 
             // [bkit 전역 결산 엔진] 
-            // 1. 월별 통계용 데이터 (지출 등)는 해당 월로 한정
-            // 2. 미정산 내역은 날짜 상관없이 전체 조회 (사장님 지시사항)
+            // 1. B2C (현금): recorded_at 기준으로 해당 월의 모든 판매
+            // 2. B2B (정산): settled_at이 해당 월이고 is_settled=true인 것
+            // 3. 미정산 내역: 언제 납품이든 상관없이 전체 조회 (입금 완료되면 사라짐)
             const { data: salesData, error: salesError } = await supabase
                 .from('sales_records')
                 .select('*, partner:partners(company_name), customer:customers(name)')
                 .eq('farm_id', farm.id)
-                .or(`and(recorded_at.gte.${startStr},recorded_at.lte.${endStr}),is_settled.eq.false`)
+                .or(`and(recorded_at.gte.${startStr},recorded_at.lte.${endStr}),and(settled_at.gte.${cashStartDate},settled_at.lte.${cashEndDate},is_settled.eq.true),is_settled.eq.false`)
                 .order('recorded_at', { ascending: false });
 
             if (salesError) throw salesError;
@@ -148,8 +151,16 @@ export default function FinancePage() {
             const newUnsettledB2c: any[] = []; // [수정] 배열에 수집 후 한 번에 업데이트
 
             salesData?.forEach((rec: any) => {
-                const recDate = rec.recorded_at.split('T')[0];
-                const isInSelectedMonth = recDate.startsWith(selectedMonth);
+                // [중요] 정산액 기준 
+                // - B2B: settled_at (정산 확정 날짜)
+                // - B2C: recorded_at (판매 날짜 = 현금거래)
+                let dateStr: string | null = null;
+                if (settlementService.isB2B(rec) && rec.is_settled && rec.settled_at) {
+                    dateStr = String(rec.settled_at).split('T')[0];
+                } else if (settlementService.isB2C(rec) && rec.recorded_at) {
+                    dateStr = rec.recorded_at.split('T')[0];
+                }
+                const isInSelectedMonth = dateStr?.startsWith(selectedMonth) ?? false;
 
                 const price = settlementService.calculateRecordTotal(rec);
 
@@ -437,9 +448,9 @@ export default function FinancePage() {
                 )}
 
                 {/* 메인 수익성 카드 */}
-                <div className="bg-gray-900 rounded-[2.5rem] p-4 text-white shadow-2xl shadow-gray-200 relative overflow-hidden group">
+                <div className="bg-red-600 rounded-[2.5rem] p-4 text-white shadow-2xl shadow-red-200 relative overflow-hidden group">
                     <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -mr-24 -mt-24 blur-3xl group-hover:bg-white/10 transition-all duration-700"></div>
-                    <div className="absolute bottom-0 left-0 w-32 h-32 bg-indigo-500/10 rounded-full -ml-16 -mb-16 blur-2xl"></div>
+                    <div className="absolute bottom-0 left-0 w-32 h-32 bg-red-700/30 rounded-full -ml-16 -mb-16 blur-2xl"></div>
 
                     <div className="relative z-10 space-y-3">
                         <div className="flex justify-between items-start gap-2">
@@ -638,12 +649,12 @@ export default function FinancePage() {
                                                         isExpanded ? prev.filter(k => k !== pKey) : [...prev, pKey]
                                                     );
                                                 }}
-                                                className={`w-full text-left bg-white rounded-3xl border-2 p-5 shadow-sm flex items-center justify-between transition-all active:scale-95 ${isExpanded ? 'border-green-400 bg-green-50/30' : 'border-gray-100'}`}
+                                                className={`w-full text-left rounded-3xl border-2 p-5 shadow-sm flex items-center justify-between transition-all active:scale-95 ${isExpanded ? 'border-green-400 bg-green-100 text-gray-900' : 'border-red-300 bg-red-50 text-gray-900'}`}
                                             >
                                                 <div className="flex-1 min-w-0 space-y-1.5 pr-3">
                                                     <div className="flex items-center gap-2 flex-wrap">
                                                         <h4 className="text-lg font-black text-gray-900 leading-tight truncate">{partnerGroup.companyName}</h4>
-                                                        <span className={`text-xs font-black px-2 py-0.5 rounded-full shrink-0 ${isExpanded ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                                                        <span className={`text-xs font-black px-2 py-0.5 rounded-full shrink-0 ${isExpanded ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}`}>
                                                             {partnerGroup.dailyGroups.length}건
                                                         </span>
                                                     </div>
@@ -653,10 +664,10 @@ export default function FinancePage() {
                                                 </div>
                                                 <div className="flex items-center gap-3 shrink-0">
                                                     <div className="text-right">
-                                                        <p className={`text-[10px] font-black uppercase tracking-wide mb-0.5 ${isExpanded ? 'text-green-600' : 'text-amber-600'}`}>미결산</p>
+                                                        <p className={`text-[10px] font-black uppercase tracking-wide mb-0.5 ${isExpanded ? 'text-green-700' : 'text-red-700'}`}>미결산</p>
                                                         <p className="text-xl font-black text-gray-900 whitespace-nowrap">{formatCurrency(partnerGroup.totalAmount)}</p>
                                                     </div>
-                                                    <div className={`p-2 rounded-full transition-transform duration-300 ${isExpanded ? 'rotate-180 bg-green-100 text-green-600' : 'bg-gray-50 text-gray-600'}`}>
+                                                    <div className={`p-2 rounded-full transition-transform duration-300 ${isExpanded ? 'rotate-180 bg-green-200 text-green-700' : 'bg-red-100 text-red-600'}`}>
                                                         <ChevronRight className={`w-5 h-5 ${isExpanded ? 'rotate-90' : ''}`} />
                                                     </div>
                                                 </div>
