@@ -214,15 +214,22 @@ export default function FinancePage() {
                         uRecords.push(rec);
                     }
                 } else if (isB2C) {
-                    // B2C: 쿼리에서 recorded_at으로 이미 월별 필터링됨
-                    // → 모든 B2C 레코드 = 선택된 월 범위 내
-                    totalRev += price;
-                    b2cRev += price;
-                    totalShipping += (rec.shipping_cost || 0) + (rec.packaging_cost || 0);
+                    // B2C 월 귀속 검증: recorded_at이 선택된 월인지 확인
+                    // 쿼리3(미정산 전체)에서 다른 월의 B2C가 섞여들어올 수 있음
+                    const recDate = String(rec.recorded_at || '').split('T')[0]; // "2026-03-02"
+                    const recMonth = recDate.slice(0, 7); // "2026-03"
                     
-                    if (!rec.is_settled) {
-                        newUnsettledB2c.push(rec);
+                    if (recMonth === selectedMonth) {
+                        // 이번 달 B2C: 정산 여부와 무관하게 매출 인정 (recorded_at 기준)
+                        totalRev += price;
+                        b2cRev += price;
+                        totalShipping += (rec.shipping_cost || 0) + (rec.packaging_cost || 0);
+                        
+                        if (!rec.is_settled) {
+                            newUnsettledB2c.push(rec);
+                        }
                     }
+                    // 다른 달 B2C(쿼리3에서 온 미정산): 매출에 합산하지 않음, 무시
                 }
             });
 
