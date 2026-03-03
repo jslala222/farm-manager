@@ -324,9 +324,9 @@ export default function WorkersPage() {
 
     const roleInfo = {
         family: { label: "가족/식구", icon: Heart, color: "text-blue-600", bg: "bg-blue-50", border: "border-blue-100" },
-        staff: { label: "일반직원", icon: UserCheck, color: "text-indigo-600", bg: "bg-indigo-50", border: "border-indigo-100" },
-        foreign: { label: "외국인", icon: Globe, color: "text-green-600", bg: "bg-green-50", border: "border-green-100" },
-        part_time: { label: "아르바이트", icon: Timer, color: "text-orange-600", bg: "bg-orange-50", border: "border-orange-100" }
+        staff: { label: "직원(내국인)", icon: UserCheck, color: "text-indigo-600", bg: "bg-indigo-50", border: "border-indigo-100" },
+        foreign: { label: "직원(외국인)", icon: Globe, color: "text-green-600", bg: "bg-green-50", border: "border-green-100" },
+        part_time: { label: "개별인력", icon: Timer, color: "text-orange-600", bg: "bg-orange-50", border: "border-orange-100" }
     };
 
     const renderWorkerCard = (worker: Worker) => {
