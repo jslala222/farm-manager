@@ -12,7 +12,7 @@ const toLocalDateStr = (d: Date = new Date()) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 type HarvestItem = { crop: string; unit: string; qty: number };
-type SalesItem = { unit: string; qty: number };
+type SalesItem = { crop: string; unit: string; qty: number };
 type RecentActivity = { id: string; type: 'harvest' | 'sales'; label: string; qty: number; unit: string; time: string };
 
 export default function Home() {
@@ -32,6 +32,7 @@ export default function Home() {
   const [monthSales, setMonthSales] = useState(0);
   const [monthExpenses, setMonthExpenses] = useState(0);
   const [unpaidB2BCount, setUnpaidB2BCount] = useState(0);
+  const [unpaidB2CCount, setUnpaidB2CCount] = useState(0);
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
 
   // 주간 날짜 계산 (월~일)
@@ -114,7 +115,7 @@ export default function Home() {
         supabase.from('attendance_records').select('worker_name')
           .eq('farm_id', farm.id).eq('work_date', selectedDate).eq('is_present', true),
 
-        supabase.from('sales_records').select('quantity, sale_unit')
+        supabase.from('sales_records').select('quantity, sale_unit, crop_name')
           .eq('farm_id', farm.id)
           .gte('recorded_at', `${selectedDate}T00:00:00`)
           .lte('recorded_at', `${selectedDate}T23:59:59`),
@@ -123,20 +124,21 @@ export default function Home() {
           .eq('farm_id', farm.id).eq('work_date', selectedDate),
 
         supabase.from('sales_records')
-          .select('price, settled_amount, is_settled, shipping_cost, sale_type, delivery_method')
+          .select('price, settled_amount, is_settled, delivery_method')
           .eq('farm_id', farm.id)
-          .gte('recorded_at', `${monthStart}T00:00:00`)
-          .lte('recorded_at', `${monthEnd}T23:59:59`),
+          .eq('is_settled', true)
+          .gte('settled_at', monthStart)
+          .lte('settled_at', monthEnd),
 
         supabase.from('expenditures').select('amount')
           .eq('farm_id', farm.id)
           .gte('expense_date', monthStart)
           .lte('expense_date', monthEnd),
 
-        supabase.from('sales_records').select('id', { count: 'exact', head: true })
+        supabase.from('sales_records')
+          .select('id, delivery_method, sale_type, partner_id')
           .eq('farm_id', farm.id)
-          .eq('is_settled', false)
-          .eq('sale_type', 'b2b'),
+          .eq('is_settled', false),
 
         supabase.from('harvest_records').select('id, crop_name, quantity, recorded_at')
           .eq('farm_id', farm.id)
@@ -165,22 +167,22 @@ export default function Home() {
         crop, unit: cropUnitMap[crop] || '박스', qty,
       })));
 
-      // 출하 합산
-      const salesMap: Record<string, number> = {};
+      // 출하 합산 (품목별)
+      const salesCropMap: Record<string, { unit: string; qty: number }> = {};
       (salesRes.data ?? []).forEach(r => {
-        const unit = r.sale_unit || '박스';
-        salesMap[unit] = (salesMap[unit] || 0) + Number(r.quantity || 0);
+        const crop = r.crop_name || '출하물';
+        const unit = r.sale_unit || 'kg';
+        if (!salesCropMap[crop]) salesCropMap[crop] = { unit, qty: 0 };
+        salesCropMap[crop].qty += Number(r.quantity || 0);
       });
-      setSalesItems(Object.entries(salesMap).map(([unit, qty]) => ({ unit, qty })));
+      setSalesItems(Object.entries(salesCropMap).map(([crop, { unit, qty }]) => ({ crop, unit, qty })));
 
       setStaffCount((attendanceRes.data ?? []).length);
       setLaborCount((laborRes.data ?? []).reduce((s, r) => s + (r.headcount || 0), 0));
 
-      // 이번달 매출
+      // 이번달 매출 (settled_at 기준 현금주의)
       const totalSales = (monthlySalesRes.data ?? []).reduce((sum, r) => {
-        if (r.is_settled && r.settled_amount != null) return sum + r.settled_amount;
-        let amt = r.price || 0;
-        if (r.sale_type === 'b2c' || r.delivery_method === 'courier') amt += (r.shipping_cost || 0);
+        const amt = (r.settled_amount && r.settled_amount > 0) ? r.settled_amount : (r.price || 0);
         return sum + amt;
       }, 0);
       setMonthSales(totalSales);
@@ -188,8 +190,10 @@ export default function Home() {
       // 이번달 지출
       setMonthExpenses((monthlyExpRes.data ?? []).reduce((sum, r) => sum + (r.amount || 0), 0));
 
-      // 미결재 B2B
-      setUnpaidB2BCount(unpaidRes.count ?? 0);
+      // 미결재 B2B + B2C
+      const unpaidData = unpaidRes.data ?? [];
+      setUnpaidB2BCount(unpaidData.filter(r => r.delivery_method !== 'courier' && (r.sale_type === 'b2b' || r.partner_id)).length);
+      setUnpaidB2CCount(unpaidData.filter(r => r.delivery_method === 'courier').length);
 
       // 최근 활동
       const activities: RecentActivity[] = [];
@@ -337,9 +341,10 @@ export default function Home() {
           ) : (
             <div className="space-y-0.5">
               {salesItems.map(item => (
-                <p key={item.unit} className="font-bold text-gray-900">
+                <p key={item.crop} className="font-bold text-gray-900">
                   <span className="text-xl">{item.qty.toLocaleString()}</span>
                   <span className="text-xs font-normal text-gray-700 ml-1">{item.unit}</span>
+                  <span className="text-[10px] text-gray-600 ml-1">({item.crop})</span>
                 </p>
               ))}
             </div>
@@ -372,13 +377,13 @@ export default function Home() {
       </div>
 
       {/* ── ⚠️ 처리 필요 ── */}
-      {!loading && unpaidB2BCount > 0 && (
+      {!loading && (unpaidB2BCount > 0 || unpaidB2CCount > 0) && (
         <a href="/finance" className="block mb-4">
           <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3 active:scale-[0.98] transition-all">
             <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
             <div className="flex-1">
               <p className="text-sm font-black text-amber-800">처리 필요</p>
-              <p className="text-xs font-bold text-amber-700 mt-0.5">미결재 B2B {unpaidB2BCount}건이 있습니다</p>
+              <p className="text-xs font-bold text-amber-700 mt-0.5">미결재 {unpaidB2BCount > 0 ? `B2B ${unpaidB2BCount}건` : ''}{unpaidB2BCount > 0 && unpaidB2CCount > 0 ? ' / ' : ''}{unpaidB2CCount > 0 ? `B2C ${unpaidB2CCount}건` : ''}이 있습니다</p>
             </div>
             <span className="text-xs font-black text-amber-600">확인 →</span>
           </div>
