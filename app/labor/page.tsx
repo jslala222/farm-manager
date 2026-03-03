@@ -885,7 +885,7 @@ export default function LaborPage() {
                                     {attendance[w.id] && <CheckCircle className="w-3.5 h-3.5" />}
                                     {w.name}
                                     <span className={`text-[9px] ${attendance[w.id] ? 'text-blue-200' : 'text-gray-600'}`}>
-                                        {w.role === 'family' ? '식구' : w.role === 'foreign' ? '외국인' : '직원'}
+                                        {w.role === 'family' ? '가족/식구' : w.role === 'foreign' ? '직원(외국인)' : w.role === 'staff' ? '직원(내국인)' : '개별인력'}
                                     </span>
                                 </button>
                             ))}

@@ -439,18 +439,15 @@ export default function WorkersPage() {
             <div key={worker.id}
                 className={`bg-white rounded-xl border p-3 space-y-2 shadow-sm transition-all hover:shadow-lg hover:border-gray-200
                     ${worker.is_active ? 'border-gray-100 bg-white' : 'bg-gray-50 border-gray-200 opacity-60'}`}>
-                {/* 헤더: 아이콘 + 이름 + 상태배지(클릭가능) + 버튼 */}
+                {/* 헤더: 아이콘 + 이름 + 버튼 */}
                 <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center border shrink-0 ${info.bg} ${info.border}`}>
                             <info.icon className={`w-5 h-5 ${info.color}`} />
                         </div>
                         <div className="min-w-0">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 mb-1">
                                 <span className="font-bold text-base text-gray-900 truncate">{worker.name}</span>
-                                <button onClick={() => toggleWorkerStatus(worker.id, worker.is_active)} className={`text-[8px] font-bold px-1.5 py-0.5 rounded shrink-0 transition-all active:scale-95 cursor-pointer ${worker.is_active ? 'bg-green-50 text-green-600 border border-green-200 hover:bg-green-100' : 'bg-amber-50 text-amber-600 border border-amber-200 hover:bg-amber-100'}`}>
-                                    {worker.is_active ? '근무중' : '휴직중'}
-                                </button>
                             </div>
                             <span className={`text-[8px] font-bold ${worker.gender === 'female' ? 'text-pink-500' : 'text-blue-500'}`}>
                                 {worker.gender === 'female' ? '여성' : '남성'}
@@ -465,6 +462,12 @@ export default function WorkersPage() {
                             <Trash2 className="w-4 h-4" />
                         </button>
                     </div>
+                </div>
+                {/* 상태 배지 (가운데) */}
+                <div className="flex justify-center mb-1">
+                    <button onClick={() => toggleWorkerStatus(worker.id, worker.is_active)} className={`text-[10px] font-black px-2.5 py-1 rounded-lg transition-all active:scale-95 cursor-pointer ${worker.is_active ? 'bg-green-600 text-white shadow-md hover:bg-green-700' : 'bg-amber-600 text-white shadow-md hover:bg-amber-700'}`}>
+                        {worker.is_active ? '근무중' : '휴직중'}
+                    </button>
                 </div>
                 {/* 정보 줄: 직급 | 연락처 */}
                 <div className="flex items-center gap-2 text-[11px] font-medium px-1">
