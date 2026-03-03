@@ -588,7 +588,7 @@ export default function SettledPage() {
                                                         </span>
                                                     </div>
 
-                                                    {/* 판매정보 - 한 줄 */}
+                                                    {/* 판매정보 - 한 줄 (결제수단 포함) */}
                                                     <div className="px-4 py-2 border-b bg-slate-50/50 text-[11px] font-medium text-slate-700 overflow-x-auto whitespace-nowrap">
                                                         <span className="font-black text-slate-600 mr-2.5">📤 판매:</span>
                                                         <span>{recordDateStr}</span>
@@ -598,10 +598,14 @@ export default function SettledPage() {
                                                         <span className="font-black">{(rec.quantity || 0).toLocaleString()}{rec.sale_unit || '박스'}</span>
                                                         <span className="text-slate-400 mx-1.5">|</span>
                                                         <span className="font-black text-slate-800">예상 {(rec.price || 0).toLocaleString()}원</span>
+                                                        <span className="text-slate-400 mx-1.5">|</span>
+                                                        <span className="bg-slate-200 text-slate-700 font-black px-2 py-1 rounded-md inline-block">
+                                                            {rec.payment_method || '-'}
+                                                        </span>
                                                     </div>
 
                                                     {/* 입금정보 - 한 줄 */}
-                                                    <div className={`px-4 py-2 text-[11px] font-medium overflow-x-auto whitespace-nowrap ${missingSettled ? 'bg-amber-100/30 text-amber-700' : 'bg-emerald-50/50 text-emerald-700'}`}>
+                                                    <div className={`px-4 py-2 border-b text-[11px] font-medium overflow-x-auto whitespace-nowrap ${missingSettled ? 'bg-amber-100/30 text-amber-700' : 'bg-emerald-50/50 text-emerald-700'}`}>
                                                         <span className={`font-black mr-2.5 ${missingSettled ? 'text-amber-600' : 'text-emerald-600'}`}>📥 입금:</span>
                                                         <span className={missingSettled ? 'text-amber-600 font-black' : ''}>{settledDateStr}{!missingSettled && ' ✓'}</span>
                                                         <span className="text-slate-400 mx-1.5">|</span>
@@ -614,25 +618,20 @@ export default function SettledPage() {
                                                         </span>
                                                     </div>
 
-                                                    {/* 결제수단 + 버튼 */}
-                                                    <div className="px-4 py-2.5 flex items-center justify-between">
-                                                        <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded-lg">
-                                                            {rec.payment_method || '-'}
-                                                        </span>
-                                                        <div className="flex items-center gap-1">
-                                                            <button
-                                                                onClick={() => openEdit(rec)}
-                                                                className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all active:scale-90"
-                                                                title="수정">
-                                                                <Edit2 className="w-3.5 h-3.5" />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleDelete(rec)}
-                                                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all active:scale-90"
-                                                                title="삭제">
-                                                                <Trash2 className="w-3.5 h-3.5" />
-                                                            </button>
-                                                        </div>
+                                                    {/* 수정/삭제 버튼만 */}
+                                                    <div className="px-4 py-2.5 flex items-center justify-center gap-2">
+                                                        <button
+                                                            onClick={() => openEdit(rec)}
+                                                            className="p-2 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all active:scale-90"
+                                                            title="수정">
+                                                            <Edit2 className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDelete(rec)}
+                                                            className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all active:scale-90"
+                                                            title="삭제">
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
                                                     </div>
                                                 </div>
                                             );
