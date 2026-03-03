@@ -19,6 +19,7 @@ import {
     Clock,
     ChevronLeft,
     ChevronRight,
+    Truck,
 } from 'lucide-react';
 import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
@@ -297,24 +298,39 @@ export default function B2CSettledPage() {
             <div className="bg-orange-500 rounded-3xl p-5 text-white shadow-xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-40 h-40 bg-orange-600 opacity-20 rounded-full -mr-20 -mt-20 blur-3xl" />
                 <div className="relative z-10">
-                    <p className="text-orange-100 text-[10px] font-bold uppercase tracking-widest mb-1">기간 내 총 입금액</p>
-                    <h2 className="text-3xl font-black tracking-tighter text-white mb-3">{formatCurrency(settledTotal)}</h2>
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-white/10 rounded-2xl p-3">
-                            <div className="flex items-center gap-1.5 mb-1">
-                                <CheckCircle className="w-3.5 h-3.5 text-emerald-300" />
-                                <span className="text-[10px] text-orange-100 font-bold">정산 완료</span>
+                    <p className="text-orange-100 text-[10px] font-bold uppercase tracking-widest mb-1">기간 내 거래 현황</p>
+                    <h2 className="text-2xl font-black tracking-tighter text-white mb-4">{records.length}건</h2>
+                    <div className="grid grid-cols-3 gap-2">
+                        {/* 정산 완료 */}
+                        <div className="bg-white/10 rounded-2xl p-2.5">
+                            <div className="flex items-center gap-1 mb-1">
+                                <CheckCircle className="w-3 h-3 text-emerald-300" />
+                                <span className="text-[9px] text-orange-100 font-bold">정산 완료</span>
                             </div>
-                            <p className="text-base font-black text-white">{formatCurrency(settledTotal)}</p>
-                            <p className="text-[10px] text-orange-100 font-bold">{settledCount}건</p>
+                            <p className="text-sm font-black text-white truncate">{formatCurrency(settledTotal)}</p>
+                            <p className="text-[9px] text-orange-100 font-bold">{settledCount}건</p>
                         </div>
-                        <div className="bg-white/10 rounded-2xl p-3">
-                            <div className="flex items-center gap-1.5 mb-1">
-                                <Clock className="w-3.5 h-3.5 text-yellow-200" />
-                                <span className="text-[10px] text-orange-100 font-bold">미정산 (외상)</span>
+                        
+                        {/* 정산 완료 택배비 */}
+                        <div className="bg-white/10 rounded-2xl p-2.5">
+                            <div className="flex items-center gap-1 mb-1">
+                                <Truck className="w-3 h-3 text-pink-200" />
+                                <span className="text-[9px] text-orange-100 font-bold">배송비</span>
                             </div>
-                            <p className="text-base font-black text-yellow-200">{formatCurrency(pendingTotal)}</p>
-                            <p className="text-[10px] text-orange-100 font-bold">{pendingCount}건</p>
+                            <p className="text-sm font-black text-pink-200 truncate">
+                                {formatCurrency(records.filter(r => r.is_settled).reduce((sum, r) => sum + (r.shipping_cost || 0), 0))}
+                            </p>
+                            <p className="text-[9px] text-orange-100 font-bold">(정산완료)</p>
+                        </div>
+                        
+                        {/* 미정산 */}
+                        <div className="bg-white/10 rounded-2xl p-2.5">
+                            <div className="flex items-center gap-1 mb-1">
+                                <Clock className="w-3 h-3 text-yellow-200" />
+                                <span className="text-[9px] text-orange-100 font-bold">미정산</span>
+                            </div>
+                            <p className="text-sm font-black text-yellow-200 truncate">{formatCurrency(pendingTotal)}</p>
+                            <p className="text-[9px] text-orange-100 font-bold">{pendingCount}건</p>
                         </div>
                     </div>
                 </div>
