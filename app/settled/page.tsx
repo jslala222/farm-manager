@@ -482,7 +482,7 @@ export default function SettledPage() {
                     <div>
                         <h1 className="text-xl font-black text-slate-900 flex items-center gap-2">
                             <CheckCircle className="w-5 h-5 text-emerald-500" />
-                            정산완료
+                            {farm?.farm_name || '농장'} 정산완료
                         </h1>
                         <p className="text-[11px] text-slate-400 font-medium mt-0.5">거래처별 정산 완료 내역 · 행 클릭 후 수정/삭제</p>
                     </div>
