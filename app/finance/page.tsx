@@ -115,20 +115,20 @@ export default function FinancePage() {
             const cashEndDate = `${selectedMonth}-${lastDay}`;
 
             // [bkit 전역 결산 엔진 - 3개 쿼리로 분리]
-            // 1. B2C (택배): delivery_method='courier' - settled_at이 NULL이면 recorded_at 사용
-            // 2. B2B (거래처): sale_type='b2b' (입금일) 기준 + is_settled=true 정산완료만
+            // 1. B2C (택배): delivery_method='courier' (recorded_at 기준만) - is_settled 무관
+            // 2. B2B (거래처): sale_type='b2b' (입금일 settled_at) 기준 + is_settled=true
             // 3. 미정산 내역: 언제 납품이든 상관없이 전체 조회
             
             // ⚠️ .or()는 복잡할 때 성능 문제 가능 → 별도 쿼리로 분리
             const [recordsB2CResult, recordsB2BResult, recordsUnsettledResult] = await Promise.all([
-                // B2C (택배): settled_at이 NULL인 경우가 많아서 recorded_at도 포함하여 조회
+                // [방안1] B2C (택배): recorded_at 기준만 사용 - is_settled 조건 제거!
                 supabase
                     .from('sales_records')
                     .select('*, partner:partners(company_name), customer:customers(name)')
                     .eq('farm_id', farm.id)
                     .eq('delivery_method', 'courier')  // ← sale_type 대신 delivery_method 사용
-                    .eq('is_settled', true)  // 정산완료만
-                    .gte('recorded_at', cashStartDate)  // recorded_at 기준 (settled_at이 NULL이므로)
+                    // ← is_settled 조건 완전 제거 (정산여부 무관)
+                    .gte('recorded_at', `${cashStartDate}T00:00:00`)
                     .lte('recorded_at', `${selectedMonth}-${lastDay}T23:59:59`)
                     .order('recorded_at', { ascending: false }),
                 
@@ -189,42 +189,39 @@ export default function FinancePage() {
             let unsettledCount = 0;
             let settledCount = 0;
             const uRecords: any[] = [];
-            const newUnsettledB2c: any[] = []; // [수정] 배열에 수집 후 한 번에 업데이트
+            const newUnsettledB2c: any[] = [];
 
             salesData?.forEach((rec: any) => {
-                // [중요] 정산액 기준 - B2B/B2C 모두 동일
-                // - B2B: settled_at (입금 확정 날짜)
-                // - B2C: settled_at이 NULL이면 recorded_at 사용 (일단)
-                let dateStr: string | null = null;
-                if ((settlementService.isB2B(rec) || settlementService.isB2C(rec)) && rec.is_settled) {
-                    // settled_at이 있으면 settled_at, 없으면 recorded_at 사용
-                    const dateToUse = rec.settled_at || rec.recorded_at;
-                    dateStr = String(dateToUse).split('T')[0];
-                }
-                const isInSelectedMonth = dateStr?.startsWith(selectedMonth) ?? false;
-
                 const price = settlementService.calculateRecordTotal(rec);
+                const isB2B = settlementService.isB2B(rec);
+                const isB2C = settlementService.isB2C(rec);
 
-                // 1. 미정산 내역은 날짜 상관없이 무조건 추출 (중요!)
-                if (settlementService.isB2B(rec) && !rec.is_settled) {
-                    unsettledAmt += price;
-                    unsettledCount++;
-                    uRecords.push(rec);
-                } else if (settlementService.isB2C(rec) && !rec.is_settled) {
-                    newUnsettledB2c.push(rec); // [수정] 로컬 배열에 푸시
-                }
-
-                // 2. 상단 대시보드 통계는 '선택된 월'의 데이터만 합산
-                if (isInSelectedMonth) {
-                    totalRev += price;
-                    if (settlementService.isB2B(rec)) {
-                        b2bRev += price;
-                        if (rec.is_settled) settledCount++;
-                    } else {
-                        b2cRev += price;
-                        if (settlementService.isB2C(rec)) {
-                            totalShipping += (rec.shipping_cost || 0) + (rec.packaging_cost || 0);
+                // [방안1] 간단하고 명확한 처리 로직
+                // B2B: settled_at 기준 (입금 확정)
+                // B2C: recorded_at 기준 (판매일) - 쿼리에서 이미 월별 필터링됨
+                
+                if (isB2B) {
+                    if (rec.is_settled && rec.settled_at) {
+                        const dateStr = String(rec.settled_at).split('T')[0];
+                        if (dateStr.startsWith(selectedMonth)) {
+                            totalRev += price;
+                            b2bRev += price;
+                            settledCount++;
                         }
+                    } else if (!rec.is_settled) {
+                        unsettledAmt += price;
+                        unsettledCount++;
+                        uRecords.push(rec);
+                    }
+                } else if (isB2C) {
+                    // B2C: 쿼리에서 recorded_at으로 이미 월별 필터링됨
+                    // → 모든 B2C 레코드 = 선택된 월 범위 내
+                    totalRev += price;
+                    b2cRev += price;
+                    totalShipping += (rec.shipping_cost || 0) + (rec.packaging_cost || 0);
+                    
+                    if (!rec.is_settled) {
+                        newUnsettledB2c.push(rec);
                     }
                 }
             });
