@@ -445,9 +445,18 @@ export default function WorkersPage() {
                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center border shrink-0 ${info.bg} ${info.border}`}>
                             <info.icon className={`w-5 h-5 ${info.color}`} />
                         </div>
-                        <div className="min-w-0 flex items-center gap-1.5">
+                        <div className="min-w-0 flex items-center gap-2">
                             <span className="font-bold text-base text-gray-900 truncate">{worker.name}</span>
-                            <button onClick={() => toggleWorkerStatus(worker.id, worker.is_active)} className={`text-[8px] font-black px-2 py-0.5 rounded-md transition-all active:scale-95 cursor-pointer shrink-0 ${worker.is_active ? 'bg-green-600 text-white shadow-sm hover:bg-green-700' : 'bg-amber-600 text-white shadow-sm hover:bg-amber-700'}`}>
+                            {/* 성별 배지 */}
+                            <span className={`text-sm font-bold px-2.5 py-1 rounded-md shrink-0 ${
+                                worker.gender === 'female' 
+                                    ? 'bg-pink-100 text-pink-600 border border-pink-200' 
+                                    : 'bg-blue-100 text-blue-600 border border-blue-200'
+                            }`}>
+                                {worker.gender === 'female' ? '♀' : '♂'}
+                            </span>
+                            {/* 상태 배지 - 확대됨 */}
+                            <button onClick={() => toggleWorkerStatus(worker.id, worker.is_active)} className={`text-sm font-bold px-3 py-1 rounded-md transition-all active:scale-95 cursor-pointer shrink-0 ${worker.is_active ? 'bg-green-600 text-white shadow-sm hover:bg-green-700' : 'bg-amber-600 text-white shadow-sm hover:bg-amber-700'}`}>
                                 {worker.is_active ? '근무중' : '휴직중'}
                             </button>
                         </div>
@@ -461,10 +470,6 @@ export default function WorkersPage() {
                         </button>
                     </div>
                 </div>
-                {/* 성별 */}
-                <span className={`text-[8px] font-bold ${worker.gender === 'female' ? 'text-pink-500' : 'text-blue-500'}`}>
-                    {worker.gender === 'female' ? '여성' : '남성'}
-                </span>
                 {/* 정보 줄: 직급 | 연락처 */}
                 <div className="flex items-center gap-2 text-[11px] font-medium px-1">
                     <span className={`${info.color} bg-white px-2 py-0.5 rounded border ${info.border} shrink-0`}>{info.label}</span>
