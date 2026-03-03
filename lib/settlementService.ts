@@ -40,19 +40,22 @@ export const settlementService = {
     // 3. 금액 계산 로직 (하드코딩 제거 대상)
     calculateRecordTotal: (record: SalesRecord) => {
         // 1. 정산 완료된 건은 실제 입금액(settled_amount) 최우선
-        if (record.is_settled && record.settled_amount !== null && record.settled_amount !== undefined) {
+        // 단, settled_amount=0은 "미입력"을 의미 → price를 사용
+        // B2C 택배거래는 settled_amount를 입력하지 않으므로 항상 0 → price 사용
+        if (record.is_settled && record.settled_amount !== null && record.settled_amount !== undefined && record.settled_amount > 0) {
             return record.settled_amount;
         }
 
-        // 2. 미정산 건 계산
+        // 2. settled_amount가 없거나 0인 경우 → price 사용
         let total = record.price || 0;
 
-        // B2C 택배의 경우: 사장님은 상품가(price)와 택배비(shipping_cost)를 따로 입력함.
-        // 매출(Revenue) 관점에서는 고객으로부터 '상품가 + 택배비'를 받으므로 둘을 합산해야 함.
-        // (이후 지출 섹션에서 택배비를 차감하여 순수익을 계산함)
-        if (settlementService.isB2C(record)) {
-            total += (record.shipping_cost || 0);
-        }
+        // [수정] B2C 택배비는 매출이 아니라 지출!
+        // - price: 상품가 (매출)
+        // - shipping_cost: 선불 택배비 (지출/경비)
+        // → 매출 계산에서는 price만 사용, shipping은 경비로 처리
+        // if (settlementService.isB2C(record)) {
+        //     total += (record.shipping_cost || 0);  // ← 제거 (shipping은 지출)
+        // }
 
         return total;
     },

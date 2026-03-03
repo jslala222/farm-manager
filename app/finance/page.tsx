@@ -156,12 +156,19 @@ export default function FinancePage() {
             if (recordsB2BResult.error) throw recordsB2BResult.error;
             if (recordsUnsettledResult.error) throw recordsUnsettledResult.error;
 
-            // 3개 결과를 병합
-            const salesData = [
+            // 3개 결과를 병합 + 중복 제거 (쿼리1 B2C + 쿼리3 미정산에서 같은 레코드 중복 가능)
+            const seenIds = new Set<string>();
+            const salesData: any[] = [];
+            [
                 ...(recordsB2CResult.data || []),
                 ...(recordsB2BResult.data || []),
                 ...(recordsUnsettledResult.data || [])
-            ];
+            ].forEach((rec: any) => {
+                if (!seenIds.has(rec.id)) {
+                    seenIds.add(rec.id);
+                    salesData.push(rec);
+                }
+            });
 
 
             // 2. 지출 데이터 (Expenditures) - 카테고리 포함 조회
