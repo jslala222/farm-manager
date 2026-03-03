@@ -257,27 +257,27 @@ export default function B2CSettledPage() {
             </div>
 
             {/* 총합 카드 */}
-            <div className="bg-gray-900 rounded-3xl p-5 text-white shadow-xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-40 h-40 bg-purple-500 opacity-20 rounded-full -mr-20 -mt-20 blur-3xl" />
+            <div className="bg-orange-500 rounded-3xl p-5 text-white shadow-xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-40 h-40 bg-orange-600 opacity-20 rounded-full -mr-20 -mt-20 blur-3xl" />
                 <div className="relative z-10">
-                    <p className="text-gray-700 text-[10px] font-bold uppercase tracking-widest mb-1">기간 내 총 입금액</p>
-                    <h2 className="text-3xl font-black tracking-tighter text-purple-300 mb-3">{formatCurrency(settledTotal)}</h2>
+                    <p className="text-orange-100 text-[10px] font-bold uppercase tracking-widest mb-1">기간 내 총 입금액</p>
+                    <h2 className="text-3xl font-black tracking-tighter text-white mb-3">{formatCurrency(settledTotal)}</h2>
                     <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-white/5 rounded-2xl p-3">
+                        <div className="bg-white/10 rounded-2xl p-3">
                             <div className="flex items-center gap-1.5 mb-1">
-                                <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
-                                <span className="text-[10px] text-gray-700 font-bold">정산 완료</span>
+                                <CheckCircle className="w-3.5 h-3.5 text-emerald-300" />
+                                <span className="text-[10px] text-orange-100 font-bold">정산 완료</span>
                             </div>
                             <p className="text-base font-black text-white">{formatCurrency(settledTotal)}</p>
-                            <p className="text-[10px] text-gray-700 font-bold">{settledCount}건</p>
+                            <p className="text-[10px] text-orange-100 font-bold">{settledCount}건</p>
                         </div>
-                        <div className="bg-white/5 rounded-2xl p-3">
+                        <div className="bg-white/10 rounded-2xl p-3">
                             <div className="flex items-center gap-1.5 mb-1">
-                                <Clock className="w-3.5 h-3.5 text-amber-400" />
-                                <span className="text-[10px] text-gray-700 font-bold">미정산 (외상)</span>
+                                <Clock className="w-3.5 h-3.5 text-yellow-200" />
+                                <span className="text-[10px] text-orange-100 font-bold">미정산 (외상)</span>
                             </div>
-                            <p className="text-base font-black text-amber-300">{formatCurrency(pendingTotal)}</p>
-                            <p className="text-[10px] text-gray-700 font-bold">{pendingCount}건</p>
+                            <p className="text-base font-black text-yellow-200">{formatCurrency(pendingTotal)}</p>
+                            <p className="text-[10px] text-orange-100 font-bold">{pendingCount}건</p>
                         </div>
                     </div>
                 </div>
