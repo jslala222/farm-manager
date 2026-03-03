@@ -115,21 +115,22 @@ export default function FinancePage() {
             const cashEndDate = `${selectedMonth}-${lastDay}`;
 
             // [bkit 전역 결산 엔진 - 3개 쿼리로 분리]
-            // 1. B2C (현금): recorded_at 기준으로 해당 월의 모든 판매
-            // 2. B2B (정산): settled_at이 해당 월이고 is_settled=true인 것
+            // 1. B2C (현금): settled_at (입금일) 기준 + is_settled=true 정산완료만
+            // 2. B2B (거래처): settled_at (입금일) 기준 + is_settled=true 정산완료만
             // 3. 미정산 내역: 언제 납품이든 상관없이 전체 조회
             
             // ⚠️ .or()는 복잡할 때 성능 문제 가능 → 별도 쿼리로 분리
             const [recordsB2CResult, recordsB2BResult, recordsUnsettledResult] = await Promise.all([
-                // B2C recorded_at 기준
+                // B2C settled_at 기준 (입금일 기준) - B2B와 동일
                 supabase
                     .from('sales_records')
                     .select('*, partner:partners(company_name), customer:customers(name)')
                     .eq('farm_id', farm.id)
                     .eq('sale_type', 'b2c')
-                    .gte('recorded_at', startStr)
-                    .lte('recorded_at', endStr)
-                    .order('recorded_at', { ascending: false }),
+                    .eq('is_settled', true)  // 정산완료만
+                    .gte('settled_at', cashStartDate)
+                    .lte('settled_at', cashEndDate)
+                    .order('settled_at', { ascending: false }),
                 
                 // B2B settled_at 기준 + is_settled=true
                 supabase
@@ -191,14 +192,12 @@ export default function FinancePage() {
             const newUnsettledB2c: any[] = []; // [수정] 배열에 수집 후 한 번에 업데이트
 
             salesData?.forEach((rec: any) => {
-                // [중요] 정산액 기준 
-                // - B2B: settled_at (정산 확정 날짜)
-                // - B2C: recorded_at (판매 날짜 = 현금거래)
+                // [중요] 정산액 기준 - B2B/B2C 모두 동일
+                // - B2B: settled_at (입금 확정 날짜)
+                // - B2C: settled_at (입금 확정 날짜) - B2B와 동일
                 let dateStr: string | null = null;
-                if (settlementService.isB2B(rec) && rec.is_settled && rec.settled_at) {
+                if ((settlementService.isB2B(rec) || settlementService.isB2C(rec)) && rec.is_settled && rec.settled_at) {
                     dateStr = String(rec.settled_at).split('T')[0];
-                } else if (settlementService.isB2C(rec) && rec.recorded_at) {
-                    dateStr = rec.recorded_at.split('T')[0];
                 }
                 const isInSelectedMonth = dateStr?.startsWith(selectedMonth) ?? false;
 

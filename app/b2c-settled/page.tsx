@@ -136,14 +136,21 @@ export default function B2CSettledPage() {
     }, [fetchData, initialized, farm?.id]);
 
     // ────── 입금확인 (미정산 → 정산완료) ──────
+    // B2B와 동일하게 settled_at (입금일) 기준으로 수익 집계
     const handleConfirmPayment = async (rec: CourierRecord) => {
         if (!rec.id || rec.is_settled) return;
         
         setConfirmingId(rec.id);
         try {
+            // 오늘 날짜를 입금일로 기록 (B2B의 settled_at과 동일한 개념)
+            const today = new Date().toISOString().split('T')[0];
+            
             const { error } = await supabase
                 .from('sales_records')
-                .update({ is_settled: true })
+                .update({ 
+                    is_settled: true,
+                    settled_at: today  // 입금 확정 날짜를 오늘로 설정
+                })
                 .eq('id', rec.id)
                 .eq('farm_id', farm?.id);
 
