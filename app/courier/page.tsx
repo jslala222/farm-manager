@@ -63,7 +63,7 @@ export default function CourierSalesPage() {
         setCourierItems(prev => [...prev, {
             id: Date.now().toString() + Math.random().toString(36).slice(2, 7),
             cropName: crop.crop_name,
-            cropIcon: getCropIcon(crop.crop_name, farmCrops),
+            cropIcon: getCropIcon(crop.crop_name),
             unit: getEffectiveUnits(crop)[0],
             quantity: '', unitPrice: ''
         }]);
@@ -213,7 +213,7 @@ export default function CourierSalesPage() {
         setCourierItems(group.map((r: any) => ({
             id: r.id,
             cropName: r.crop_name || '딸기',
-            cropIcon: getCropIcon(r.crop_name || '', farmCrops),
+            cropIcon: getCropIcon(r.crop_name || ''),
             unit: r.sale_unit || '박스',
             quantity: r.quantity?.toString() || '',
             unitPrice: r.quantity && r.price ? Math.floor(r.price / r.quantity).toString() : ''
@@ -351,7 +351,7 @@ export default function CourierSalesPage() {
                                             <button key={crop.id}
                                                 onClick={() => addToCart(crop)}
                                                 className="min-w-[68px] flex flex-col items-center justify-center py-2.5 px-1.5 rounded-2xl border-2 transition-all gap-0.5 shrink-0 bg-white border-slate-100 hover:border-rose-300 hover:bg-rose-50 active:scale-95">
-                                                <span className="text-2xl leading-none">{getCropIcon(crop.crop_name, farmCrops)}</span>
+                                                <span className="text-2xl leading-none">{getCropIcon(crop.crop_name)}</span>
                                                 <span className="text-[9px] font-black text-slate-800 whitespace-nowrap truncate max-w-[60px]">{crop.crop_name}</span>
                                             </button>
                                         ))}
@@ -520,7 +520,7 @@ export default function CourierSalesPage() {
                             {groupedHistory.map(group => {
                                 const first = group[0];
                                 const totalPrice = group.reduce((s, r) => s + (r.price || 0), 0);
-                                const groupIcons = group.map(r => getCropIcon(r.crop_name || '', farmCrops));
+                                const groupIcons = group.map(r => getCropIcon(r.crop_name || ''));
                                 const qtySummary = group.length > 1
                                     ? group.map(r => `${r.quantity}${r.sale_unit}`).join('+')
                                     : `${first.quantity}${first.sale_unit}`;
@@ -589,7 +589,7 @@ export default function CourierSalesPage() {
                                         <div className="space-y-0.5 mt-1">
                                             {allItems.map((item, idx) => (
                                                 <p key={idx} className="text-xs text-slate-400 font-bold">
-                                                    {getCropIcon(item.crop_name || '', farmCrops)} {item.crop_name} {item.quantity}{item.sale_unit} · {formatCurrency(item.price || 0)}
+                                                    {getCropIcon(item.crop_name || '')} {item.crop_name} {item.quantity}{item.sale_unit} · {formatCurrency(item.price || 0)}
                                                 </p>
                                             ))}
                                             {allItems.length > 1 && (

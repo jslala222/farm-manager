@@ -50,7 +50,7 @@ export default function BulkSalesPage() {
     const addToBulkCart = (crop: any) => {
         setBulkItems(prev => [...prev, {
             id: Date.now().toString() + Math.random().toString(36).slice(2, 7),
-            cropName: crop.crop_name, cropIcon: getCropIcon(crop.crop_name, farmCrops),
+            cropName: crop.crop_name, cropIcon: getCropIcon(crop.crop_name),
             unit: getEffectiveUnits(crop)[0],
             category: crop.category || 'crop',
             qty: '', qtySang: '', qtyJung: '', qtyHa: ''
@@ -638,7 +638,7 @@ export default function BulkSalesPage() {
                             {editModal.cropGroups.map((cg, cgIdx) => (
                                 <div key={cg.cropName} className="space-y-2">
                                     <div className="flex items-center gap-2 px-1">
-                                        <span className="text-lg">{getCropIcon(cg.cropName, farmCrops)}</span>
+                                        <span className="text-lg">{getCropIcon(cg.cropName)}</span>
                                         <p className="text-xs font-black text-slate-700">{cg.cropName}</p>
                                         {cg.isProcessed && <span className="text-[8px] font-bold text-violet-500 bg-violet-50 px-1.5 py-0.5 rounded-full">가공품</span>}
                                     </div>
@@ -815,7 +815,7 @@ export default function BulkSalesPage() {
                             <button key={crop.id}
                                 onClick={() => addToBulkCart(crop)}
                                 className="min-w-[68px] flex flex-col items-center justify-center py-2.5 px-1.5 rounded-2xl border-2 transition-all gap-0.5 shrink-0 bg-white border-slate-100 hover:border-indigo-300 hover:bg-indigo-50 active:scale-95">
-                                <span className="text-2xl leading-none">{getCropIcon(crop.crop_name, farmCrops)}</span>
+                                <span className="text-2xl leading-none">{getCropIcon(crop.crop_name)}</span>
                                 <span className="text-[9px] font-black text-slate-800 whitespace-nowrap truncate max-w-[60px]">{crop.crop_name}</span>
                             </button>
                         ))}
@@ -985,7 +985,7 @@ export default function BulkSalesPage() {
                                                                                 <div className="flex items-center gap-1.5">
                                                                                     <div className="flex items-center gap-0.5">
                                                                                         {tx.cropGroups.map((cg: any, i: number) => (
-                                                                                            <span key={i} className="text-lg leading-none">{getCropIcon(cg.cropName, farmCrops)}</span>
+                                                                                            <span key={i} className="text-lg leading-none">{getCropIcon(cg.cropName)}</span>
                                                                                         ))}
                                                                                     </div>
                                                                                     <span className="text-[8px] font-black bg-indigo-50 text-indigo-500 px-1.5 py-0.5 rounded-full">{tx.cropGroups.length}종류</span>
@@ -997,7 +997,7 @@ export default function BulkSalesPage() {
                                                                         <div className={`px-3 pb-2 space-y-1 ${tx.cropGroups.length === 1 ? 'pt-2.5' : ''}`}>
                                                                             {tx.cropGroups.map((cg: any, i: number) => (
                                                                                 <div key={i} className="flex items-center gap-2 text-xs">
-                                                                                    <span className="text-sm shrink-0">{getCropIcon(cg.cropName, farmCrops)}</span>
+                                                                                    <span className="text-sm shrink-0">{getCropIcon(cg.cropName)}</span>
                                                                                     <span className="font-black text-slate-700 shrink-0">{cg.cropName}</span>
                                                                                     {cg.isProcessed ? (
                                                                                         <span className="font-bold text-violet-500">{cg.totalQty}{cg.unit}</span>
