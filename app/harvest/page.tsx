@@ -38,6 +38,9 @@ export default function HarvestPage() {
     const [selectedHouse, setSelectedHouse] = useState<number | null>(null);
     const [selectedGrade, setSelectedGrade] = useState<'sang' | 'jung' | 'ha'>('sang');
     const [quantity, setQuantity] = useState(1);
+    const [qtySang, setQtySang] = useState('');
+    const [qtyJung, setQtyJung] = useState('');
+    const [qtyHa, setQtyHa] = useState('');
     const [houseNotes, setHouseNotes] = useState<Record<number, string>>({}); // 동별 메모 저장 객체
     const harvestNote = selectedHouse ? (houseNotes[selectedHouse] || "") : ""; // 현재 선택된 동의 메모
     const [selectedDate, setSelectedDate] = useState(() => getLocalISOString(new Date()));
@@ -283,6 +286,14 @@ export default function HarvestPage() {
             return;
         }
 
+        const sang = parseInt(qtySang) || 0;
+        const jung = parseInt(qtyJung) || 0;
+        const ha = parseInt(qtyHa) || 0;
+        if (sang === 0 && jung === 0 && ha === 0) {
+            alert("수량을 입력해주세요!");
+            return;
+        }
+
         // 선택된 하우스의 정보 확인 (휴작 여부 체크 및 작물 정보 획득)
         const selectedHouseData = houses.find(h => h.house_number === selectedHouse);
         if (selectedHouseData && !selectedHouseData.is_active) {
@@ -292,28 +303,27 @@ export default function HarvestPage() {
 
         setSaving(true);
         const currentCrop = selectedHouseData?.current_crop || '딸기';
-
-        // Combine date with current time to preserve order if multiple entries on same day
         const now = new Date();
-        const timeString = now.toTimeString().split(' ')[0]; // HH:MM:SS
-        const dateTime = `${selectedDate}T${timeString}`;
+        const timeString = now.toTimeString().split(' ')[0];
+        const recordedAt = new Date(`${selectedDate}T${timeString}`).toISOString();
 
-        const { error } = await supabase.from('harvest_records').insert({
-            farm_id: farm.id,
-            house_number: selectedHouse,
-            grade: selectedGrade,
-            quantity,
-            crop_name: currentCrop, // 작물 이름 스냅샷 저장
-            recorded_at: new Date(dateTime).toISOString()
-        });
+        const records = [
+            sang > 0 && { farm_id: farm.id, house_number: selectedHouse, grade: 'sang', quantity: sang, crop_name: currentCrop, recorded_at: recordedAt },
+            jung > 0 && { farm_id: farm.id, house_number: selectedHouse, grade: 'jung', quantity: jung, crop_name: currentCrop, recorded_at: recordedAt },
+            ha > 0 && { farm_id: farm.id, house_number: selectedHouse, grade: 'ha', quantity: ha, crop_name: currentCrop, recorded_at: recordedAt },
+        ].filter(Boolean);
+
+        const { error } = await supabase.from('harvest_records').insert(records as any[]);
         if (error) {
             alert(`저장 실패: ${error.message}`);
         } else {
-            alert(`✅ 저장 완료!\n${selectedDate}\n${selectedHouse}동 / ${gradeLabel(selectedGrade)} / ${quantity}박스`);
-            setQuantity(1);
-            // 메모 초기화하지 않고 유지 (사용자 피드백 반영: 하루는 유지되어야 함)
+            const parts = [sang > 0 && `특/상 ${sang}박스`, jung > 0 && `중 ${jung}박스`, ha > 0 && `하 ${ha}박스`].filter(Boolean).join(', ');
+            alert(`✅ 저장 완료!\n${selectedDate}\n${selectedHouse}동 / ${parts}`);
+            setQtySang('');
+            setQtyJung('');
+            setQtyHa('');
             fetchHistory();
-            fetchHarvestedDates(); // 수확 후 달력 업데이트
+            fetchHarvestedDates();
         }
         setSaving(false);
     };
@@ -506,9 +516,9 @@ export default function HarvestPage() {
                                     />
                                 </div>
 
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                <div className="grid grid-cols-3 gap-3">
                                     {houses.length === 0 ? (
-                                        <div className="col-span-2 sm:col-span-4 py-8 flex flex-col items-center gap-3">
+                                        <div className="col-span-3 py-8 flex flex-col items-center gap-3">
                                             <p className="text-xs text-slate-400 font-bold">하우스 정보가 로드되지 않았습니다.</p>
                                             <button
                                                 onClick={() => fetchHouses()}
@@ -586,52 +596,31 @@ export default function HarvestPage() {
                                 )}
                             </div>
 
-                            {/* 섹션 2: 등급 및 수량 */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6">
-                                <div className="space-y-4">
-                                    <h2 className="text-sm font-black text-gray-900 flex items-center gap-2 px-1">
-                                        <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
-                                        등급 선택
-                                    </h2>
-                                    <div className="space-y-2">
-                                        {(['sang', 'jung', 'ha'] as const).map((g) => (
-                                            <button
-                                                key={g}
-                                                onClick={() => setSelectedGrade(g)}
-                                                className={`w-full py-3.5 px-4 rounded-2xl text-[11px] font-black flex items-center justify-between transition-all border ${selectedGrade === g
-                                                    ? 'bg-orange-50 border-orange-200 text-orange-700 shadow-sm ring-1 ring-orange-200'
-                                                    : 'bg-white border-gray-50 text-gray-700 hover:bg-gray-50'
-                                                    }`}
-                                            >
-                                                {gradeLabel(g)}
-                                                {selectedGrade === g && <Check className="w-3.5 h-3.5" />}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="space-y-4 flex flex-col items-center">
-                                    <h2 className="text-sm font-black text-gray-900 flex items-center gap-2 self-start px-1">
-                                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                                        수량 (BOX)
-                                    </h2>
-                                    <div className="flex-1 flex flex-col items-center justify-center gap-4 w-full">
-                                        <div className="relative w-full max-w-full sm:max-w-[200px]">
+                            {/* 섹션 2: 등급별 수량 일괄 입력 */}
+                            <div>
+                                <h2 className="text-sm font-black text-gray-900 flex items-center gap-2 px-1 mb-3">
+                                    <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
+                                    등급별 수량 입력 (BOX)
+                                </h2>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {[
+                                        { label: '특/상', key: 'sang', val: qtySang, setter: setQtySang, color: '#f97316' },
+                                        { label: '중', key: 'jung', val: qtyJung, setter: setQtyJung, color: '#3b82f6' },
+                                        { label: '하', key: 'ha', val: qtyHa, setter: setQtyHa, color: '#8b5cf6' },
+                                    ].map((g) => (
+                                        <div key={g.key} className="bg-white border border-gray-100 rounded-2xl p-3 flex flex-col items-center gap-1.5 shadow-sm">
+                                            <span className="text-[11px] font-black" style={{ color: g.color }}>{g.label}</span>
                                             <input
                                                 type="text"
                                                 inputMode="numeric"
-                                                pattern="[0-9]*"
-                                                value={quantity}
-                                                onChange={(e) => {
-                                                    const val = e.target.value.replace(/[^0-9]/g, '');
-                                                    setQuantity(val === '' ? 0 : parseInt(val));
-                                                }}
-                                                className="w-full p-3 bg-white border-2 border-green-100 rounded-[2rem] text-2xl sm:text-4xl font-black text-center text-green-600 outline-none focus:border-green-500 transition-all shadow-sm"
+                                                value={g.val}
+                                                onChange={(e) => g.setter(e.target.value.replace(/[^0-9]/g, ''))}
+                                                placeholder="0"
+                                                className="w-full bg-transparent text-center text-2xl font-black text-gray-800 outline-none focus:outline-none"
                                             />
-                                            <span className="absolute right-6 top-1/2 -translate-y-1/2 text-sm font-black text-green-200">BOX</span>
+                                            <span className="text-[9px] font-bold text-gray-300">BOX</span>
                                         </div>
-                                        <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest">Enter Quantity</span>
-                                    </div>
+                                    ))}
                                 </div>
                             </div>
 
@@ -882,65 +871,50 @@ export default function HarvestPage() {
                                 <div className="text-center py-8 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-100 text-gray-600 text-xs font-bold">
                                     기록이 없습니다.
                                 </div>
-                            ) : (
-                                history.map((item) => {
-                                    const isEditing = editingId === item.id;
-                                    if (isEditing) {
-                                        return (
-                                            <div key={item.id} className="bg-white rounded-2xl border-2 border-green-200 p-4 shadow-lg space-y-3 animate-in fade-in">
-                                                <div className="flex flex-wrap items-center justify-between gap-2">
-                                                    <div className="flex flex-wrap items-center gap-2">
-                                                        <input type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)} className="p-2 bg-gray-50 border border-gray-100 rounded-lg text-xs font-bold outline-none" />
-                                                        <select value={editHouse} onChange={(e) => setEditHouse(Number(e.target.value))} className="p-2 bg-gray-50 border border-gray-100 rounded-lg text-xs font-bold outline-none">{houses.map(h => <option key={h.id} value={h.house_number}>{h.house_number}동</option>)}</select>
-                                                        <select value={editGrade} onChange={(e) => setEditGrade(e.target.value as any)} className="p-2 bg-gray-50 border border-gray-100 rounded-lg text-xs font-bold outline-none"><option value="sang">특/상</option><option value="jung">중</option><option value="ha">하</option></select>
-                                                    </div>
-                                                    <div className="flex items-center gap-1">
-                                                        <button onClick={() => setEditQuantity(Math.max(1, editQuantity - 1))} className="p-1 bg-gray-100 rounded-lg"><Minus className="w-3 h-3" /></button>
-                                                        <span className="text-sm font-black w-6 text-center">{editQuantity}</span>
-                                                        <button onClick={() => setEditQuantity(editQuantity + 1)} className="p-1 bg-green-100 rounded-lg"><Plus className="w-3 h-3 text-green-600" /></button>
-                                                    </div>
-                                                </div>
-                                                <div className="flex gap-2">
-                                                    <button onClick={handleUpdate} className="flex-1 bg-gray-900 text-white py-2 rounded-lg font-bold text-xs">수정</button>
-                                                    <button onClick={() => setEditingId(null)} className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg font-bold text-xs">취소</button>
-                                                </div>
-                                            </div>
-                                        );
-                                    }
-                                    return (
-                                        <button key={item.id}
-                                            onClick={() => setHarvestEditModal(item)}
+                            ) : (() => {
+                                // 동 + 날짜 기준으로 그룹핑 (같은 동, 같은 날 기록을 1장으로 합침)
+                                const groups: Record<string, { ids: string[]; houseNumber: number; date: string; time: string; grades: Record<string, number> }> = {};
+                                history.forEach(item => {
+                                    const date = item.recorded_at.split('T')[0];
+                                    const key = `${item.house_number}_${date}`;
+                                    if (!groups[key]) groups[key] = { ids: [], houseNumber: item.house_number, date, time: item.recorded_at, grades: {} };
+                                    groups[key].grades[item.grade] = (groups[key].grades[item.grade] || 0) + item.quantity;
+                                    groups[key].ids.push(item.id);
+                                });
+                                return Object.values(groups)
+                                    .sort((a, b) => b.time.localeCompare(a.time))
+                                    .map((group) => (
+                                        <button key={group.ids.join('-')}
+                                            onClick={() => { const first = history.find(h => group.ids.includes(h.id)); if (first) setHarvestEditModal(first); }}
                                             className="w-full text-left bg-white rounded-2xl border border-gray-50 p-2.5 px-4 shadow-sm flex items-center justify-between animate-in slide-in-from-bottom-2 duration-300 active:scale-[0.98] hover:border-green-200 transition-all">
                                             <div className="flex items-center gap-4 flex-1">
                                                 <div className="flex items-center gap-2 min-w-[60px]">
                                                     <span className="text-[10px] font-black text-gray-700 uppercase tracking-tighter">House</span>
-                                                    <span className="text-sm font-black text-gray-900">{item.house_number}</span>
+                                                    <span className="text-sm font-black text-gray-900">{group.houseNumber}</span>
                                                 </div>
-                                                <div className="flex items-center gap-3 flex-1">
-                                                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-md border whitespace-nowrap ${gradeColor(item.grade)}`}>
-                                                        {gradeLabel(item.grade)}
-                                                    </span>
-                                                    <div className="flex items-center gap-1">
-                                                        <span className="text-base font-black text-gray-900 tracking-tighter">{item.quantity}</span>
-                                                        <span className="text-[9px] text-gray-700 font-black uppercase">Box</span>
-                                                    </div>
+                                                <div className="flex items-center gap-1.5 flex-1 flex-wrap">
+                                                    {(['sang', 'jung', 'ha'] as const).filter(g => group.grades[g]).map(g => (
+                                                        <span key={g} className={`text-[9px] font-black px-2 py-0.5 rounded-md border whitespace-nowrap ${gradeColor(g)}`}>
+                                                            {gradeLabel(g)} {group.grades[g]}
+                                                        </span>
+                                                    ))}
+                                                    <span className="text-[9px] text-gray-400 font-bold">BOX</span>
                                                 </div>
-                                                <div className="flex flex-col items-end gap-0.5 bg-gray-50/50 px-2.5 py-1.5 rounded-xl border border-gray-100/50">
+                                                <div className="flex flex-col items-end gap-0.5 bg-gray-50/50 px-2.5 py-1.5 rounded-xl border border-gray-100/50 shrink-0">
                                                     <div className="flex items-center gap-1 text-[9px] text-gray-700 font-bold">
                                                         <CalendarDays className="w-2.5 h-2.5" />
-                                                        {new Date(item.recorded_at).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })}
+                                                        {new Date(group.time).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })}
                                                     </div>
                                                     <div className="flex items-center gap-1 text-[10px] text-gray-900 font-black">
                                                         <Clock className="w-2.5 h-2.5 text-green-500" />
-                                                        {new Date(item.recorded_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                                                        {new Date(group.time).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
                                                     </div>
                                                 </div>
                                             </div>
                                             <Edit2 className="w-3.5 h-3.5 text-gray-200 ml-4 shrink-0" />
                                         </button>
-                                    );
-                                })
-                            )}
+                                    ));
+                            })()}
                         </div>
                     </section>
                 </div>
@@ -1191,7 +1165,7 @@ export default function HarvestPage() {
                             <BarChart3 className="w-4 h-4 text-gray-700" /> 동별 수확량
                         </h3>
                         <div className="grid grid-cols-3 gap-2">
-                            {houses.map(h => {
+                            {houses.filter(h => h.is_active || (houseStats[h.house_number] || 0) > 0).map(h => {
                                 const count = houseStats[h.house_number] || 0;
                                 const gBreakdown = houseGradeStats[h.house_number] || { sang: 0, jung: 0, ha: 0 };
                                 return (

@@ -165,37 +165,47 @@ export default function NavBar() {
 
             <div className="hidden md:block w-56 flex-shrink-0" />
 
-            {/* 모바일 상단 헤더 */}
-            <nav className="md:hidden bg-white border-b border-gray-100 sticky top-0 z-50">
-                <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
-                    <div className="flex items-center gap-2 min-w-0 overflow-hidden" onClick={() => window.location.href = '/'}>
-                        <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center shadow-lg shadow-red-100 text-white font-black text-xl shrink-0">
-                            {farm?.farm_name?.[0] || 'N'}
+            {/* 모바일 상단 헤더 - 홈(/) 에서는 숨김 */}
+            {pathname !== '/' && (
+                <nav className="md:hidden bg-white border-b border-gray-100 sticky top-0 z-50">
+                    <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+                        <div className="flex items-center gap-2 min-w-0 overflow-hidden" onClick={() => window.location.href = '/'}>
+                            <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center shadow-lg shadow-red-100 text-white font-black text-xl shrink-0">
+                                {farm?.farm_name?.[0] || 'N'}
+                            </div>
+                            <h1 className="text-sm font-black text-gray-900 tracking-tight whitespace-nowrap truncate">
+                                {farm?.farm_name || "농장관리"}
+                            </h1>
+                            <div className="scale-75 origin-left shrink-0">
+                                <DbStatus />
+                            </div>
                         </div>
-                        <h1 className="text-sm font-black text-gray-900 tracking-tight whitespace-nowrap truncate">
-                            {farm?.farm_name || "농장관리"}
-                        </h1>
-                        <div className="scale-75 origin-left shrink-0">
-                            <DbStatus />
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={handleEmergencyReset}
+                                className="p-2 text-gray-700 hover:text-red-500 hover:bg-red-50 rounded-full transition-all"
+                                title="연결 복구"
+                            >
+                                <RefreshCcw size={18} />
+                            </button>
+                            <button onClick={() => setMobileOpen(!mobileOpen)} className="p-2 text-gray-700 hover:bg-gray-50 rounded-full">
+                                {mobileOpen ? <X size={20} /> : <AlignLeft size={20} />}
+                            </button>
                         </div>
                     </div>
+                </nav>
+            )}
 
-                    <div className="flex items-center gap-2">
-                        {/* [bkit] 긴급 연결 복구 버튼 */}
-                        <button
-                            onClick={handleEmergencyReset}
-                            className="p-2 text-gray-700 hover:text-red-500 hover:bg-red-50 rounded-full transition-all"
-                            title="연결 복구"
-                        >
-                            <RefreshCcw size={18} />
-                        </button>
-
-                        <button onClick={() => setMobileOpen(!mobileOpen)} className="p-2 text-gray-700 hover:bg-gray-50 rounded-full">
-                            {mobileOpen ? <X size={20} /> : <AlignLeft size={20} />}
-                        </button>
-                    </div>
-                </div>
-            </nav>
+            {/* 홈 전용: 플로팅 메뉴 버튼 (녹색 헤더 위 오버레이) */}
+            {pathname === '/' && (
+                <button
+                    onClick={() => setMobileOpen(!mobileOpen)}
+                    className="md:hidden fixed top-4 left-4 z-50 p-2.5 rounded-2xl transition-all active:scale-90"
+                    style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(4px)' }}
+                >
+                    {mobileOpen ? <X size={20} className="text-white" /> : <AlignLeft size={20} className="text-white" />}
+                </button>
+            )}
 
             {/* 모바일 드로어 메뉴 */}
             {mobileOpen && (
@@ -250,16 +260,30 @@ export default function NavBar() {
                 </div>
             )}
 
-            {/* 모바일 하단 탭바 (B2B/B2C 포함 주요 메뉴 5개) */}
+            {/* 모바일 하단 탭바 */}
             <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-40 flex">
-                {navItems.slice(0, 5).map(({ href, label, icon: Icon }) => (
-                    <Link key={href} href={href}
-                        className={`flex-1 flex flex-col items-center py-3 gap-0.5 text-[11px] font-medium transition-colors
-              ${pathname === href ? 'text-red-600' : 'text-gray-700 hover:text-gray-600'}`}>
-                        <Icon className="w-5 h-5" />
-                        {label}
-                    </Link>
-                ))}
+                {/* 주요 4개 탭 */}
+                {[navItems[0], navItems[2], navItems[3], navItems[1]].map(({ href, label, icon: Icon }) => {
+                    const isActive = pathname === href;
+                    return (
+                        <Link key={href} href={href}
+                            className={`flex-1 flex flex-col items-center pt-2 pb-3 gap-0.5 transition-colors ${isActive ? 'text-green-600' : 'text-gray-400'}`}>
+                            <div className={`p-1.5 rounded-xl transition-all ${isActive ? 'bg-green-50' : ''}`}>
+                                <Icon className="w-5 h-5" />
+                            </div>
+                            <span className={`text-[10px] font-bold ${isActive ? 'text-green-600' : 'text-gray-400'}`}>{label}</span>
+                        </Link>
+                    );
+                })}
+                {/* 더보기 버튼 */}
+                <button
+                    onClick={() => setMobileOpen(true)}
+                    className={`flex-1 flex flex-col items-center pt-2 pb-3 gap-0.5 transition-colors ${mobileOpen ? 'text-green-600' : 'text-gray-400'}`}>
+                    <div className={`p-1.5 rounded-xl transition-all ${mobileOpen ? 'bg-green-50' : ''}`}>
+                        <Menu className="w-5 h-5" />
+                    </div>
+                    <span className={`text-[10px] font-bold ${mobileOpen ? 'text-green-600' : 'text-gray-400'}`}>더보기</span>
+                </button>
             </nav>
 
             <div className="md:hidden h-14" />
