@@ -10,6 +10,7 @@ import {
 import { useAuthStore } from "@/store/authStore";
 import { useHarvestStore } from "@/store/harvestStore";
 import { supabase } from "@/lib/supabase";
+import { toKSTDateString } from "@/lib/utils";
 
 const DAY_NAMES_KR = ['일', '월', '화', '수', '목', '금', '토'];
 const DAY_FULL_KR = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
@@ -57,6 +58,9 @@ export default function Home() {
     const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
     const [weather, setWeather] = useState<WeatherData>(null);
     const [cropsList, setCropsList] = useState<CropItem[]>([]);
+    const [showNotifPanel, setShowNotifPanel] = useState(false);
+    const [todayDeliveries, setTodayDeliveries] = useState<any[]>([]);
+    const [todayUnsettledCount, setTodayUnsettledCount] = useState(0);
 
     const weekDates = useMemo(() => {
         const d = new Date(selectedDate + 'T00:00:00');
@@ -125,18 +129,24 @@ export default function Home() {
         try {
             const [
                 harvestRes, cropsRes, attendanceRes, salesRes, laborRes,
-                unpaidRes,
+                unpaidRes, todayDelivRes,
                 recentHarvestRes, recentSalesRes,
             ] = await Promise.all([
                 supabase.from('harvest_records').select('quantity, crop_name').eq('farm_id', farm.id)
                     .gte('recorded_at', `${selectedDate}T00:00:00`).lte('recorded_at', `${selectedDate}T23:59:59`),
-                supabase.from('farm_crops').select('id, crop_name, default_unit, crop_icon, crop_image_url, image_source, category').eq('farm_id', farm.id).eq('is_active', true),
+                supabase.from('farm_crops').select('id, crop_name, default_unit, crop_icon, crop_image_url, image_source, category').eq('farm_id', farm.id).eq('is_active', true).order('sort_order').order('created_at'),
                 supabase.from('attendance_records').select('worker_name').eq('farm_id', farm.id).eq('work_date', selectedDate).eq('is_present', true),
                 supabase.from('sales_records').select('quantity, sale_unit, crop_name').eq('farm_id', farm.id)
                     .gte('recorded_at', `${selectedDate}T00:00:00`).lte('recorded_at', `${selectedDate}T23:59:59`),
                 supabase.from('labor_costs').select('headcount').eq('farm_id', farm.id).eq('work_date', selectedDate),
                 supabase.from('sales_records').select('id, delivery_method, sale_type, partner_id, recorded_at')
                     .eq('farm_id', farm.id).eq('is_settled', false),
+                supabase.from('sales_records')
+                    .select('id, crop_name, quantity, sale_unit, delivery_method, sale_type, partner_id, is_settled, recorded_at')
+                    .eq('farm_id', farm.id)
+                    .gte('recorded_at', `${toKSTDateString()}T00:00:00`)
+                    .lte('recorded_at', `${toKSTDateString()}T23:59:59`)
+                    .order('recorded_at', { ascending: false }),
                 supabase.from('harvest_records').select('id, crop_name, quantity, recorded_at')
                     .eq('farm_id', farm.id).order('recorded_at', { ascending: false }).limit(5),
                 supabase.from('sales_records').select('id, crop_name, quantity, sale_unit, recorded_at')
@@ -184,6 +194,10 @@ export default function Home() {
             setUnpaidB2BCount(dailyGroupSet.size);
             setUnpaidB2CCount((unpaidData as any[]).filter((r: any) => r.delivery_method === 'courier').length);
 
+            const todayData = (todayDelivRes.data ?? []) as any[];
+            setTodayDeliveries(todayData);
+            setTodayUnsettledCount(todayData.filter((r: any) => !r.is_settled).length);
+
             const activities: RecentActivity[] = [];
             (recentHarvestRes.data ?? []).forEach((r: any) => {
                 activities.push({ id: `h-${r.id}`, type: 'harvest', label: r.crop_name || '수확물', qty: r.quantity || 0, unit: cropUnitMap[r.crop_name] || '박스', time: r.recorded_at });
@@ -228,6 +242,7 @@ export default function Home() {
     ].slice(0, 4);
 
     return (
+        <>
         <div className="min-h-screen pb-20 md:pb-6" style={{ background: '#F8FAF9' }}>
 
             {/* ══════════════════════════════
@@ -243,17 +258,17 @@ export default function Home() {
                     <div>
                         <p className="text-sm font-medium" style={{ color: '#C8E8D5' }}>{fullDateLabel}</p>
                         <h1 className="text-white text-xl font-bold mt-0.5">
-                            안녕하세요, {farm?.farm_name ?? '농장주'}님 👋
+                            Hi~ {farm?.farm_name ?? '농장주'} 👋
                         </h1>
                     </div>
-                    <button onClick={() => router.push('/finance')}
+                    <button onClick={() => setShowNotifPanel(true)}
                         className="relative p-2.5 rounded-2xl shrink-0 active:scale-90 transition-all"
                         style={{ background: 'rgba(255,255,255,0.15)' }}>
-                        <Bell className="w-5 h-5 text-white" />
-                        {totalUnpaid > 0 && (
+                        <Bell className={`w-5 h-5 text-white ${todayUnsettledCount > 0 ? 'animate-bounce' : ''}`} />
+                        {todayUnsettledCount > 0 && (
                             <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-[9px] font-bold flex items-center justify-center"
                                 style={{ border: '2px solid #5BAE7E' }}>
-                                {totalUnpaid > 9 ? '9+' : totalUnpaid}
+                                {todayUnsettledCount > 9 ? '9+' : todayUnsettledCount}
                             </span>
                         )}
                     </button>
@@ -643,5 +658,78 @@ export default function Home() {
                 </div>
             </div>
         </div>
+
+        {/* ── 오늘 출하 알림 패널 ── */}
+        {showNotifPanel && (
+            <div className="fixed inset-0 z-[200] flex items-end justify-center">
+                <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowNotifPanel(false)} />
+                <div className="relative bg-white rounded-t-[2rem] w-full max-w-md shadow-2xl animate-in slide-in-from-bottom-8 duration-300"
+                    style={{ maxHeight: '75vh', display: 'flex', flexDirection: 'column' }}>
+
+                    {/* 패널 헤더 */}
+                    <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
+                        <div>
+                            <h3 className="text-base font-black text-gray-900">🔔 오늘 출하 현황</h3>
+                            <p className="text-xs text-gray-400 mt-0.5">
+                                {toKSTDateString()} · 총 {todayDeliveries.length}건
+                            </p>
+                        </div>
+                        <button onClick={() => setShowNotifPanel(false)}
+                            className="p-2 rounded-full hover:bg-gray-100 text-gray-400">✕</button>
+                    </div>
+
+                    {/* 완료 메시지 or 목록 */}
+                    <div className="flex-1 overflow-y-auto px-5 pb-6 space-y-2">
+                        {todayDeliveries.length === 0 ? (
+                            <div className="py-12 text-center">
+                                <p className="text-3xl mb-2">📭</p>
+                                <p className="text-sm text-gray-400 font-medium">오늘 출하 내역이 없습니다</p>
+                            </div>
+                        ) : todayUnsettledCount === 0 ? (
+                            <div className="py-10 text-center">
+                                <p className="text-4xl mb-3">✅</p>
+                                <p className="text-base font-black text-green-600">오늘 출하 모두 정산 완료!</p>
+                                <p className="text-xs text-gray-400 mt-1">수고하셨습니다 👍</p>
+                            </div>
+                        ) : (
+                            todayDeliveries.map((r: any) => {
+                                const isCourier = r.delivery_method === 'courier';
+                                const settled = r.is_settled;
+                                return (
+                                    <div key={r.id}
+                                        className={`flex items-center gap-3 p-3 rounded-2xl border transition-all ${settled ? 'bg-green-50 border-green-100' : 'bg-white border-gray-100'}`}>
+                                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-base ${isCourier ? 'bg-amber-50' : 'bg-blue-50'}`}>
+                                            {isCourier ? '📦' : '🚛'}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-black text-gray-800 truncate">
+                                                {r.crop_name || '출하물'} {r.quantity?.toLocaleString()}{r.sale_unit}
+                                            </p>
+                                            <p className="text-[10px] text-gray-400 font-medium mt-0.5">
+                                                {isCourier ? '택배' : '거래처 납품'}
+                                            </p>
+                                        </div>
+                                        <span className={`text-[10px] font-black px-2 py-1 rounded-full ${settled ? 'bg-green-500 text-white' : 'bg-red-100 text-red-600'}`}>
+                                            {settled ? '정산완료' : '미정산'}
+                                        </span>
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+
+                    {/* 정산 바로가기 */}
+                    {todayUnsettledCount > 0 && (
+                        <div className="px-5 pb-5 shrink-0">
+                            <button onClick={() => { setShowNotifPanel(false); router.push('/finance'); }}
+                                className="w-full py-3.5 bg-green-600 text-white rounded-2xl font-black text-sm shadow-lg shadow-green-100 hover:bg-green-700 transition-all">
+                                정산하러 가기 →
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div>
+        )}
+        </>
     );
 }

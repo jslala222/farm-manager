@@ -88,11 +88,18 @@ export default function CropImagePicker({
 
         setUploading(true);
         try {
-            const compressed = await compressImage(file, TARGET_KB);
+            // 모든 포맷 → JPEG 변환 + 150KB 압축 (실패 시 원본 사용)
+            let uploadFile: File;
+            try {
+                uploadFile = await compressImage(file, TARGET_KB);
+            } catch {
+                uploadFile = file;
+            }
+
             await supabase.storage.from('crop-photos').remove([path]);
             const { error } = await supabase.storage
                 .from('crop-photos')
-                .upload(path, compressed, { upsert: true });
+                .upload(path, uploadFile, { upsert: true, contentType: 'image/jpeg' });
             if (error) throw error;
 
             const { data: urlData } = supabase.storage.from('crop-photos').getPublicUrl(path);
@@ -281,7 +288,7 @@ export default function CropImagePicker({
                                 <span className="text-xs text-gray-400">자동 압축 · JPG, PNG, WebP</span>
                             </button>
                             <input ref={fileInputRef} type="file"
-                                accept="image/jpeg,image/jpg,image/png,image/webp"
+                                accept="image/*"
                                 onChange={handleFileChange} className="hidden" />
                         </div>
                     )}
