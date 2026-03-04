@@ -149,17 +149,17 @@ export default function FinancePage() {
             
             // ⚠️ .or()는 복잡할 때 성능 문제 가능 → 별도 쿼리로 분리
             const [recordsB2CResult, recordsB2BResult, recordsUnsettledResult] = await Promise.all([
-                // [안2] B2C (택배): settled_at 기준 (입금일 = 매출 귀속 월)
-                // 입금 완료된 건만 해당 월 매출로 인정
+                // [안2] B2C (택배): recorded_at 기준으로 조회 (settled_at=null인 기존 레코드 포함)
+                // JS 레벨에서 settled_at || recorded_at 으로 월 귀속 처리
                 supabase
                     .from('sales_records')
                     .select('*, partner:partners(company_name), customer:customers(name)')
                     .eq('farm_id', farm.id)
                     .eq('delivery_method', 'courier')
                     .eq('is_settled', true)
-                    .gte('settled_at', cashStartDate)
-                    .lte('settled_at', cashEndDate)
-                    .order('settled_at', { ascending: false }),
+                    .gte('recorded_at', startStr)
+                    .lte('recorded_at', endStr)
+                    .order('recorded_at', { ascending: false }),
                 
                 // B2B settled_at 기준 + is_settled=true
                 supabase

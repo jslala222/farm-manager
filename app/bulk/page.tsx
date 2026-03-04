@@ -4,27 +4,8 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Building2, Edit2, Trash2, History, RefreshCcw, Save, ShoppingCart, ChevronDown, Calendar as CalendarIcon, X } from 'lucide-react';
 import { useAuthStore } from "@/store/authStore";
 import { supabase, SalesRecord, Partner } from "@/lib/supabase";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, getCropIcon } from "@/lib/utils";
 import CalendarComponent from "@/components/Calendar";
-
-const getCropIcon = (cropName: string) => {
-    if (!cropName) return '📦';
-    if (cropName.includes('딸기')) return '🍓';
-    if (cropName.includes('감자')) return '🥔';
-    if (cropName.includes('고구마')) return '🍠';
-    if (cropName.includes('토마토')) return '🍅';
-    if (cropName.includes('사과')) return '🍎';
-    if (cropName.includes('포도') || cropName.includes('샤인머스캣')) return '🍇';
-    if (cropName.includes('배')) return '🍐';
-    if (cropName.includes('복숭아')) return '🍑';
-    if (cropName.includes('오이')) return '🥒';
-    if (cropName.includes('상추')) return '🥬';
-    if (cropName.includes('당근')) return '🥕';
-    if (cropName.includes('고추')) return '🌶️';
-    if (cropName.includes('마늘')) return '🧄';
-    if (cropName.includes('양파')) return '🧅';
-    return '📦';
-};
 
 const toLocalDateStr = (d: Date = new Date()) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -42,9 +23,9 @@ export default function BulkSalesPage() {
     const [expandedPartners, setExpandedPartners] = useState<string[]>([]);
 
     // 수정 모달 state
-    const [editModal, setEditModal] = useState<{ open: boolean; records: any[]; companyName: string }>({ open: false, records: [], companyName: '' });
+    const [editModal, setEditModal] = useState<{ open: boolean; records: any[]; cropGroups: {cropName: string; isProcessed: boolean; unit: string; records: any[]}[]; companyName: string }>({ open: false, records: [], cropGroups: [], companyName: '' });
     const [modalDate, setModalDate] = useState('');
-    const [modalQties, setModalQties] = useState<Record<string, string>>({}); // { [grade]: qty }
+    const [modalQties, setModalQties] = useState<Record<string, string>>({}); // { [cropName:grade]: qty }
     const [modalPaymentMethod, setModalPaymentMethod] = useState('카드');
     const [modalPaymentStatus, setModalPaymentStatus] = useState<'pending' | 'completed'>('pending');
     const [modalSaving, setModalSaving] = useState(false);
@@ -52,13 +33,32 @@ export default function BulkSalesPage() {
 
     // B2B State
     const [selectedClientId, setSelectedClientId] = useState<string>("");
-    const [bulkQtySang, setBulkQtySang] = useState("");
-    const [bulkQtyJung, setBulkQtyJung] = useState("");
-    const [bulkQtyHa, setBulkQtyHa] = useState("");
+    // 다중 품목 장바구니 (category로 원물/가공품 구분)
+    const [bulkItems, setBulkItems] = useState<{id: string; cropName: string; cropIcon: string; unit: string; category: string; qty: string; qtySang: string; qtyJung: string; qtyHa: string;}[]>([]);
 
     // Common State
     const [cropName, setCropName] = useState('딸기');
     const [saleUnit, setSaleUnit] = useState('박스');
+
+    // 가공품이면 규격(specs), 아니면 단위(units)
+    const getEffectiveUnits = (crop: any) => {
+        if (crop?.category === 'processed' && crop?.available_specs?.length > 0) return crop.available_specs;
+        return crop?.available_units || ['박스'];
+    };
+
+    // 장바구니 헬퍼
+    const addToBulkCart = (crop: any) => {
+        setBulkItems(prev => [...prev, {
+            id: Date.now().toString() + Math.random().toString(36).slice(2, 7),
+            cropName: crop.crop_name, cropIcon: getCropIcon(crop.crop_name, farmCrops),
+            unit: getEffectiveUnits(crop)[0],
+            category: crop.category || 'crop',
+            qty: '', qtySang: '', qtyJung: '', qtyHa: ''
+        }]);
+    };
+    const removeBulkItem = (id: string) => setBulkItems(prev => prev.filter(i => i.id !== id));
+    const updateBulkItem = (id: string, field: string, value: string) =>
+        setBulkItems(prev => prev.map(i => i.id === id ? { ...i, [field]: value } : i));
 
     // 바로 정산 시트
     const [showSettlementSheet, setShowSettlementSheet] = useState(false);
@@ -110,27 +110,41 @@ export default function BulkSalesPage() {
     useEffect(() => { if (initialized && farm?.id) fetchInitialData(); }, [initialized, farm?.id, fetchInitialData]);
 
     const handleResetAllStates = () => {
-        setEditingRecordId(null); setSelectedClientId(""); setBulkQtySang(""); setBulkQtyJung(""); setBulkQtyHa("");
+        setEditingRecordId(null); setSelectedClientId(""); setBulkItems([]);
     };
 
-    const buildGrades = () => [
-        { grade: '특/상', qty: bulkQtySang }, { grade: '중', qty: bulkQtyJung }, { grade: '하', qty: bulkQtyHa }
-    ].filter(g => Number(g.qty) > 0);
+    const buildAllGrades = () => {
+        const result: {cropName: string; unit: string; grade: string; qty: number; itemId: string}[] = [];
+        for (const item of bulkItems) {
+            if (item.category === 'processed') {
+                // 가공품: 등급 없이 단순 수량
+                const q = Number(item.qty);
+                if (q > 0) result.push({cropName: item.cropName, unit: item.unit, grade: '-', qty: q, itemId: item.id});
+            } else {
+                // 원물: 등급별 수량
+                [{grade: '특/상', qty: item.qtySang}, {grade: '중', qty: item.qtyJung}, {grade: '하', qty: item.qtyHa}]
+                    .filter(g => Number(g.qty) > 0)
+                    .forEach(g => result.push({cropName: item.cropName, unit: item.unit, grade: g.grade, qty: Number(g.qty), itemId: item.id}));
+            }
+        }
+        return result;
+    };
 
     const handleSavePending = async () => {
         if (!farm?.id || saving) return;
         if (!selectedClientId) { alert("거래처를 선택해주세요."); return; }
-        const grades = buildGrades();
-        if (grades.length === 0) { alert("수량을 입력해주세요."); return; }
+        const allGrades = buildAllGrades();
+        if (allGrades.length === 0) { alert("품목을 추가하고 수량을 입력해주세요."); return; }
         setSaving(true);
         try {
-            for (const g of grades) {
+            const nowTs = selectedDate + 'T' + new Date().toTimeString().split(' ')[0];
+            for (const g of allGrades) {
                 const { error } = await supabase.from('sales_records').insert([{
-                    farm_id: farm.id, partner_id: selectedClientId, crop_name: cropName, sale_unit: saleUnit,
-                    quantity: Number(g.qty), grade: g.grade,
+                    farm_id: farm.id, partner_id: selectedClientId, crop_name: g.cropName, sale_unit: g.unit,
+                    quantity: g.qty, grade: g.grade,
                     is_settled: false, payment_status: 'pending',
                     delivery_method: 'direct', sale_type: 'b2b',
-                    recorded_at: selectedDate + 'T' + new Date().toTimeString().split(' ')[0]
+                    recorded_at: nowTs
                 }]);
                 if (error) throw error;
             }
@@ -145,39 +159,39 @@ export default function BulkSalesPage() {
     const handleSaveSettled = async () => {
         if (!farm?.id || saving) return;
         if (!selectedClientId) { alert("거래처를 선택해주세요."); setShowSettlementSheet(false); return; }
-        const grades = buildGrades();
-        if (grades.length === 0) { alert("수량을 입력해주세요."); setShowSettlementSheet(false); return; }
+        const allGrades = buildAllGrades();
+        if (allGrades.length === 0) { alert("품목을 추가하고 수량을 입력해주세요."); setShowSettlementSheet(false); return; }
         setSaving(true);
         try {
             const actualTotal = sheetActualAmount ? Number(sheetActualAmount) : null;
-            // 등급별 예상금액 합계 (비례 분배 기준)
-            const totalExpected = grades.reduce((sum, g) => {
-                const up = sheetUnitPrices[g.grade] ? Number(sheetUnitPrices[g.grade]) : 0;
-                return sum + up * Number(g.qty);
+            const totalExpected = allGrades.reduce((sum, g) => {
+                const key = `${g.itemId}-${g.grade}`;
+                const up = sheetUnitPrices[key] ? Number(sheetUnitPrices[key]) : 0;
+                return sum + up * g.qty;
             }, 0);
-            const totalQtyForSave = grades.reduce((sum, g) => sum + Number(g.qty), 0);
-            for (const g of grades) {
-                const gradeQty = Number(g.qty);
-                const up = sheetUnitPrices[g.grade] ? Number(sheetUnitPrices[g.grade]) : null;
-                const gradePrice = up ? up * gradeQty : null;
-                // 실입금액 비례 분배: 단가 있으면 예상금액 기준, 없으면 수량 기준
+            const totalQtyForSave = allGrades.reduce((sum, g) => sum + g.qty, 0);
+            const nowTs = selectedDate + 'T' + new Date().toTimeString().split(' ')[0];
+            for (const g of allGrades) {
+                const key = `${g.itemId}-${g.grade}`;
+                const up = sheetUnitPrices[key] ? Number(sheetUnitPrices[key]) : null;
+                const gradePrice = up ? up * g.qty : null;
                 const gradeSettled = actualTotal
                     ? totalExpected > 0 && gradePrice
                         ? Math.round(actualTotal * gradePrice / totalExpected)
                         : totalQtyForSave > 0
-                            ? Math.round(actualTotal * gradeQty / totalQtyForSave)
+                            ? Math.round(actualTotal * g.qty / totalQtyForSave)
                             : actualTotal
                     : null;
                 const { error } = await supabase.from('sales_records').insert([{
-                    farm_id: farm.id, partner_id: selectedClientId, crop_name: cropName, sale_unit: saleUnit,
-                    quantity: gradeQty, grade: g.grade,
+                    farm_id: farm.id, partner_id: selectedClientId, crop_name: g.cropName, sale_unit: g.unit,
+                    quantity: g.qty, grade: g.grade,
                     is_settled: true, payment_status: 'completed', payment_method: sheetPaymentMethod,
                     price: gradePrice,
                     settled_amount: gradeSettled,
-                    harvest_note: sheetDeductionReason || null,  // 차액사유 카테고리 (필터링용)
-                    delivery_note: sheetMemo || null,            // 메모 텍스트
+                    harvest_note: sheetDeductionReason || null,
+                    delivery_note: sheetMemo || null,
                     delivery_method: 'direct', sale_type: 'b2b',
-                    recorded_at: selectedDate + 'T' + new Date().toTimeString().split(' ')[0]
+                    recorded_at: nowTs
                 }]);
                 if (error) throw error;
             }
@@ -215,97 +229,127 @@ export default function BulkSalesPage() {
         setModalPaymentMethod(first?.payment_method || '카드');
         setModalPaymentStatus((first?.payment_status as 'pending' | 'completed') || 'pending');
 
-        const gradeOrder = ['특/상', '중', '하'];
-        const gradeQtyMap: Record<string, number> = {};
-        const gradeRecordMap: Record<string, any> = {};
         const srcIds = new Set<string>();
-
+        // 품목별 그루핑
+        const cropMap = new Map<string, any[]>();
         records.forEach(rec => {
-            const gradeStr = rec.grade || '';
-            if (['특/상', '중', '하'].includes(gradeStr)) {
-                // 신형: 등급 1개 = 레코드 1개
-                gradeQtyMap[gradeStr] = (gradeQtyMap[gradeStr] || 0) + (rec.quantity || 0);
-                gradeRecordMap[gradeStr] = rec;
+            const cn = rec.crop_name || '미지정';
+            if (!cropMap.has(cn)) cropMap.set(cn, []);
+            cropMap.get(cn)!.push(rec);
+        });
+
+        const gradeOrder = ['특/상', '중', '하'];
+        const cropGroups: {cropName: string; isProcessed: boolean; unit: string; records: any[]}[] = [];
+        const qties: Record<string, string> = {};
+
+        cropMap.forEach((recs, cropName) => {
+            const isProcessed = recs.every((r: any) => r.grade === '-');
+            const unit = recs[0].sale_unit || '박스';
+
+            if (isProcessed) {
+                // 가공품: 단순 수량
+                const totalQty = recs.reduce((s: number, r: any) => s + (r.quantity || 0), 0);
+                qties[`${cropName}:-`] = totalQty.toString();
+                cropGroups.push({ cropName, isProcessed: true, unit, records: recs });
             } else {
-                // 구형 복합 포맷 파싱
-                const parsed = parseGradeString(gradeStr, rec.quantity || 0);
-                for (const [g, q] of Object.entries(parsed)) {
-                    gradeQtyMap[g] = (gradeQtyMap[g] || 0) + q;
-                    if (!gradeRecordMap[g]) {
-                        gradeRecordMap[g] = { ...rec, id: null, grade: g, quantity: q, _isCompound: true };
+                // 원물: 등급별 처리
+                const gradeQtyMap: Record<string, number> = {};
+                const gradeRecordMap: Record<string, any> = {};
+                recs.forEach((rec: any) => {
+                    const gradeStr = rec.grade || '';
+                    if (gradeOrder.includes(gradeStr)) {
+                        gradeQtyMap[gradeStr] = (gradeQtyMap[gradeStr] || 0) + (rec.quantity || 0);
+                        gradeRecordMap[gradeStr] = rec;
+                    } else {
+                        const parsed = parseGradeString(gradeStr, rec.quantity || 0);
+                        for (const [g, q] of Object.entries(parsed)) {
+                            gradeQtyMap[g] = (gradeQtyMap[g] || 0) + q;
+                            if (!gradeRecordMap[g]) {
+                                gradeRecordMap[g] = { ...rec, id: null, grade: g, quantity: q, _isCompound: true };
+                            }
+                        }
+                        if (rec.id) srcIds.add(rec.id);
                     }
-                }
-                if (rec.id) srcIds.add(rec.id);
+                });
+                const fullRecs = gradeOrder.map(grade =>
+                    gradeRecordMap[grade] || {
+                        id: null, grade, quantity: 0, sale_unit: unit,
+                        recorded_at: first.recorded_at, farm_id: first.farm_id,
+                        partner_id: first.partner_id, crop_name: cropName,
+                    }
+                );
+                gradeOrder.forEach(grade => { qties[`${cropName}:${grade}`] = (gradeQtyMap[grade] || 0).toString(); });
+                cropGroups.push({ cropName, isProcessed: false, unit, records: fullRecs });
             }
         });
 
-        const fullRecords = gradeOrder.map(grade =>
-            gradeRecordMap[grade] || {
-                id: null, grade, quantity: 0,
-                sale_unit: first.sale_unit || '박스',
-                recorded_at: first.recorded_at,
-                farm_id: first.farm_id,
-                partner_id: first.partner_id,
-                crop_name: first.crop_name,
-            }
-        );
-
-        const qties: Record<string, string> = {};
-        gradeOrder.forEach(grade => { qties[grade] = (gradeQtyMap[grade] || 0).toString(); });
         setModalQties(qties);
         setCompoundSourceIds(Array.from(srcIds));
-        setEditModal({ open: true, records: fullRecords, companyName });
+        setEditModal({ open: true, records, cropGroups, companyName });
     };
 
     const handleModalSave = async () => {
-        if (!editModal.records.length || modalSaving || !farm?.id) return;
+        if (!editModal.cropGroups.length || modalSaving || !farm?.id) return;
         setModalSaving(true);
         try {
             const first = editModal.records[0];
             const timeStr = first.recorded_at.split('T')[1] || new Date().toTimeString().split(' ')[0];
-            const baseData = {
-                farm_id: farm.id,
-                partner_id: first.partner_id,
-                crop_name: first.crop_name,
-                sale_unit: first.sale_unit,
-                recorded_at: modalDate + 'T' + timeStr,
-                payment_method: modalPaymentMethod,
-                payment_status: modalPaymentStatus,
-                is_settled: modalPaymentStatus === 'completed',
-                delivery_method: 'direct',
-                sale_type: 'b2b',
-            };
+            const recordedAt = modalDate + 'T' + timeStr;
 
             // 1. 구형 복합 레코드 삭제
             for (const srcId of compoundSourceIds) {
                 await supabase.from('sales_records').delete().eq('id', srcId);
             }
 
-            // 2. 각 등급 처리
-            for (const rec of editModal.records) {
-                const qty = Number(modalQties[rec.grade] || '0');
-                if (rec.id && !rec._isCompound) {
-                    // 신형 기존 레코드: 수량 0이면 삭제, 아니면 업데이트
-                    if (qty === 0) {
-                        await supabase.from('sales_records').delete().eq('id', rec.id);
-                    } else {
-                        const { error } = await supabase.from('sales_records').update({
-                            recorded_at: modalDate + 'T' + timeStr,
-                            quantity: qty,
-                            payment_method: modalPaymentMethod,
-                            payment_status: modalPaymentStatus,
-                            is_settled: modalPaymentStatus === 'completed',
-                        }).eq('id', rec.id);
-                        if (error) { alert('저장 실패: ' + error.message); return; }
+            // 2. 각 품목별 처리
+            for (const cg of editModal.cropGroups) {
+                const baseData = {
+                    farm_id: farm.id, partner_id: first.partner_id, crop_name: cg.cropName,
+                    sale_unit: cg.unit, recorded_at: recordedAt,
+                    payment_method: modalPaymentMethod, payment_status: modalPaymentStatus,
+                    is_settled: modalPaymentStatus === 'completed',
+                    delivery_method: 'direct', sale_type: 'b2b',
+                };
+
+                if (cg.isProcessed) {
+                    // 가공품: 단일 레코드
+                    const qty = Number(modalQties[`${cg.cropName}:-`] || '0');
+                    const existingRec = cg.records[0];
+                    if (existingRec?.id) {
+                        if (qty === 0) {
+                            await supabase.from('sales_records').delete().eq('id', existingRec.id);
+                        } else {
+                            await supabase.from('sales_records').update({
+                                recorded_at: recordedAt, quantity: qty,
+                                payment_method: modalPaymentMethod, payment_status: modalPaymentStatus,
+                                is_settled: modalPaymentStatus === 'completed',
+                            }).eq('id', existingRec.id);
+                        }
+                    } else if (qty > 0) {
+                        await supabase.from('sales_records').insert({ ...baseData, quantity: qty, grade: '-' });
                     }
-                } else if (qty > 0) {
-                    // 신규 또는 구형 복합에서 분리된 등급 → INSERT
-                    const { error } = await supabase.from('sales_records').insert({ ...baseData, quantity: qty, grade: rec.grade });
-                    if (error) { alert('저장 실패: ' + error.message); return; }
+                } else {
+                    // 원물: 등급별 처리
+                    for (const rec of cg.records) {
+                        const qty = Number(modalQties[`${cg.cropName}:${rec.grade}`] || '0');
+                        if (rec.id && !rec._isCompound) {
+                            if (qty === 0) {
+                                await supabase.from('sales_records').delete().eq('id', rec.id);
+                            } else {
+                                await supabase.from('sales_records').update({
+                                    recorded_at: recordedAt, quantity: qty,
+                                    payment_method: modalPaymentMethod, payment_status: modalPaymentStatus,
+                                    is_settled: modalPaymentStatus === 'completed',
+                                }).eq('id', rec.id);
+                            }
+                        } else if (qty > 0) {
+                            await supabase.from('sales_records').insert({ ...baseData, quantity: qty, grade: rec.grade });
+                        }
+                    }
                 }
             }
 
-            setEditModal({ open: false, records: [], companyName: '' });
+            setEditModal({ open: false, records: [], cropGroups: [], companyName: '' });
             setCompoundSourceIds([]);
             fetchHistory();
         } catch (error: any) {
@@ -319,7 +363,7 @@ export default function BulkSalesPage() {
     const handleDelete = async (id: string) => { if (!confirm("삭제하시겠습니까?")) return; const { error } = await supabase.from('sales_records').delete().eq('id', id); if (!error) fetchHistory(); };
 
     const groupedHistory = useMemo(() => {
-        // partner → date → transaction(recorded_at 기준) → records
+        // partner → date → transaction(recorded_at 기준) → records → cropGroups
         const partnerMap = new Map<string, {
             partnerId: string | null; companyName: string; totalAmount: number;
             qtyByUnit: Record<string, number>;
@@ -348,16 +392,33 @@ export default function BulkSalesPage() {
                 .map(([date, txMap]) => ({
                     date,
                     transactions: Array.from(txMap.values()).map(records => {
-                        const cropName = records[0].crop_name || '';
+                        // 품목별 하위 그룹핑
+                        const cropMap = new Map<string, any[]>();
+                        records.forEach((r: any) => {
+                            const cn = r.crop_name || '미지정';
+                            if (!cropMap.has(cn)) cropMap.set(cn, []);
+                            cropMap.get(cn)!.push(r);
+                        });
+                        const cropGroups = Array.from(cropMap.entries()).map(([cn, recs]) => {
+                            const isProcessed = recs.every((r: any) => r.grade === '-');
+                            const totalQty = recs.reduce((s: number, r: any) => s + (r.quantity || 0), 0);
+                            const unit = recs[0].sale_unit || '박스';
+                            const gradeBreakdown = isProcessed
+                                ? `${totalQty}${unit}`
+                                : recs.map((r: any) => `${r.grade}:${r.quantity}`).join(', ');
+                            return { cropName: cn, records: recs, isProcessed, totalQty, unit, gradeBreakdown };
+                        });
                         const txQtyByUnit = records.reduce((acc: any, r: any) => {
                             const u = r.sale_unit || '박스';
                             acc[u] = (acc[u] || 0) + (r.quantity || 0);
                             return acc;
                         }, {});
+                        const uniqueCrops = cropGroups.map(cg => cg.cropName);
                         return {
                             txKey: records[0].recorded_at,
                             records,
-                            cropName,
+                            cropGroups,
+                            uniqueCrops,
                             qtyByUnit: txQtyByUnit,
                         };
                     })
@@ -368,15 +429,19 @@ export default function BulkSalesPage() {
 
     const DEDUCTION_REASONS = ['조합공제', '운임공제', '품질하락', '시세조정', '선불차감', '기타'];
 
-    // 바로 정산 시트 계산값 (선언 순서 수정: sheetGradesSummary를 먼저 선언)
-    const sheetGradesSummary = [
-        { grade: '특/상', qty: Number(bulkQtySang || 0) },
-        { grade: '중', qty: Number(bulkQtyJung || 0) },
-        { grade: '하', qty: Number(bulkQtyHa || 0) },
-    ].filter(g => g.qty > 0);
-    const sheetTotalQty = Number(bulkQtySang || 0) + Number(bulkQtyJung || 0) + Number(bulkQtyHa || 0);
+    // 바로 정산 시트 계산값 (다중 품목 - 가공품/원물 구분)
+    const sheetGradesSummary = bulkItems.flatMap(item => {
+        if (item.category === 'processed') {
+            const q = Number(item.qty || 0);
+            return q > 0 ? [{grade: '-', qty: q, itemId: item.id, cropName: item.cropName, cropIcon: item.cropIcon, unit: item.unit, key: `${item.id}--`}] : [];
+        }
+        return [{grade: '특/상', qty: Number(item.qtySang || 0)}, {grade: '중', qty: Number(item.qtyJung || 0)}, {grade: '하', qty: Number(item.qtyHa || 0)}]
+            .filter(g => g.qty > 0)
+            .map(g => ({...g, itemId: item.id, cropName: item.cropName, cropIcon: item.cropIcon, unit: item.unit, key: `${item.id}-${g.grade}`}));
+    });
+    const sheetTotalQty = sheetGradesSummary.reduce((sum, g) => sum + g.qty, 0);
     const sheetExpected = sheetGradesSummary.reduce((sum, g) => {
-        const up = sheetUnitPrices[g.grade] ? Number(sheetUnitPrices[g.grade]) : 0;
+        const up = sheetUnitPrices[g.key] ? Number(sheetUnitPrices[g.key]) : 0;
         return sum + up * g.qty;
     }, 0);
     const sheetActualNum = sheetActualAmount ? Number(sheetActualAmount) : 0;
@@ -412,29 +477,32 @@ export default function BulkSalesPage() {
                             {/* 단가 (등급별) - 납품 요약 제거: 이미 상단에 표시됨 */}
                             <div className="bg-slate-50 rounded-2xl overflow-hidden">
                                 <div className="flex items-center justify-between px-4 pt-3 pb-2">
-                                    <p className="text-[9px] font-black text-slate-400 uppercase">단가 (등급별)</p>
+                                    <p className="text-[9px] font-black text-slate-400 uppercase">단가 (품목별)</p>
                                     {partners.find(p => p.id === selectedClientId)?.default_unit_price && (
                                         <span className="text-[9px] font-bold text-indigo-400">기본단가 자동입력됨</span>
                                     )}
                                 </div>
                                 {sheetGradesSummary.length > 0 ? sheetGradesSummary.map(g => {
-                                    const subtotal = sheetUnitPrices[g.grade] ? Number(sheetUnitPrices[g.grade]) * g.qty : 0;
+                                    const subtotal = sheetUnitPrices[g.key] ? Number(sheetUnitPrices[g.key]) * g.qty : 0;
+                                    const isProcessed = g.grade === '-';
                                     return (
-                                        <div key={g.grade} className="px-4 py-2.5 border-t border-slate-100">
-                                            {/* 등급·수량 + 단가 입력 */}
+                                        <div key={g.key} className="px-4 py-2.5 border-t border-slate-100">
                                             <div className="flex items-center gap-2">
-                                                <span className="text-xs font-black text-indigo-500 w-9 shrink-0">{g.grade}</span>
-                                                <span className="text-[10px] font-bold text-slate-400 shrink-0">{g.qty}{saleUnit}</span>
+                                                <span className="text-sm shrink-0">{g.cropIcon}</span>
+                                                {isProcessed
+                                                    ? <span className="text-xs font-black text-violet-500 shrink-0">{g.cropName}</span>
+                                                    : <span className="text-xs font-black text-indigo-500 w-9 shrink-0">{g.grade}</span>
+                                                }
+                                                <span className="text-[10px] font-bold text-slate-400 shrink-0">{g.qty}{g.unit}</span>
                                                 <div className="flex items-center gap-1 ml-auto">
                                                     <input type="text" inputMode="numeric"
-                                                        value={sheetUnitPrices[g.grade] ? Number(sheetUnitPrices[g.grade]).toLocaleString() : ''}
-                                                        onChange={e => setSheetUnitPrices(prev => ({ ...prev, [g.grade]: e.target.value.replace(/[^0-9]/g, '') }))}
+                                                        value={sheetUnitPrices[g.key] ? Number(sheetUnitPrices[g.key]).toLocaleString() : ''}
+                                                        onChange={e => setSheetUnitPrices(prev => ({ ...prev, [g.key]: e.target.value.replace(/[^0-9]/g, '') }))}
                                                         placeholder="단가"
                                                         className="w-32 bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-right text-sm font-black text-slate-800 outline-none focus:border-indigo-300 transition-all" />
                                                     <span className="text-[10px] font-bold text-slate-400 shrink-0">원</span>
                                                 </div>
                                             </div>
-                                            {/* 소계 (별도 줄) */}
                                             {subtotal > 0 && (
                                                 <p className="text-right text-[10px] font-black text-emerald-600 mt-1 pr-1">
                                                     = {subtotal.toLocaleString()}원
@@ -442,7 +510,7 @@ export default function BulkSalesPage() {
                                             )}
                                         </div>
                                     );
-                                }) : <p className="px-4 py-3 text-xs text-slate-300 font-bold border-t border-slate-100">수량 입력 후 단가를 입력하세요</p>}
+                                }) : <p className="px-4 py-3 text-xs text-slate-300 font-bold border-t border-slate-100">품목을 추가하고 수량 입력 후 단가를 입력하세요</p>}
                                 {sheetExpected > 0 && (
                                     <div className="flex items-center justify-between px-4 py-3 bg-slate-100 border-t border-slate-200">
                                         <span className="text-[10px] font-bold text-slate-500">예상 총액</span>
@@ -536,60 +604,101 @@ export default function BulkSalesPage() {
                 </div>
             )}
 
-            {/* 수정 모달 */}
-            {editModal.open && editModal.records.length > 0 && (
+            {/* 수정 모달 (다중 품목 대응) */}
+            {editModal.open && editModal.cropGroups.length > 0 && (
                 <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm px-4 pb-4"
-                    onClick={() => { setEditModal({ open: false, records: [], companyName: '' }); setCompoundSourceIds([]); }}>
-                    <div className="bg-white w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden"
+                    onClick={() => { setEditModal({ open: false, records: [], cropGroups: [], companyName: '' }); setCompoundSourceIds([]); }}>
+                    <div className="bg-white w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
                         onClick={e => e.stopPropagation()}>
                         {/* 헤더 */}
-                        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+                        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
                             <div>
                                 <p className="text-[10px] font-bold text-slate-400 uppercase">납품 내역 수정</p>
-                                <p className="text-sm font-black text-slate-900">{editModal.companyName}</p>
+                                <div className="flex items-center gap-2">
+                                    <p className="text-sm font-black text-slate-900">{editModal.companyName}</p>
+                                    {editModal.cropGroups.length > 1 && (
+                                        <span className="text-[8px] font-black bg-indigo-50 text-indigo-500 px-1.5 py-0.5 rounded-full">{editModal.cropGroups.length}종류</span>
+                                    )}
+                                </div>
                             </div>
-                            <button onClick={() => { setEditModal({ open: false, records: [], companyName: '' }); setCompoundSourceIds([]); }}
+                            <button onClick={() => { setEditModal({ open: false, records: [], cropGroups: [], companyName: '' }); setCompoundSourceIds([]); }}
                                 className="p-2 rounded-xl bg-slate-100 text-slate-400 hover:bg-slate-200 transition-all">
                                 <X className="w-4 h-4" />
                             </button>
                         </div>
-                        {/* 폼 */}
-                        <div className="p-5 space-y-4">
+                        {/* 스크롤 가능한 폼 */}
+                        <div className="p-5 space-y-4 overflow-y-auto flex-1">
                             {/* 날짜 */}
                             <div className="bg-slate-50 rounded-2xl p-3">
                                 <p className="text-[9px] font-black text-slate-400 uppercase mb-1">날짜</p>
                                 <input type="date" value={modalDate} onChange={e => setModalDate(e.target.value)}
                                     className="bg-transparent text-sm font-black text-slate-800 outline-none w-full" />
                             </div>
-                            {/* 등급별 수량 */}
-                            <div className="space-y-2">
-                                <p className="text-[9px] font-black text-slate-400 uppercase px-1">등급별 수량</p>
-                                <p className="text-[10px] text-slate-500 px-1 mb-1">
-                                    각 등급별로 수량을 개별적으로 수정할 수 있습니다. 수정하지 않은 등급은 원래 값이 유지됩니다.
-                                </p>
-                                {editModal.records.map(rec => (
-                                    <div key={rec.grade} className="flex items-center gap-3 bg-slate-50/50 rounded-2xl border border-slate-100 px-4 py-3">
-                                        <span className="text-xs font-black text-indigo-500 w-14 shrink-0 whitespace-nowrap">{rec.grade}</span>
-                                        <input type="text" inputMode="numeric"
-                                            value={modalQties[rec.grade] ?? ''}
-                                            onChange={e => setModalQties(prev => ({ ...prev, [rec.grade]: e.target.value.replace(/[^0-9]/g, '') }))}
-                                            className="flex-1 bg-transparent text-center text-xl font-black text-slate-800 outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 focus:bg-white rounded-lg transition-all" placeholder="0" />
-                                        <span className="text-xs font-bold text-slate-400 shrink-0">{rec.sale_unit}</span>
+                            {/* 품목별 수량 (적응형) */}
+                            {editModal.cropGroups.map((cg, cgIdx) => (
+                                <div key={cg.cropName} className="space-y-2">
+                                    <div className="flex items-center gap-2 px-1">
+                                        <span className="text-lg">{getCropIcon(cg.cropName, farmCrops)}</span>
+                                        <p className="text-xs font-black text-slate-700">{cg.cropName}</p>
+                                        {cg.isProcessed && <span className="text-[8px] font-bold text-violet-500 bg-violet-50 px-1.5 py-0.5 rounded-full">가공품</span>}
                                     </div>
-                                ))}
-                                {/* 합계 표시 */}
-                                <div className="flex items-center justify-between bg-indigo-50/50 rounded-2xl border border-indigo-100 px-4 py-3 mt-2">
-                                    <span className="text-xs font-black text-indigo-600">합계</span>
-                                    <div className="text-right">
-                                        <span className="text-xl font-black text-indigo-700">
-                                            {editModal.records.reduce((sum, rec) => sum + Number(modalQties[rec.grade] || 0), 0)}
-                                        </span>
-                                        <span className="text-xs font-bold text-indigo-400 ml-1">
-                                            {editModal.records[0]?.sale_unit || '박스'}
-                                        </span>
+                                    {cg.isProcessed ? (
+                                        /* 가공품: 단순 수량 1칸 */
+                                        <div className="flex items-center gap-3 bg-violet-50/50 rounded-2xl border border-violet-100 px-4 py-3">
+                                            <span className="text-xs font-black text-violet-500 w-14 shrink-0">수량</span>
+                                            <input type="text" inputMode="numeric"
+                                                value={modalQties[`${cg.cropName}:-`] ?? ''}
+                                                onChange={e => setModalQties(prev => ({ ...prev, [`${cg.cropName}:-`]: e.target.value.replace(/[^0-9]/g, '') }))}
+                                                className="flex-1 bg-transparent text-center text-xl font-black text-slate-800 outline-none" placeholder="0" />
+                                            <span className="text-xs font-bold text-slate-400 shrink-0">{cg.unit}</span>
+                                        </div>
+                                    ) : (
+                                        /* 원물: 등급별 수량 */
+                                        <>
+                                            {cg.records.map(rec => (
+                                                <div key={rec.grade} className="flex items-center gap-3 bg-slate-50/50 rounded-2xl border border-slate-100 px-4 py-3">
+                                                    <span className="text-xs font-black text-indigo-500 w-14 shrink-0 whitespace-nowrap">{rec.grade}</span>
+                                                    <input type="text" inputMode="numeric"
+                                                        value={modalQties[`${cg.cropName}:${rec.grade}`] ?? ''}
+                                                        onChange={e => setModalQties(prev => ({ ...prev, [`${cg.cropName}:${rec.grade}`]: e.target.value.replace(/[^0-9]/g, '') }))}
+                                                        className="flex-1 bg-transparent text-center text-xl font-black text-slate-800 outline-none" placeholder="0" />
+                                                    <span className="text-xs font-bold text-slate-400 shrink-0">{cg.unit}</span>
+                                                </div>
+                                            ))}
+                                        </>
+                                    )}
+                                    {/* 품목별 소계 */}
+                                    {(() => {
+                                        const subtotal = cg.isProcessed
+                                            ? Number(modalQties[`${cg.cropName}:-`] || 0)
+                                            : cg.records.reduce((s: number, r: any) => s + Number(modalQties[`${cg.cropName}:${r.grade}`] || 0), 0);
+                                        return subtotal > 0 ? (
+                                            <div className="text-right text-[10px] font-bold text-slate-400 pr-1">
+                                                소계: {subtotal.toLocaleString()}{cg.unit}
+                                            </div>
+                                        ) : null;
+                                    })()}
+                                    {cgIdx < editModal.cropGroups.length - 1 && <div className="border-b border-dashed border-slate-100 mt-2" />}
+                                </div>
+                            ))}
+                            {/* 전체 합계 (다중 품목일 때만) */}
+                            {editModal.cropGroups.length > 1 && (
+                                <div className="flex items-center justify-between bg-indigo-50/50 rounded-2xl border border-indigo-100 px-4 py-3">
+                                    <span className="text-xs font-black text-indigo-600">전체 합계</span>
+                                    <div className="text-right text-sm font-black text-indigo-700">
+                                        {(() => {
+                                            const unitTotals: Record<string, number> = {};
+                                            editModal.cropGroups.forEach(cg => {
+                                                const qty = cg.isProcessed
+                                                    ? Number(modalQties[`${cg.cropName}:-`] || 0)
+                                                    : cg.records.reduce((s: number, r: any) => s + Number(modalQties[`${cg.cropName}:${r.grade}`] || 0), 0);
+                                                unitTotals[cg.unit] = (unitTotals[cg.unit] || 0) + qty;
+                                            });
+                                            return Object.entries(unitTotals).map(([u, q]) => `${q.toLocaleString()}${u}`).join(', ');
+                                        })()}
                                     </div>
                                 </div>
-                            </div>
+                            )}
                             {/* 결제수단 + 정산상태 */}
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="flex gap-1 p-1 bg-slate-100 rounded-xl">
@@ -607,16 +716,16 @@ export default function BulkSalesPage() {
                             </div>
                             {/* 저장/취소/삭제 */}
                             <div className="flex gap-2 pt-1">
-                                <button onClick={() => { setEditModal({ open: false, records: [], companyName: '' }); setCompoundSourceIds([]); }}
+                                <button onClick={() => { setEditModal({ open: false, records: [], cropGroups: [], companyName: '' }); setCompoundSourceIds([]); }}
                                     className="flex-1 py-3 rounded-2xl bg-slate-100 text-slate-500 font-black text-sm">
                                     취소
                                 </button>
                                 <button onClick={() => {
                                     if (confirm("정말 삭제하시겠습니까? 삭제하시면 되돌릴 수 없으니, 자세히 확인 후 삭제하기 바랍니다.")) {
-                                        // 모든 모달 레코드 삭제 처리
-                                        Promise.all(editModal.records.map(rec => supabase.from('sales_records').delete().eq('id', rec.id)))
+                                        const allRecs = editModal.records.filter(r => r.id);
+                                        Promise.all(allRecs.map(rec => supabase.from('sales_records').delete().eq('id', rec.id)))
                                             .then(() => {
-                                                setEditModal({ open: false, records: [], companyName: '' });
+                                                setEditModal({ open: false, records: [], cropGroups: [], companyName: '' });
                                                 setCompoundSourceIds([]);
                                                 fetchHistory();
                                             })
@@ -674,40 +783,6 @@ export default function BulkSalesPage() {
                     </div>
                 )}
 
-                <div className="relative bg-white/80 backdrop-blur-md p-3 rounded-3xl border border-white shadow-sm space-y-4">
-                    {/* 작물 선택 그리드 */}
-                    <div className="flex gap-2">
-                        {farmCrops.map((crop, idx) => (
-                            <button key={crop.id}
-                                onClick={() => {
-                                    setCropName(crop.crop_name);
-                                    if (crop.available_units?.length > 0) setSaleUnit(crop.available_units[0]);
-                                }}
-                                className={`flex-1 flex flex-col items-center justify-center py-3 rounded-2xl border-2 transition-all gap-1 min-w-0 relative
-                                    ${cropName === crop.crop_name ? 'bg-indigo-50 border-indigo-500 shadow-sm ring-2 ring-indigo-100 z-10' : 'bg-white border-slate-50 opacity-40 hover:opacity-100'}`}>
-                                <span className="text-3xl leading-none mb-1">{getCropIcon(crop.crop_name)}</span>
-                                <span className="text-[10px] font-black text-slate-800 tracking-tighter truncate w-full text-center px-1">{crop.crop_name}</span>
-
-                                {/* 선택 표시 인디케이터 (삼각형) */}
-                                {cropName === crop.crop_name && (
-                                    <div className="absolute -bottom-[21px] border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-b-[10px] border-b-slate-100 z-20"></div>
-                                )}
-                            </button>
-                        ))}
-                    </div>
-
-                    {/* [이동형 단위 선택창] 선택된 작물과 연결된 느낌 */}
-                    <div className="bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200 flex gap-1.5 overflow-x-auto scrollbar-hide">
-                        {farmCrops.find(c => c.crop_name === cropName)?.available_units?.map((unit: string) => (
-                            <button key={unit} onClick={() => setSaleUnit(unit)}
-                                className={`flex-1 py-3 rounded-xl text-[11px] font-black transition-all whitespace-nowrap px-4
-                                ${saleUnit === unit ? 'bg-indigo-600 text-white shadow-lg scale-[1.02]' : 'bg-white text-slate-400 border border-slate-100 opacity-60'}`}>
-                                {unit}
-                            </button>
-                        )) || <div className="p-2 text-[10px] text-slate-400 font-bold w-full text-center">선택 가능한 단위가 없습니다</div>}
-                    </div>
-                </div>
-
                 <div className="bg-white rounded-[2rem] shadow-xl border border-indigo-100 p-5 space-y-3">
                     {editingRecordId && (
                         <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-2.5">
@@ -717,52 +792,114 @@ export default function BulkSalesPage() {
                             </span>
                         </div>
                     )}
-                    <div className="space-y-4">
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black text-indigo-500 uppercase px-1">거래처 선택</label>
-                            <div className="relative">
-                                <select value={selectedClientId} onChange={(e) => setSelectedClientId(e.target.value)}
-                                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-base font-black appearance-none outline-none focus:border-indigo-400 focus:bg-white transition-all shadow-inner">
-                                    <option value="">거래처를 골라주세요</option>
-                                    {partners.map(p => <option key={p.id} value={p.id}>{p.company_name}</option>)}
-                                </select>
-                                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2">
-                            {[{ label: '특/상', val: bulkQtySang, set: setBulkQtySang }, { label: '중', val: bulkQtyJung, set: setBulkQtyJung }, { label: '하', val: bulkQtyHa, set: setBulkQtyHa }].map((item, i) => (
-                                <div key={i} className="bg-slate-50/50 p-3 rounded-2xl border border-slate-100 flex flex-col items-center">
-                                    <span className="text-[9px] font-black text-slate-400 mb-1">{item.label}</span>
-                                    <input type="text" inputMode="numeric" value={item.val} onChange={(e) => item.set(e.target.value.replace(/[^0-9]/g, ''))}
-                                        className="w-full bg-transparent text-center text-xl font-black text-slate-800 outline-none" placeholder="0" />
-                                </div>
-                            ))}
-                        </div>
-                        <div className="flex gap-2 pt-4 border-t border-slate-100">
-                            <button onClick={handleSavePending} disabled={saving}
-                                className="flex-1 py-4 rounded-[1.25rem] text-sm font-black text-amber-700 bg-amber-50 border-2 border-amber-300 shadow-sm transition-all active:scale-[0.98] flex items-center justify-center gap-1.5">
-                                {saving ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4" /> 미정산 저장</>}
-                            </button>
-                            <button onClick={() => {
-                                const partner = partners.find(p => p.id === selectedClientId);
-                                if (partner?.default_unit_price) {
-                                    const dp = String(partner.default_unit_price);
-                                    setSheetUnitPrices({ '특/상': dp, '중': dp, '하': dp });
-                                }
-                                setShowSettlementSheet(true);
-                            }} disabled={saving}
-                                className="flex-1 py-4 rounded-[1.25rem] text-sm font-black text-white bg-emerald-500 shadow-lg shadow-emerald-200 transition-all active:scale-[0.98] flex items-center justify-center gap-1.5">
-                                <ShoppingCart className="w-4 h-4" /> 바로 정산
-                            </button>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-indigo-500 uppercase px-1">거래처 선택</label>
+                        <div className="relative">
+                            <select value={selectedClientId} onChange={(e) => setSelectedClientId(e.target.value)}
+                                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-base font-black appearance-none outline-none focus:border-indigo-400 focus:bg-white transition-all shadow-inner">
+                                <option value="">거래처를 골라주세요</option>
+                                {partners.map(p => <option key={p.id} value={p.id}>{p.company_name}</option>)}
+                            </select>
+                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                         </div>
                     </div>
+                </div>
+
+                {/* ② 🛒 품목 장바구니 */}
+                <div className="bg-white rounded-[2rem] shadow-xl border border-indigo-100 p-5 space-y-4">
+                    <div className="flex items-center justify-between px-1">
+                        <label className="text-[10px] font-black text-indigo-500 uppercase flex items-center gap-1">🛒 품목 담기 ({bulkItems.length})</label>
+                    </div>
+                    <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1">
+                        {farmCrops.map((crop) => (
+                            <button key={crop.id}
+                                onClick={() => addToBulkCart(crop)}
+                                className="min-w-[68px] flex flex-col items-center justify-center py-2.5 px-1.5 rounded-2xl border-2 transition-all gap-0.5 shrink-0 bg-white border-slate-100 hover:border-indigo-300 hover:bg-indigo-50 active:scale-95">
+                                <span className="text-2xl leading-none">{getCropIcon(crop.crop_name, farmCrops)}</span>
+                                <span className="text-[9px] font-black text-slate-800 whitespace-nowrap truncate max-w-[60px]">{crop.crop_name}</span>
+                            </button>
+                        ))}
+                    </div>
+                    {bulkItems.length === 0 && (
+                        <div className="text-center py-6 text-slate-300 text-xs font-bold border-2 border-dashed border-slate-100 rounded-2xl">
+                            위 품목을 탭하면 자동으로 추가됩니다
+                        </div>
+                    )}
+                    {bulkItems.map((item) => (
+                        <div key={item.id} className="bg-slate-50/50 border border-slate-100 rounded-2xl p-3 space-y-2">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-lg">{item.cropIcon}</span>
+                                    <span className="text-sm font-black text-slate-800">{item.cropName}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    {(() => { const cr = farmCrops.find(c => c.crop_name === item.cropName); return cr ? getEffectiveUnits(cr) : [item.unit]; })().map((u: string) => (
+                                        <button key={u} onClick={() => updateBulkItem(item.id, 'unit', u)}
+                                            className={`text-[9px] font-bold px-2 py-1 rounded-lg transition-all ${item.unit === u ? 'bg-indigo-500 text-white' : 'bg-white text-slate-400 border border-slate-100'}`}>
+                                            {u}
+                                        </button>
+                                    ))}
+                                    <button onClick={() => removeBulkItem(item.id)} className="p-1 text-slate-300 hover:text-red-400 transition-colors ml-0.5"><X className="w-4 h-4" /></button>
+                                </div>
+                            </div>
+                            {item.category === 'processed' ? (
+                                /* 가공품: 단순 수량 1칸 */
+                                <div className="bg-white p-3 rounded-xl border border-slate-100 flex items-center gap-3">
+                                    <span className="text-[10px] font-black text-violet-500 shrink-0">수량</span>
+                                    <input type="text" inputMode="numeric" value={item.qty}
+                                        onChange={(e) => updateBulkItem(item.id, 'qty', e.target.value.replace(/[^0-9]/g, ''))}
+                                        className="flex-1 bg-transparent text-center text-lg font-black text-slate-800 outline-none" placeholder="0" />
+                                    <span className="text-[10px] font-bold text-slate-400 shrink-0">{item.unit}</span>
+                                </div>
+                            ) : (
+                                /* 원물: 등급별 수량 3칸 */
+                                <div className="grid grid-cols-3 gap-2">
+                                    {[{label: '특/상', field: 'qtySang', val: item.qtySang}, {label: '중', field: 'qtyJung', val: item.qtyJung}, {label: '하', field: 'qtyHa', val: item.qtyHa}].map((g) => (
+                                        <div key={g.field} className="bg-white p-2.5 rounded-xl border border-slate-100 flex flex-col items-center">
+                                            <span className="text-[9px] font-black text-slate-400 mb-1">{g.label}</span>
+                                            <input type="text" inputMode="numeric" value={g.val}
+                                                onChange={(e) => updateBulkItem(item.id, g.field, e.target.value.replace(/[^0-9]/g, ''))}
+                                                className="w-full bg-transparent text-center text-lg font-black text-slate-800 outline-none" placeholder="0" />
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+
+                {/* ③ 저장 버튼 */}
+                <div className="flex gap-2">
+                    <button onClick={handleSavePending} disabled={saving}
+                        className="flex-1 py-4 rounded-[1.25rem] text-sm font-black text-amber-700 bg-amber-50 border-2 border-amber-300 shadow-sm transition-all active:scale-[0.98] flex items-center justify-center gap-1.5">
+                        {saving ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4" /> 미정산 저장</>}
+                    </button>
+                    <button onClick={() => {
+                        const partner = partners.find(p => p.id === selectedClientId);
+                        if (partner?.default_unit_price) {
+                            const dp = String(partner.default_unit_price);
+                            const prices: Record<string, string> = {};
+                            bulkItems.forEach(bi => {
+                                if (bi.category === 'processed') {
+                                    prices[`${bi.id}--`] = dp;
+                                } else {
+                                    ['특/상', '중', '하'].forEach(g => { prices[`${bi.id}-${g}`] = dp; });
+                                }
+                            });
+                            setSheetUnitPrices(prices);
+                        }
+                        setShowSettlementSheet(true);
+                    }} disabled={saving}
+                        className="flex-1 py-4 rounded-[1.25rem] text-sm font-black text-white bg-emerald-500 shadow-lg shadow-emerald-200 transition-all active:scale-[0.98] flex items-center justify-center gap-1.5">
+                        <ShoppingCart className="w-4 h-4" /> 바로 정산
+                    </button>
                 </div>
 
                 <div className="space-y-3 pb-10">
                     <h2 className="text-sm font-black text-slate-800 flex items-center gap-2 px-1">
                         <History className="w-4 h-4 text-slate-300" /> 미결산 납품 내역
                         <span className="text-[10px] font-bold text-amber-500 bg-amber-50 px-2 py-0.5 rounded-full">
-                            {groupedHistory.reduce((acc, p) => acc + p.dailyGroups.length, 0)}건
+                            {groupedHistory.reduce((acc, p) => acc + p.dailyGroups.reduce((s, d) => s + d.transactions.length, 0), 0)}건
                         </span>
                     </h2>
                     {groupedHistory.length === 0 ? (
@@ -786,11 +923,26 @@ export default function BulkSalesPage() {
                                                 <div className="text-left min-w-0">
                                                     <p className="text-sm font-black text-slate-900 truncate">{pGroup.companyName}</p>
                                                     <div className="flex items-center gap-1.5 text-[10px] font-bold mt-0.5">
-                                                        <span className="text-slate-400">{pGroup.dailyGroups.length}건</span>
+                                                        <span className="text-slate-400">{pGroup.dailyGroups.reduce((s, d) => s + d.transactions.length, 0)}건</span>
                                                         <span className="text-slate-200">|</span>
                                                         <span className="text-amber-500">미결산</span>
                                                         <span className="text-slate-200">|</span>
-                                                        <span className="text-slate-500 truncate">{Object.entries(pGroup.qtyByUnit || {}).map(([u, q]) => `${(q as number).toLocaleString()}${u}`).join(', ')}</span>
+                                                        <span className="text-slate-500 truncate">{(() => {
+                                                            const cropTotals = new Map<string, {qty: number; unit: string}>();
+                                                            pGroup.dailyGroups.forEach((dg: any) => {
+                                                                dg.transactions.forEach((tx: any) => {
+                                                                    tx.cropGroups.forEach((cg: any) => {
+                                                                        const key = `${cg.cropName}|${cg.unit}`;
+                                                                        const prev = cropTotals.get(key);
+                                                                        cropTotals.set(key, { qty: (prev?.qty || 0) + cg.totalQty, unit: cg.unit });
+                                                                    });
+                                                                });
+                                                            });
+                                                            return Array.from(cropTotals.entries()).map(([key, v]) => {
+                                                                const cropName = key.split('|')[0];
+                                                                return `${cropName} ${v.qty.toLocaleString()}${v.unit}`;
+                                                            }).join(', ');
+                                                        })()}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -804,8 +956,9 @@ export default function BulkSalesPage() {
                                                     <div key={dGroup.date} className="p-3 border-b border-slate-100 last:border-b-0">
                                                         {/* 날짜별 카드 */}
                                                         <div className="border-4 border-green-500 rounded-xl overflow-hidden">
-                                                            {/* 날짜 헤더 */}
-                                                            <div className="bg-green-50 px-4 py-2 border-b border-green-200">
+
+                                                            {/* 날짜 헤더 + 전표 건수 */}
+                                                            <div className="bg-green-50 px-4 py-2 border-b border-green-200 flex items-center gap-2">
                                                                 <p className="text-sm font-black text-green-800">
                                                                     {new Date(dGroup.date).toLocaleDateString('ko-KR', {
                                                                         month: 'long',
@@ -813,43 +966,83 @@ export default function BulkSalesPage() {
                                                                         weekday: 'short'
                                                                     })}
                                                                 </p>
+                                                                {dGroup.transactions.length > 1 && (
+                                                                    <span className="ml-2 px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-xs font-semibold">
+                                                                        {dGroup.transactions.length}건
+                                                                    </span>
+                                                                )}
                                                             </div>
 
-                                                            {/* 판매 물품 목록 */}
-                                                            <div className="p-3 bg-white space-y-2">
+                                                            {/* 판매 물품 목록 - 전표 카드형 */}
+                                                            <div className="p-3 bg-white space-y-2.5">
                                                                 {dGroup.transactions.map(tx => (
                                                                     <div key={tx.txKey}
                                                                         onClick={() => handleEditModal(tx.records, pGroup.companyName)}
-                                                                        className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2 border border-slate-100 cursor-pointer hover:border-indigo-200 hover:bg-indigo-50/30 transition-all group">
-                                                                        {/* 물품 정보 */}
-                                                                        <div className="flex items-center gap-2 text-xs min-w-0 flex-1">
-                                                                            <span className="text-sm font-black text-slate-700 flex-shrink-0 whitespace-nowrap w-24">{getCropIcon(tx.cropName)} {tx.cropName}</span>
-                                                                            <span className="font-black text-indigo-500 whitespace-nowrap">
-                                                                                {tx.records.map(r => `${r.grade}:${r.quantity}`).join(', ')}
-                                                                            </span>
-                                                                            <span className="text-slate-300">|</span>
-                                                                            <span className="font-bold text-slate-500 whitespace-nowrap">
-                                                                                {Object.entries(tx.qtyByUnit || {}).map(([u, q]) => `${(q as number).toLocaleString()}${u}`).join(', ')}
-                                                                            </span>
+                                                                        className="bg-slate-50/70 rounded-xl border border-slate-100 cursor-pointer hover:border-indigo-200 hover:bg-indigo-50/20 transition-all group overflow-hidden">
+                                                                        {/* 전표 헤더: 다중품목일 때만 아이콘 + 종류수 표시 */}
+                                                                        {tx.cropGroups.length > 1 && (
+                                                                            <div className="flex items-center justify-between px-3 pt-2.5 pb-1.5 bg-orange-50 border-b border-orange-200">
+                                                                                <div className="flex items-center gap-1.5">
+                                                                                    <div className="flex items-center gap-0.5">
+                                                                                        {tx.cropGroups.map((cg: any, i: number) => (
+                                                                                            <span key={i} className="text-lg leading-none">{getCropIcon(cg.cropName, farmCrops)}</span>
+                                                                                        ))}
+                                                                                    </div>
+                                                                                    <span className="text-[8px] font-black bg-indigo-50 text-indigo-500 px-1.5 py-0.5 rounded-full">{tx.cropGroups.length}종류</span>
+                                                                                </div>
+                                                                                <Edit2 className="w-3 h-3 text-slate-200 group-hover:text-indigo-400 transition-all shrink-0" />
+                                                                            </div>
+                                                                        )}
+                                                                        {/* 품목별 행 */}
+                                                                        <div className={`px-3 pb-2 space-y-1 ${tx.cropGroups.length === 1 ? 'pt-2.5' : ''}`}>
+                                                                            {tx.cropGroups.map((cg: any, i: number) => (
+                                                                                <div key={i} className="flex items-center gap-2 text-xs">
+                                                                                    <span className="text-sm shrink-0">{getCropIcon(cg.cropName, farmCrops)}</span>
+                                                                                    <span className="font-black text-slate-700 shrink-0">{cg.cropName}</span>
+                                                                                    {cg.isProcessed ? (
+                                                                                        <span className="font-bold text-violet-500">{cg.totalQty}{cg.unit}</span>
+                                                                                    ) : (
+                                                                                        <span className="font-black text-indigo-500">{cg.gradeBreakdown}</span>
+                                                                                    )}
+                                                                                    <span className="text-slate-300">|</span>
+                                                                                    <span className="font-bold text-slate-400">{cg.totalQty.toLocaleString()}{cg.unit}</span>
+                                                                                    {/* 단일 품목일 때 수정 아이콘 */}
+                                                                                    {tx.cropGroups.length === 1 && i === 0 && (
+                                                                                        <Edit2 className="w-3 h-3 text-slate-200 group-hover:text-indigo-400 transition-all shrink-0 ml-auto" />
+                                                                                    )}
+                                                                                </div>
+                                                                            ))}
                                                                         </div>
-                                                                        {/* 삭제 버튼 공간 (제거됨 - 수정모드 아이콘만 남김) */}
-                                                                        <div className="flex items-center gap-1 shrink-0 px-2">
-                                                                            <Edit2 className="w-3 h-3 text-slate-200 group-hover:text-indigo-400 transition-all" />
-                                                                        </div>
+                                                                        {/* 전표 품목별 요약 (2종류 이상) */}
+                                                                        {tx.cropGroups.length > 1 && (
+                                                                            <div className="mx-3 mb-2 pt-2 border-t-2 border-slate-300">
+                                                                                <p className="text-right text-[10px] font-bold text-slate-500">
+                                                                                    {tx.cropGroups.map((cg: any) => `${cg.cropName} ${cg.totalQty.toLocaleString()}${cg.unit}`).join(' · ')}
+                                                                                </p>
+                                                                            </div>
+                                                                        )}
                                                                     </div>
                                                                 ))}
 
-                                                                {/* 날짜별 합계 */}
-                                                                <div className="mt-2 pt-2 text-right text-[10px] font-bold text-slate-400 border-t border-dashed border-slate-200">
-                                                                    총 {
-                                                                        Object.entries(dGroup.transactions.reduce((acc: any, tx: any) => {
-                                                                            Object.entries(tx.qtyByUnit || {}).forEach(([u, q]) => {
-                                                                                acc[u] = (acc[u] || 0) + (q as number);
+                                                                {/* 날짜별 품목 요약: 2건 이상일 때만 표시 */}
+                                                                {dGroup.transactions.length > 1 && (
+                                                                    <div className="mt-2 pt-2 text-right text-[10px] font-bold text-slate-500 border-t-2 border-slate-300">
+                                                                        {(() => {
+                                                                            const cropTotals = new Map<string, {qty: number; unit: string}>();
+                                                                            dGroup.transactions.forEach((tx: any) => {
+                                                                                tx.cropGroups.forEach((cg: any) => {
+                                                                                    const key = `${cg.cropName}|${cg.unit}`;
+                                                                                    const prev = cropTotals.get(key);
+                                                                                    cropTotals.set(key, { qty: (prev?.qty || 0) + cg.totalQty, unit: cg.unit });
+                                                                                });
                                                                             });
-                                                                            return acc;
-                                                                        }, {})).map(([u, q]) => `${(q as number).toLocaleString()}${u}`).join(', ') || '0박스'
-                                                                    }
-                                                                </div>
+                                                                            return Array.from(cropTotals.entries()).map(([key, v]) => {
+                                                                                const cropName = key.split('|')[0];
+                                                                                return `${cropName} ${v.qty.toLocaleString()}${v.unit}`;
+                                                                            }).join(' · ');
+                                                                        })()}
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     </div>

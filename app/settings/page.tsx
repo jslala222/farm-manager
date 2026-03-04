@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Save, Plus, Trash2, Home, LayoutGrid, AlertCircle, Building2, CheckCircle2, Sprout, GripVertical, Factory } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { supabase, Farm, FarmHouse, FarmCrop } from "@/lib/supabase";
-import { formatPhone, formatBusinessNumber } from "@/lib/utils";
+import { formatPhone, formatBusinessNumber, getCropIcon } from "@/lib/utils";
 import AddressSearch from "@/components/AddressSearch";
 import { Search } from "lucide-react";
 
@@ -28,6 +28,65 @@ export default function SettingsPage() {
     const [newProcessedIcon, setNewProcessedIcon] = useState('🍯');
     const [editingSpecId, setEditingSpecId] = useState<string | null>(null);
     const [newSpecInput, setNewSpecInput] = useState('');
+
+    // 품목 수정 모달 상태
+    const [editCropModal, setEditCropModal] = useState<{
+        open: boolean;
+        id: string;
+        name: string;
+        icon: string;
+        category: 'crop' | 'processed';
+    } | null>(null);
+    const [editSaving, setEditSaving] = useState(false);
+
+    const ALL_ICONS = ['🍓','🍠','🥔','🧅','🧄','🍅','🌶️','🍇','🍎','🍐','🍑','🍈','🥒','🥬','🥕','🥗','🥦','🌽','🌾','🍄','🍯','🧊','🧣','🥤','🍩','🍪','🍫','🍮','🍦','🍧','🍰','🤧','🍵','🍷','🥭','🥃','🥛','🦴','🦵','🌿','📦','🏷️'];
+
+    const openEditCrop = (crop: any) => {
+        setEditCropModal({
+            open: true,
+            id: crop.id,
+            name: crop.crop_name,
+            icon: crop.crop_icon || getCropIcon(crop.crop_name),
+            category: crop.category || 'crop',
+        });
+    };
+
+    const saveEditCrop = async () => {
+        if (!editCropModal || !storeFarm?.id) return;
+        setEditSaving(true);
+        const { id, name, icon, category } = editCropModal;
+        const original = farmCrops.find(c => c.id === id);
+        const oldName = original?.crop_name || '';
+        const nameChanged = oldName !== name.trim();
+
+        try {
+            // 1. farm_crops 업데이트
+            const { error } = await supabase.from('farm_crops')
+                .update({ crop_name: name.trim(), crop_icon: icon })
+                .eq('id', id);
+            if (error) throw error;
+
+            // 2. 이름 변경 시 관련 레코드 CASCADE 업데이트
+            if (nameChanged && oldName) {
+                await Promise.all([
+                    supabase.from('sales_records')
+                        .update({ crop_name: name.trim() })
+                        .eq('farm_id', storeFarm.id)
+                        .eq('crop_name', oldName),
+                    supabase.from('harvest_records')
+                        .update({ crop_name: name.trim() })
+                        .eq('farm_id', storeFarm.id)
+                        .eq('crop_name', oldName),
+                ]);
+            }
+            setEditCropModal(null);
+            fetchCrops();
+        } catch (e: any) {
+            alert('저장 실패: ' + e.message);
+        } finally {
+            setEditSaving(false);
+        }
+    };
 
     // 컴포넌트 마운트 시 초기화 확인
     useEffect(() => {
@@ -604,7 +663,9 @@ export default function SettingsPage() {
                                         className="absolute top-2 right-2 text-gray-600 hover:text-red-500 transition-all p-1.5 opacity-0 group-hover:opacity-100 scale-75 hover:scale-100">
                                         <Trash2 className="w-4 h-4" />
                                     </button>
-                                    <span className="text-3xl mb-1">{crop.crop_icon}</span>
+                                    <button onClick={() => openEditCrop(crop)} className="text-3xl mb-1 hover:scale-110 transition-transform active:scale-95" title="클릭하여 수정">
+                                        {crop.crop_icon || getCropIcon(crop.crop_name)}
+                                    </button>
                                     <span className="text-sm font-black text-gray-800">{crop.crop_name}</span>
                                     <span className="text-[9px] text-gray-700 font-bold mt-0.5">
                                         {crop.available_units?.join(' · ') || crop.default_unit}
@@ -698,7 +759,9 @@ export default function SettingsPage() {
                                     <div className="absolute top-2 left-2">
                                         <span className="text-[8px] font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-200">가공품</span>
                                     </div>
-                                    <span className="text-3xl mb-1">{crop.crop_icon}</span>
+                                    <button onClick={() => openEditCrop(crop)} className="text-3xl mb-1 hover:scale-110 transition-transform active:scale-95 mt-3" title="클릭하여 수정">
+                                        {crop.crop_icon || getCropIcon(crop.crop_name)}
+                                    </button>
                                     <span className="text-sm font-black text-gray-800">{crop.crop_name}</span>
                                     <span className="text-[9px] text-gray-700 font-bold mt-0.5">
                                         {crop.available_units?.join(' · ') || crop.default_unit}
@@ -835,6 +898,69 @@ export default function SettingsPage() {
                         </div>
                     )}
                 </section>
+            )}
+
+            {/* ===== 품목 수정 모달 ===== */}
+            {editCropModal?.open && (
+                <div className="fixed inset-0 z-[200] flex items-end md:items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setEditCropModal(null)} />
+                    <div className="relative bg-white rounded-[2rem] w-full max-w-sm shadow-2xl p-6 space-y-5 animate-in fade-in slide-in-from-bottom-8 duration-300">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-base font-black text-gray-900">품목 수정</h3>
+                            <button onClick={() => setEditCropModal(null)} className="p-2 text-gray-400 hover:text-gray-600">✕</button>
+                        </div>
+
+                        {/* 선택된 아이콘 프리븷 */}
+                        <div className="flex items-center justify-center gap-3 py-2">
+                            <span className="text-5xl">{editCropModal.icon}</span>
+                            <div>
+                                <p className="text-xs text-gray-400 font-bold">현재 선택</p>
+                                <p className="text-sm font-black text-gray-800">{editCropModal.name}</p>
+                            </div>
+                        </div>
+
+                        {/* 이름 수정 */}
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-black text-gray-500 uppercase px-1">품목명</label>
+                            <input
+                                type="text"
+                                value={editCropModal.name}
+                                onChange={e => setEditCropModal(m => m ? { ...m, name: e.target.value } : m)}
+                                className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-black outline-none focus:border-green-400 focus:bg-white transition-all"
+                            />
+                            <p className="text-[9px] text-amber-500 font-bold px-1">⚠️ 이름 변경 시 기존 판매/수확 내역이 자동 업데이트됩니다</p>
+                        </div>
+
+                        {/* 아이콘 팔레트 */}
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-black text-gray-500 uppercase px-1">아이콘 선택</label>
+                            <div className="flex flex-wrap gap-1.5 bg-gray-50 p-3 rounded-2xl border border-gray-100 max-h-36 overflow-y-auto">
+                                {ALL_ICONS.map(em => (
+                                    <button key={em}
+                                        onClick={() => setEditCropModal(m => m ? { ...m, icon: em } : m)}
+                                        className={`w-10 h-10 rounded-xl text-xl flex items-center justify-center transition-all
+                                            ${editCropModal.icon === em
+                                                ? (editCropModal.category === 'processed' ? 'bg-amber-500 shadow-md scale-110 ring-2 ring-amber-300' : 'bg-green-500 shadow-md scale-110 ring-2 ring-green-300')
+                                                : 'bg-white hover:bg-gray-100 border border-gray-100'}`}>
+                                        {em}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* 저장 버튼 */}
+                        <button
+                            onClick={saveEditCrop}
+                            disabled={editSaving || !editCropModal.name.trim()}
+                            className={`w-full py-4 rounded-2xl font-black text-white text-sm transition-all
+                                ${editCropModal.category === 'processed'
+                                    ? 'bg-amber-500 hover:bg-amber-600 shadow-lg shadow-amber-100'
+                                    : 'bg-green-600 hover:bg-green-700 shadow-lg shadow-green-100'}
+                                disabled:opacity-50`}>
+                            {editSaving ? '저장 중...' : '✓ 저장하기'}
+                        </button>
+                    </div>
+                </div>
             )}
         </div>
     );

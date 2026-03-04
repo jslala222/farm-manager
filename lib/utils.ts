@@ -136,25 +136,44 @@ export const formatKSTLocale = (
 
 /**
  * 작물명에 따른 이모지 아이콘 반환
+ * farmCrops 배열을 넘기면 DB에 저장된 crop_icon을 우선 사용 (설정 아이콘 정확 반영)
+ * farmCrops 없으면 하드코딩 fallback 사용
  */
-export const getCropIcon = (cropName: string | null): string => {
-    const iconMap: Record<string, string> = {
+export const getCropIcon = (
+    cropName: string | null,
+    farmCrops?: Array<{ crop_name: string; crop_icon?: string | null }>
+): string => {
+    // 1순위: DB에 저장된 아이콘
+    if (farmCrops && cropName) {
+        const found = farmCrops.find(c => c.crop_name === cropName);
+        if (found?.crop_icon) return found.crop_icon;
+    }
+    // 2순위: fallback 하드코딩 맵
+    const fallbackMap: Record<string, string> = {
         '딸기': '🍓',
         '감자': '🥔',
+        '고구마': '🍠',
         '당근': '🥕',
         '양파': '🧅',
         '마늘': '🧄',
         '토마토': '🍅',
         '고추': '🌶️',
+        '샤인머스캣': '🍇',
+        '포도': '🍇',
+        '사과': '🍎',
+        '배': '🍐',
+        '복숭아': '🍑',
+        '참외': '🍈',
+        '멜론': '🍈',
+        '오이': '🥒',
         '애호박': '🥒',
         '배추': '🥬',
         '상추': '🥗',
-        '오이': '🥒',
         '브로콜리': '🥦',
         '옥수수': '🌽',
         '호박': '🎃',
     };
-    return iconMap[cropName ?? ''] ?? '🌾';
+    return fallbackMap[cropName ?? ''] ?? '📦';
 };
 
 /**

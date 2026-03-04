@@ -4,29 +4,9 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Truck, Search, History, RefreshCcw, Save, Phone, User, ArrowRight, UserCheck, AlignLeft, Edit2, Trash2, Calendar as CalendarIcon, X, CheckCircle, Clock } from 'lucide-react';
 import { useAuthStore } from "@/store/authStore";
 import { supabase, SalesRecord, Customer } from "@/lib/supabase";
-import { formatCurrency, formatPhone, stripNonDigits } from "@/lib/utils";
+import { formatCurrency, formatPhone, stripNonDigits, getCropIcon } from "@/lib/utils";
 import AddressSearch from "@/components/AddressSearch";
 import CalendarComponent from "@/components/Calendar";
-
-const getCropIcon = (cropName: string) => {
-    if (!cropName) return '📦';
-    if (cropName.includes('딸기')) return '🍓';
-    if (cropName.includes('감자')) return '🥔';
-    if (cropName.includes('고구마')) return '🍠';
-    if (cropName.includes('토마토')) return '🍅';
-    if (cropName.includes('사과')) return '🍎';
-    if (cropName.includes('포도') || cropName.includes('샤인머스캣')) return '🍇';
-    if (cropName.includes('배')) return '🍐';
-    if (cropName.includes('복숭아')) return '🍑';
-    if (cropName.includes('오이')) return '🥒';
-    if (cropName.includes('상추')) return '🥬';
-    if (cropName.includes('당근')) return '🥕';
-    if (cropName.includes('고추')) return '🌶️';
-    if (cropName.includes('마늘')) return '🧄';
-    if (cropName.includes('양파')) return '🧅';
-    if (cropName.includes('참외') || cropName.includes('메론')) return '🍈';
-    return '📦';
-};
 
 const toLocalDateStr = (d: Date = new Date()) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -43,7 +23,6 @@ export default function CourierSalesPage() {
     const [farmCrops, setFarmCrops] = useState<any[]>([]);
     // 상세 팝업 모달 상태 (그룹 배열)
     const [detailModal, setDetailModal] = useState<SalesRecord[] | null>(null);
-    const [showCropPicker, setShowCropPicker] = useState(true);
 
     // B2C State
     const [searchTerm, setSearchTerm] = useState("");
@@ -73,12 +52,19 @@ export default function CourierSalesPage() {
     const [paymentStatus, setPaymentStatus] = useState<'pending' | 'completed'>('completed');
     const [paymentMethod, setPaymentMethod] = useState('카드');
 
-    // 다중 품목 헬퍼
-    const addCourierItem = () => {
-        const crop = farmCrops.find(c => c.crop_name === cropName);
+    // 가공품이면 규격(specs), 아니면 단위(units)
+    const getEffectiveUnits = (crop: any) => {
+        if (crop?.category === 'processed' && crop?.available_specs?.length > 0) return crop.available_specs;
+        return crop?.available_units || ['박스'];
+    };
+
+    // 장바구니에 품목 즉시 추가 (탭 → 추가)
+    const addToCart = (crop: any) => {
         setCourierItems(prev => [...prev, {
             id: Date.now().toString() + Math.random().toString(36).slice(2, 7),
-            cropName, cropIcon: crop?.crop_icon || getCropIcon(cropName), unit: saleUnit,
+            cropName: crop.crop_name,
+            cropIcon: getCropIcon(crop.crop_name, farmCrops),
+            unit: getEffectiveUnits(crop)[0],
             quantity: '', unitPrice: ''
         }]);
     };
@@ -154,7 +140,7 @@ export default function CourierSalesPage() {
         setRecipientAddress(""); setRecipientDetailAddress("");
         setCourierItems([]); setShippingCost("");
         setDeliveryNote(""); setIsSameAsOrderer(true);
-        setShippingFeeType('선불'); setShowCropPicker(true);
+        setShippingFeeType('선불');
         setPaymentStatus('completed'); setPaymentMethod('카드');
     };
 
@@ -182,6 +168,7 @@ export default function CourierSalesPage() {
                 sale_type: 'b2c', delivery_method: 'courier',
                 is_settled: paymentStatus === 'completed', payment_status: paymentStatus, payment_method: paymentMethod,
                 recorded_at: selectedDate + 'T' + new Date().toTimeString().split(' ')[0],
+                settled_at: paymentStatus === 'completed' ? selectedDate : null,
                 harvest_note: 'GRP:' + groupId,
             };
             for (let idx = 0; idx < validItems.length; idx++) {
@@ -211,13 +198,13 @@ export default function CourierSalesPage() {
         }
     };
 
+    // [FIX] 택배 아이콘 수정 - DB crop_icon 우선 적용
     const handleEdit = (group: SalesRecord[]) => {
         const first = group[0] as any;
         const gid = first.harvest_note?.startsWith('GRP:') ? first.harvest_note.slice(4) : null;
         setEditingGroupId(gid);
         setEditingRecordId(gid ? null : first.id);
         setIsEditMode(true);
-        setShowCropPicker(false);
         setCropName(first.crop_name || '딸기');
         setSaleUnit(first.sale_unit || '박스');
         setSelectedDate(first.recorded_at.split('T')[0]);
@@ -226,7 +213,7 @@ export default function CourierSalesPage() {
         setCourierItems(group.map((r: any) => ({
             id: r.id,
             cropName: r.crop_name || '딸기',
-            cropIcon: getCropIcon(r.crop_name || ''),
+            cropIcon: getCropIcon(r.crop_name || '', farmCrops),
             unit: r.sale_unit || '박스',
             quantity: r.quantity?.toString() || '',
             unitPrice: r.quantity && r.price ? Math.floor(r.price / r.quantity).toString() : ''
@@ -277,56 +264,7 @@ export default function CourierSalesPage() {
 
         return (
             <div className={`space-y-4 ${inModal ? 'max-h-[60vh] overflow-y-auto scrollbar-hide p-1' : ''}`}>
-                <div className="relative bg-white/80 backdrop-blur-md p-3 rounded-3xl border border-white shadow-sm space-y-4">
-                    {/* 품목 선택 (접힘/펼침) */}
-                    {showCropPicker ? (
-                        <div className="space-y-2 animate-in fade-in duration-200">
-                            <div className="flex items-center justify-between px-1">
-                                <span className="text-[9px] font-black text-rose-500 uppercase">품목 선택</span>
-                            </div>
-                            <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1">
-                                {farmCrops.map((crop) => (
-                                    <button key={crop.id}
-                                        onClick={() => {
-                                            setCropName(crop.crop_name);
-                                            if (crop.available_units?.length > 0) setSaleUnit(crop.available_units[0]);
-                                            setShowCropPicker(false);
-                                        }}
-                                        className={`min-w-[68px] flex flex-col items-center justify-center py-2.5 px-1.5 rounded-2xl border-2 transition-all gap-0.5 shrink-0
-                                            ${cropName === crop.crop_name ? 'bg-rose-50 border-rose-500 shadow-sm ring-2 ring-rose-100' : 'bg-white border-slate-50 opacity-50 hover:opacity-100'}`}>
-                                        <span className="text-2xl leading-none">{getCropIcon(crop.crop_name)}</span>
-                                        <span className="text-[9px] font-black text-slate-800 whitespace-nowrap truncate max-w-[60px]">{crop.crop_name}</span>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="flex items-center gap-2 animate-in fade-in duration-200">
-                            <div className="flex items-center gap-2 flex-1 bg-rose-50/80 px-3 py-2 rounded-2xl border border-rose-200">
-                                <span className="text-2xl leading-none">{getCropIcon(cropName)}</span>
-                                <div className="min-w-0">
-                                    <p className="text-sm font-black text-slate-800 truncate">{cropName}</p>
-                                    <p className="text-[9px] font-bold text-rose-400">{saleUnit}</p>
-                                </div>
-                            </div>
-                            <button onClick={() => setShowCropPicker(true)}
-                                className="px-3 py-2.5 bg-white border border-rose-200 rounded-xl text-[10px] font-black text-rose-500 active:scale-95 transition-all hover:bg-rose-50 whitespace-nowrap shadow-sm">
-                                🔄 변경
-                            </button>
-                        </div>
-                    )}
-
-                    <div className="bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200 flex gap-1.5 overflow-x-auto scrollbar-hide">
-                        {farmCrops.find(c => c.crop_name === cropName)?.available_units?.map((unit: string) => (
-                            <button key={unit} onClick={() => setSaleUnit(unit)}
-                                className={`flex-1 py-3 rounded-xl text-[11px] font-black transition-all whitespace-nowrap px-4
-                                    ${saleUnit === unit ? 'bg-rose-600 text-white shadow-lg scale-[1.02]' : 'bg-white text-slate-400 border border-slate-100 opacity-60'}`}>
-                                {unit}
-                            </button>
-                        )) || <div className="p-2 text-[10px] text-slate-400 font-bold w-full text-center">선택 가능한 단위가 없습니다</div>}
-                    </div>
-                </div>
-
+                {/* ① 주문자 정보 (먼저!) */}
                 <div className="bg-white rounded-[2rem] shadow-xl border border-rose-100 p-5 space-y-3">
                     <div className="space-y-3">
                         <label className="text-[10px] font-black text-rose-500 uppercase px-1">
@@ -403,26 +341,42 @@ export default function CourierSalesPage() {
                             </div>
 
                             <div className="space-y-4 pt-4 border-t border-dashed border-slate-100">
-                                {/* 📦 담긴 품목 카드 */}
+                                {/* � 장바구니 (품목 탭 → 즉시 추가) */}
                                 <div className="space-y-2.5">
                                     <div className="flex items-center justify-between px-1">
-                                        <label className="text-[10px] font-black text-rose-500 uppercase flex items-center gap-1">📦 담긴 품목 ({courierItems.length})</label>
-                                        <button onClick={addCourierItem} className="px-3 py-1.5 bg-rose-50 border border-dashed border-rose-300 rounded-xl text-[10px] font-black text-rose-500 active:scale-95 transition-all hover:bg-rose-100">+ 품목 추가</button>
+                                        <label className="text-[10px] font-black text-rose-500 uppercase flex items-center gap-1">🛒 품목 담기 ({courierItems.length})</label>
+                                    </div>
+                                    <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1">
+                                        {farmCrops.map((crop) => (
+                                            <button key={crop.id}
+                                                onClick={() => addToCart(crop)}
+                                                className="min-w-[68px] flex flex-col items-center justify-center py-2.5 px-1.5 rounded-2xl border-2 transition-all gap-0.5 shrink-0 bg-white border-slate-100 hover:border-rose-300 hover:bg-rose-50 active:scale-95">
+                                                <span className="text-2xl leading-none">{getCropIcon(crop.crop_name, farmCrops)}</span>
+                                                <span className="text-[9px] font-black text-slate-800 whitespace-nowrap truncate max-w-[60px]">{crop.crop_name}</span>
+                                            </button>
+                                        ))}
                                     </div>
                                     {courierItems.length === 0 && (
-                                        <div className="text-center py-8 text-slate-300 text-xs font-bold border-2 border-dashed border-slate-100 rounded-2xl">
-                                            위에서 품목을 선택한 후<br/>[+ 품목 추가] 버튼을 눌러주세요
+                                        <div className="text-center py-6 text-slate-300 text-xs font-bold border-2 border-dashed border-slate-100 rounded-2xl">
+                                            위 품목을 탭하면 자동으로 추가됩니다
                                         </div>
                                     )}
                                     {courierItems.map((item) => (
-                                        <div key={item.id} className="bg-white border border-slate-100 rounded-2xl p-3 space-y-2 shadow-sm">
+                                        <div key={item.id} className="bg-slate-50/50 border border-slate-100 rounded-2xl p-3 space-y-2">
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-lg">{item.cropIcon}</span>
                                                     <span className="text-sm font-black text-slate-800">{item.cropName}</span>
-                                                    <span className="text-[9px] font-bold text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded-full">{item.unit}</span>
                                                 </div>
-                                                <button onClick={() => removeCourierItem(item.id)} className="p-1 text-slate-300 hover:text-red-400 transition-colors"><X className="w-4 h-4" /></button>
+                                                <div className="flex items-center gap-1">
+                                                    {(() => { const cr = farmCrops.find(c => c.crop_name === item.cropName); return cr ? getEffectiveUnits(cr) : [item.unit]; })().map((u: string) => (
+                                                        <button key={u} onClick={() => updateCourierItem(item.id, 'unit', u)}
+                                                            className={`text-[9px] font-bold px-2 py-1 rounded-lg transition-all ${item.unit === u ? 'bg-rose-500 text-white' : 'bg-white text-slate-400 border border-slate-100'}`}>
+                                                            {u}
+                                                        </button>
+                                                    ))}
+                                                    <button onClick={() => removeCourierItem(item.id)} className="p-1 text-slate-300 hover:text-red-400 transition-colors ml-0.5"><X className="w-4 h-4" /></button>
+                                                </div>
                                             </div>
                                             <div className="grid grid-cols-2 gap-2">
                                                 <div className="space-y-0.5">
@@ -562,48 +516,50 @@ export default function CourierSalesPage() {
                                 </button>
                             </div>
                         </div>
-                        <div className="space-y-1.5">
+                        <div className="grid grid-cols-2 gap-2">
                             {groupedHistory.map(group => {
                                 const first = group[0];
                                 const totalPrice = group.reduce((s, r) => s + (r.price || 0), 0);
-                                const itemSummary = group.length > 1
-                                    ? `${getCropIcon(first.crop_name || "")} ${first.crop_name} 외 ${group.length - 1}건`
-                                    : `${getCropIcon(first.crop_name || "")} ${first.crop_name || '미지정'}`;
+                                const groupIcons = group.map(r => getCropIcon(r.crop_name || '', farmCrops));
                                 const qtySummary = group.length > 1
                                     ? group.map(r => `${r.quantity}${r.sale_unit}`).join('+')
                                     : `${first.quantity}${first.sale_unit}`;
                                 return (
                                     <button key={first.id}
                                         onClick={() => setDetailModal(group)}
-                                        className="w-full text-left bg-white px-4 py-3 rounded-2xl border border-slate-100 hover:border-rose-200 transition-all flex justify-between items-center shadow-sm active:scale-[0.98]">
-                                        <div className="flex-1 flex items-center gap-3 min-w-0">
-                                            <span className="text-sm font-black text-slate-700 flex-shrink-0 whitespace-nowrap max-w-[120px] truncate">
-                                                {itemSummary}
-                                            </span>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-[14px] font-black text-slate-900 truncate">
-                                                        {first.customer?.name || first.customer_name || '미지정'}
-                                                    </span>
-                                                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${first.is_settled ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-500 animate-pulse'}`}>
-                                                        {first.is_settled ? '완료' : '미정산'}
-                                                    </span>
-                                                    {group.length > 1 && (
-                                                        <span className="text-[9px] font-black bg-rose-50 text-rose-500 px-1.5 py-0.5 rounded-full">{group.length}품목</span>
-                                                    )}
-                                                </div>
-                                                <div className="flex items-center gap-2 text-[11px] font-bold text-slate-400 mt-0.5">
-                                                    <span className="text-rose-500 font-black">{qtySummary}</span>
-                                                    <span className="w-px h-2 bg-slate-200" />
-                                                    <span className="text-slate-700 font-extrabold">{formatCurrency(totalPrice)}</span>
-                                                    <span className="w-px h-2 bg-slate-200" />
-                                                    <span className="truncate max-w-[120px]">{first.recipient_name || '수령인동일'}</span>
-                                                    <span className="w-px h-2 bg-slate-200" />
-                                                    <span className="text-[10px]">{new Date(first.recorded_at).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })}</span>
-                                                </div>
+                                        className="w-full text-left bg-white p-3 rounded-2xl border border-slate-100 hover:border-rose-200 transition-all shadow-sm active:scale-[0.98] flex flex-col gap-1.5">
+                                        {/* 상단: 아이콘 + 정산상태 */}
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-0.5">
+                                                {groupIcons.map((icon, i) => (
+                                                    <span key={i} className="text-xl leading-none">{icon}</span>
+                                                ))}
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                {group.length > 1 && (
+                                                    <span className="text-[8px] font-black bg-rose-50 text-rose-400 px-1.5 py-0.5 rounded-full">{group.length}품목</span>
+                                                )}
+                                                <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full ${first.is_settled ? 'bg-emerald-50 text-emerald-500' : 'bg-amber-50 text-amber-500 animate-pulse'}`}>
+                                                    {first.is_settled ? '완료' : '미정산'}
+                                                </span>
                                             </div>
                                         </div>
-                                        <Edit2 className="w-4 h-4 text-slate-200 ml-2 shrink-0" />
+                                        {/* 중단: 이름 */}
+                                        <div>
+                                            <p className="text-[13px] font-black text-slate-900 truncate">
+                                                {first.customer?.name || first.customer_name || '미지정'}
+                                            </p>
+                                            <p className="text-[10px] font-bold text-slate-400 truncate">
+                                                {first.crop_name} {qtySummary}
+                                            </p>
+                                        </div>
+                                        {/* 하단: 금액 + 날짜 */}
+                                        <div className="flex items-center justify-between pt-1 border-t border-slate-50">
+                                            <span className="text-[13px] font-black text-rose-600">{formatCurrency(totalPrice)}</span>
+                                            <span className="text-[10px] font-bold text-slate-300">
+                                                {new Date(first.recorded_at).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })}
+                                            </span>
+                                        </div>
                                     </button>
                                 );
                             })}
@@ -633,7 +589,7 @@ export default function CourierSalesPage() {
                                         <div className="space-y-0.5 mt-1">
                                             {allItems.map((item, idx) => (
                                                 <p key={idx} className="text-xs text-slate-400 font-bold">
-                                                    {getCropIcon(item.crop_name || '')} {item.crop_name} {item.quantity}{item.sale_unit} · {formatCurrency(item.price || 0)}
+                                                    {getCropIcon(item.crop_name || '', farmCrops)} {item.crop_name} {item.quantity}{item.sale_unit} · {formatCurrency(item.price || 0)}
                                                 </p>
                                             ))}
                                             {allItems.length > 1 && (
