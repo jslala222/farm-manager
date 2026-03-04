@@ -2,6 +2,34 @@
  * bkit 표준 데이터 포맷팅 유틸리티
  */
 
+const CROP_ICON_MAP: Record<string, string> = {
+    '딸기': '🍓', '고구마': '🍠', '감자': '🥔', '상추': '🥬', '고추': '🌶️',
+    '토마토': '🍅', '참외': '🍈', '멜론': '🍈', '수박': '🍉', '사과': '🍎',
+    '포도': '🍇', '샤인머스켓': '🍇', '옥수수': '🌽', '당근': '🥕',
+    '양파': '🧅', '마늘': '🧄', '배추': '🥬', '오이': '🥒',
+};
+export const getCropIcon = (name: string): string => {
+    for (const [key, icon] of Object.entries(CROP_ICON_MAP)) {
+        if (name.includes(key)) return icon;
+    }
+    return '🌱';
+};
+
+export const getCropColor = (name: string): string => {
+    if (name.includes('딸기')) return 'text-red-500';
+    if (name.includes('토마토')) return 'text-red-600';
+    if (name.includes('고추')) return 'text-red-700';
+    if (name.includes('사과')) return 'text-rose-500';
+    if (name.includes('수박')) return 'text-green-600';
+    if (name.includes('참외') || name.includes('멜론')) return 'text-yellow-500';
+    if (name.includes('포도') || name.includes('샤인머스켓')) return 'text-purple-500';
+    if (name.includes('고구마')) return 'text-orange-600';
+    if (name.includes('당근')) return 'text-orange-500';
+    if (name.includes('옥수수')) return 'text-yellow-400';
+    if (name.includes('상추') || name.includes('배추')) return 'text-green-500';
+    return 'text-gray-500';
+};
+
 /**
  * 전화번호를 000-0000-0000 형식으로 변환합니다.
  */
@@ -135,66 +163,71 @@ export const formatKSTLocale = (
 };
 
 /**
- * 작물명에 따른 이모지 아이콘 반환
- * farmCrops 배열을 넘기면 DB에 저장된 crop_icon을 우선 사용 (설정 아이콘 정확 반영)
- * farmCrops 없으면 하드코딩 fallback 사용
+ * 이미지 파일을 목표 크기(KB) 이하로 자동 압축합니다.
+ * Canvas API를 사용하여 품질을 낮추거나 해상도를 줄입니다.
+ * @param file 원본 이미지 파일
+ * @param targetKB 목표 파일 크기 (기본: 150KB)
+ * @returns 압축된 File 객체
  */
-export const getCropIcon = (
-    cropName: string | null,
-    farmCrops?: Array<{ crop_name: string; crop_icon?: string | null }>
-): string => {
-    // 1순위: DB에 저장된 아이콘
-    if (farmCrops && cropName) {
-        const found = farmCrops.find(c => c.crop_name === cropName);
-        if (found?.crop_icon) return found.crop_icon;
-    }
-    // 2순위: fallback 하드코딩 맵
-    const fallbackMap: Record<string, string> = {
-        '딸기': '🍓',
-        '감자': '🥔',
-        '고구마': '🍠',
-        '당근': '🥕',
-        '양파': '🧅',
-        '마늘': '🧄',
-        '토마토': '🍅',
-        '고추': '🌶️',
-        '샤인머스캣': '🍇',
-        '포도': '🍇',
-        '사과': '🍎',
-        '배': '🍐',
-        '복숭아': '🍑',
-        '참외': '🍈',
-        '멜론': '🍈',
-        '오이': '🥒',
-        '애호박': '🥒',
-        '배추': '🥬',
-        '상추': '🥗',
-        '브로콜리': '🥦',
-        '옥수수': '🌽',
-        '호박': '🎃',
-    };
-    return fallbackMap[cropName ?? ''] ?? '📦';
-};
+export const compressImage = (file: File, targetKB: number = 150): Promise<File> => {
+    return new Promise((resolve, reject) => {
+        const targetBytes = targetKB * 1024;
 
-/**
- * 작물명에 따른 색상 클래스 반환
- */
-export const getCropColor = (cropName: string | null): string => {
-    const colorMap: Record<string, string> = {
-        '딸기': 'text-rose-600',
-        '감자': 'text-amber-700',
-        '당근': 'text-orange-600',
-        '양파': 'text-yellow-600',
-        '마늘': 'text-slate-600',
-        '토마토': 'text-red-600',
-        '고추': 'text-red-700',
-        '애호박': 'text-green-600',
-        '배추': 'text-green-700',
-        '상추': 'text-green-600',
-        '오이': 'text-green-600',
-        '브로콜리': 'text-green-700',
-        '옥수수': 'text-yellow-700',
-        '호박': 'text-orange-700',
-    };
-    return colorMap[cropName ?? ''] ?? 'text-emerald-600';
+        // 이미 목표 크기 이하면 그대로 반환
+        if (file.size <= targetBytes) {
+            resolve(file);
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let { width, height } = img;
+
+                // 최대 해상도 제한 (1200px)
+                const MAX_DIM = 1200;
+                if (width > MAX_DIM || height > MAX_DIM) {
+                    const ratio = Math.min(MAX_DIM / width, MAX_DIM / height);
+                    width = Math.round(width * ratio);
+                    height = Math.round(height * ratio);
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d')!;
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // 품질을 낮춰가며 목표 크기 달성
+                let quality = 0.85;
+                const tryCompress = () => {
+                    canvas.toBlob((blob) => {
+                        if (!blob) { reject(new Error('압축 실패')); return; }
+
+                        if (blob.size <= targetBytes || quality <= 0.1) {
+                            // 목표 달성 or 최저 품질 도달
+                            const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+                            const compressedFile = new File(
+                                [blob],
+                                file.name.replace(/\.[^.]+$/, `.jpg`),
+                                { type: 'image/jpeg' }
+                            );
+                            resolve(compressedFile);
+                        } else {
+                            // 품질 낮추고 재시도
+                            quality = Math.max(0.1, quality - 0.1);
+                            tryCompress();
+                        }
+                    }, 'image/jpeg', quality);
+                };
+
+                tryCompress();
+            };
+            img.onerror = () => reject(new Error('이미지 로드 실패'));
+            img.src = e.target?.result as string;
+        };
+        reader.onerror = () => reject(new Error('파일 읽기 실패'));
+        reader.readAsDataURL(file);
+    });
 };

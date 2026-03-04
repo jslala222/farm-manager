@@ -33,7 +33,7 @@ type HarvestItem = { crop: string; unit: string; qty: number };
 type SalesItem = { crop: string; unit: string; qty: number };
 type RecentActivity = { id: string; type: 'harvest' | 'sales'; label: string; qty: number; unit: string; time: string };
 type WeatherData = { temp: number; weatherCode: number; windSpeed: number; humidity: number; tempMax: number; tempMin: number } | null;
-type CropItem = { id: string; crop_name: string; crop_icon: string };
+type CropItem = { id: string; crop_name: string; crop_icon: string; crop_image_url?: string | null; image_source?: string; category?: string };
 
 const HEADER_BG = 'linear-gradient(180deg, #5BAE7E 0%, #469265 100%)';
 
@@ -130,7 +130,7 @@ export default function Home() {
             ] = await Promise.all([
                 supabase.from('harvest_records').select('quantity, crop_name').eq('farm_id', farm.id)
                     .gte('recorded_at', `${selectedDate}T00:00:00`).lte('recorded_at', `${selectedDate}T23:59:59`),
-                supabase.from('farm_crops').select('id, crop_name, default_unit, crop_icon').eq('farm_id', farm.id).eq('is_active', true),
+                supabase.from('farm_crops').select('id, crop_name, default_unit, crop_icon, crop_image_url, image_source, category').eq('farm_id', farm.id).eq('is_active', true),
                 supabase.from('attendance_records').select('worker_name').eq('farm_id', farm.id).eq('work_date', selectedDate).eq('is_present', true),
                 supabase.from('sales_records').select('quantity, sale_unit, crop_name').eq('farm_id', farm.id)
                     .gte('recorded_at', `${selectedDate}T00:00:00`).lte('recorded_at', `${selectedDate}T23:59:59`),
@@ -146,7 +146,14 @@ export default function Home() {
             const cropUnitMap: Record<string, string> = {};
             (cropsRes.data ?? []).forEach((c: any) => { cropUnitMap[c.crop_name] = c.default_unit || '박스'; });
             setActiveCropCount((cropsRes.data ?? []).length);
-            setCropsList((cropsRes.data ?? []).map((c: any) => ({ id: c.id || c.crop_name, crop_name: c.crop_name, crop_icon: c.crop_icon || '🌿' })));
+            setCropsList((cropsRes.data ?? []).map((c: any) => ({
+                id: c.id || c.crop_name,
+                crop_name: c.crop_name,
+                crop_icon: c.crop_icon || '🌿',
+                crop_image_url: c.crop_image_url || null,
+                image_source: c.image_source || 'emoji',
+                category: c.category || 'crop',
+            })));
 
             const harvestMap: Record<string, number> = {};
             (harvestRes.data ?? []).forEach((r: any) => {
@@ -375,7 +382,7 @@ export default function Home() {
                         <div className="mb-5">
                             <div className="flex items-center justify-between mb-3">
                                 <h2 className="text-base font-black" style={{ color: '#14311e' }}>작물 현황</h2>
-                                <a href="/harvest" className="text-xs font-bold" style={{ color: '#16a34a' }}>전체보기 &gt;</a>
+                                <a href="/crops" className="text-xs font-bold" style={{ color: '#16a34a' }}>전체보기 &gt;</a>
                             </div>
                             <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4" style={{ scrollbarWidth: 'none' }}>
                                 {cropsList.map((crop, idx) => {
@@ -386,14 +393,44 @@ export default function Home() {
                                         'linear-gradient(135deg, #7c2d12 0%, #ea580c 100%)',
                                         'linear-gradient(135deg, #064e3b 0%, #059669 100%)',
                                     ];
+                                    const hasImage = !!crop.crop_image_url;
                                     return (
-                                        <div key={crop.id} className="shrink-0 w-36 rounded-2xl shadow-sm relative overflow-hidden"
-                                            style={{ background: gradients[idx % gradients.length] }}>
-                                            <div className="absolute -bottom-4 -right-4 w-20 h-20 rounded-full pointer-events-none"
-                                                style={{ background: 'rgba(255,255,255,0.07)' }} />
-                                            <div className="p-4 pt-5">
-                                                <span className="text-3xl block mb-2">{crop.crop_icon}</span>
-                                                <div className="inline-block px-2 py-0.5 rounded-full text-[9px] font-bold mb-2"
+                                        <div key={crop.id}
+                                            className="shrink-0 w-36 h-44 rounded-2xl shadow-sm relative overflow-hidden"
+                                            style={{ background: hasImage ? undefined : gradients[idx % gradients.length] }}>
+
+                                            {/* 배경 사진 */}
+                                            {hasImage && (
+                                                <>
+                                                    <img
+                                                        src={crop.crop_image_url!}
+                                                        alt={crop.crop_name}
+                                                        className="absolute inset-0 w-full h-full object-cover"
+                                                    />
+                                                </>
+                                            )}
+
+                                            {/* 이모지 배경 장식 (사진 없을 때만) */}
+                                            {!hasImage && (
+                                                <div className="absolute -bottom-4 -right-4 w-20 h-20 rounded-full pointer-events-none"
+                                                    style={{ background: 'rgba(255,255,255,0.07)' }} />
+                                            )}
+
+                                            {/* 카테고리 뱃지 */}
+                                            <div className="absolute top-2 left-2">
+                                                <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full ${crop.category === 'processed'
+                                                    ? 'bg-amber-500/80 text-white'
+                                                    : 'bg-green-500/80 text-white'}`}>
+                                                    {crop.category === 'processed' ? '가공' : '원물'}
+                                                </span>
+                                            </div>
+
+                                            {/* 콘텐츠 */}
+                                            <div className="absolute bottom-0 left-0 right-0 p-3">
+                                                {!hasImage && (
+                                                    <span className="text-3xl block mb-2">{crop.crop_icon}</span>
+                                                )}
+                                                <div className="inline-block px-2 py-0.5 rounded-full text-[9px] font-bold mb-1"
                                                     style={{ background: 'rgba(255,255,255,0.2)', color: '#fff' }}>
                                                     재배중
                                                 </div>

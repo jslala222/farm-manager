@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Save, Plus, Trash2, Home, LayoutGrid, AlertCircle, Building2, CheckCircle2, Sprout, GripVertical, Factory } from "lucide-react";
+import { Save, Plus, Trash2, Home, LayoutGrid, AlertCircle, Building2, CheckCircle2, Sprout, GripVertical, Factory, Camera } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { supabase, Farm, FarmHouse, FarmCrop } from "@/lib/supabase";
 import { formatPhone, formatBusinessNumber, getCropIcon } from "@/lib/utils";
 import AddressSearch from "@/components/AddressSearch";
 import { Search } from "lucide-react";
+import CropImagePicker from "@/components/CropImagePicker";
 
 export default function SettingsPage() {
     const { user, farm: storeFarm, profile, initialize, initialized } = useAuthStore();
@@ -39,6 +40,14 @@ export default function SettingsPage() {
     } | null>(null);
     const [editSaving, setEditSaving] = useState(false);
 
+    // 사진 피커 상태
+    const [imagePickerTarget, setImagePickerTarget] = useState<{
+        cropId: string;
+        cropName: string;
+        currentImageUrl?: string | null;
+        currentSource?: string;
+    } | null>(null);
+
     const ALL_ICONS = ['🍓','🍠','🥔','🧅','🧄','🍅','🌶️','🍇','🍎','🍐','🍑','🍈','🥒','🥬','🥕','🥗','🥦','🌽','🌾','🍄','🍯','🧊','🧣','🥤','🍩','🍪','🍫','🍮','🍦','🍧','🍰','🤧','🍵','🍷','🥭','🥃','🥛','🦴','🦵','🌿','📦','🏷️'];
 
     const openEditCrop = (crop: any) => {
@@ -49,6 +58,22 @@ export default function SettingsPage() {
             icon: crop.crop_icon || getCropIcon(crop.crop_name),
             category: crop.category || 'crop',
         });
+    };
+
+    const handleImageSelect = async (cropId: string, imageUrl: string, source: 'catalog' | 'custom') => {
+        await supabase.from('farm_crops')
+            .update({ crop_image_url: imageUrl, image_source: source })
+            .eq('id', cropId);
+        setImagePickerTarget(null);
+        fetchCrops();
+    };
+
+    const handleImageRemove = async (cropId: string) => {
+        await supabase.from('farm_crops')
+            .update({ crop_image_url: null, image_source: 'emoji' })
+            .eq('id', cropId);
+        setImagePickerTarget(null);
+        fetchCrops();
     };
 
     const saveEditCrop = async () => {
@@ -658,11 +683,24 @@ export default function SettingsPage() {
                         ) : (
                             cropItems.map((crop) => (
                                 <div key={crop.id}
-                                    className="group flex flex-col items-center justify-center p-5 rounded-[1.5rem] border-2 bg-white border-green-50 shadow-sm hover:shadow-green-100/50 hover:border-green-200 transition-all relative">
+                                    className="group flex flex-col items-center justify-center p-5 rounded-[1.5rem] border-2 bg-white border-green-50 shadow-sm hover:shadow-green-100/50 hover:border-green-200 transition-all relative overflow-hidden">
                                     <button onClick={() => deleteCrop(crop.id, crop.crop_name)}
-                                        className="absolute top-2 right-2 text-gray-600 hover:text-red-500 transition-all p-1.5 opacity-0 group-hover:opacity-100 scale-75 hover:scale-100">
+                                        className="absolute top-2 right-2 text-gray-600 hover:text-red-500 transition-all p-1.5 opacity-0 group-hover:opacity-100 scale-75 hover:scale-100 z-10">
                                         <Trash2 className="w-4 h-4" />
                                     </button>
+                                    {/* 사진 버튼 */}
+                                    <button
+                                        onClick={() => setImagePickerTarget({
+                                            cropId: crop.id,
+                                            cropName: crop.crop_name,
+                                            currentImageUrl: crop.crop_image_url,
+                                            currentSource: crop.image_source,
+                                        })}
+                                        className={`absolute top-2 left-2 p-1.5 opacity-0 group-hover:opacity-100 transition-all z-10 rounded-lg ${crop.crop_image_url ? 'bg-green-500 hover:bg-green-600' : 'bg-white/80 hover:bg-green-50'}`}
+                                        title="사진 선택">
+                                        <Camera className={`w-4 h-4 ${crop.crop_image_url ? 'text-white' : 'text-green-600'}`} />
+                                    </button>
+                                    {/* 항상 이모지 표시 */}
                                     <button onClick={() => openEditCrop(crop)} className="text-3xl mb-1 hover:scale-110 transition-transform active:scale-95" title="클릭하여 수정">
                                         {crop.crop_icon || getCropIcon(crop.crop_name)}
                                     </button>
@@ -670,6 +708,11 @@ export default function SettingsPage() {
                                     <span className="text-[9px] text-gray-700 font-bold mt-0.5">
                                         {crop.available_units?.join(' · ') || crop.default_unit}
                                     </span>
+                                    {crop.crop_image_url && (
+                                        <span className="text-[8px] font-black mt-1 px-1.5 py-0.5 rounded-full bg-green-100 text-green-600">
+                                            📷 사진등록됨
+                                        </span>
+                                    )}
                                 </div>
                             ))
                         )}
@@ -753,12 +796,22 @@ export default function SettingsPage() {
                                 <div key={crop.id}
                                     className="group flex flex-col items-center p-4 rounded-[1.5rem] border-2 bg-white border-amber-50 shadow-sm hover:shadow-amber-100/50 hover:border-amber-200 transition-all relative">
                                     <button onClick={() => deleteCrop(crop.id, crop.crop_name, true)}
-                                        className="absolute top-2 right-2 text-gray-600 hover:text-red-500 transition-all p-1.5 opacity-0 group-hover:opacity-100 scale-75 hover:scale-100">
+                                        className="absolute top-2 right-2 text-gray-600 hover:text-red-500 transition-all p-1.5 opacity-0 group-hover:opacity-100 scale-75 hover:scale-100 z-10">
                                         <Trash2 className="w-4 h-4" />
                                     </button>
-                                    <div className="absolute top-2 left-2">
-                                        <span className="text-[8px] font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-200">가공품</span>
-                                    </div>
+                                    {/* 사진 버튼 */}
+                                    <button
+                                        onClick={() => setImagePickerTarget({
+                                            cropId: crop.id,
+                                            cropName: crop.crop_name,
+                                            currentImageUrl: crop.crop_image_url,
+                                            currentSource: crop.image_source,
+                                        })}
+                                        className={`absolute top-2 left-2 p-1.5 opacity-0 group-hover:opacity-100 transition-all z-10 rounded-lg ${crop.crop_image_url ? 'bg-amber-500 hover:bg-amber-600' : 'bg-white/80 hover:bg-amber-50'}`}
+                                        title="사진 선택">
+                                        <Camera className={`w-4 h-4 ${crop.crop_image_url ? 'text-white' : 'text-amber-600'}`} />
+                                    </button>
+                                    {/* 항상 이모지 표시 */}
                                     <button onClick={() => openEditCrop(crop)} className="text-3xl mb-1 hover:scale-110 transition-transform active:scale-95 mt-3" title="클릭하여 수정">
                                         {crop.crop_icon || getCropIcon(crop.crop_name)}
                                     </button>
@@ -766,6 +819,11 @@ export default function SettingsPage() {
                                     <span className="text-[9px] text-gray-700 font-bold mt-0.5">
                                         {crop.available_units?.join(' · ') || crop.default_unit}
                                     </span>
+                                    {crop.crop_image_url && (
+                                        <span className="text-[8px] font-black mt-1 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-600">
+                                            📷 사진등록됨
+                                        </span>
+                                    )}
 
                                     {/* 규격 태그 관리 */}
                                     <div className="w-full mt-2 pt-2 border-t border-amber-100">
@@ -961,6 +1019,20 @@ export default function SettingsPage() {
                         </button>
                     </div>
                 </div>
+            )}
+
+            {/* ===== 사진 피커 모달 ===== */}
+            {imagePickerTarget && storeFarm?.id && (
+                <CropImagePicker
+                    farmId={storeFarm.id}
+                    cropId={imagePickerTarget.cropId}
+                    cropName={imagePickerTarget.cropName}
+                    currentImageUrl={imagePickerTarget.currentImageUrl}
+                    currentSource={imagePickerTarget.currentSource}
+                    onSelect={(imageUrl, source) => handleImageSelect(imagePickerTarget.cropId, imageUrl, source)}
+                    onRemove={() => handleImageRemove(imagePickerTarget.cropId)}
+                    onClose={() => setImagePickerTarget(null)}
+                />
             )}
         </div>
     );

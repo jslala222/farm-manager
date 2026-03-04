@@ -113,12 +113,37 @@ export interface FarmHouse {
     created_at: string;
 }
 
+// [안3] 작물/가공품 사진 카탈로그 (Admin 전용 마스터, 1:N 구조)
+export interface CropCatalog {
+    id: string;
+    crop_key: string;       // 그룹 키 (같은 작물의 여러 사진을 묶는 키)
+    crop_name: string;
+    crop_icon: string;
+    image_url: string;
+    category: 'crop' | 'processed';
+    display_order: number;
+    is_published: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+// crop_key 기준으로 그룹핑된 카탈로그 타입
+export interface CropCatalogGroup {
+    crop_key: string;
+    crop_name: string;
+    crop_icon: string;
+    category: 'crop' | 'processed';
+    photos: CropCatalog[];  // 해당 작물의 사진 목록
+}
+
 // [bkit 엔터프라이즈] 농장별 재배 작물 관리 (하이브리드 다품종 시스템)
 export interface FarmCrop {
     id: string;
     farm_id: string;
     crop_name: string;
     crop_icon: string;
+    crop_image_url?: string | null;
+    image_source?: 'emoji' | 'catalog' | 'custom';
     default_unit: string;
     available_units: string[];
     sort_order: number;

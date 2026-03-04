@@ -53,9 +53,16 @@ export default function AdminPage() {
 
     return (
         <div className="p-4 md:p-3 pb-20 md:pb-6 max-w-4xl mx-auto">
-            <div className="mb-6">
-                <h1 className="text-xl font-bold text-gray-900">관리자 대시보드</h1>
-                <p className="text-gray-700 text-sm mt-1">전체 농장 현황 및 승인 관리</p>
+            <div className="flex items-center justify-between mb-6">
+                <div>
+                    <h1 className="text-xl font-bold text-gray-900">관리자 대시보드</h1>
+                    <p className="text-gray-700 text-sm mt-1">전체 농장 현황 및 승인 관리</p>
+                </div>
+                <a href="/admin/catalog"
+                    className="flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-2xl text-sm font-black transition-all shadow-lg shadow-green-100">
+                    <Sprout className="w-4 h-4" />
+                    사진 카탈로그
+                </a>
             </div>
 
             {/* 요약 카드 */}
