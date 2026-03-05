@@ -59,6 +59,8 @@ export default function SettledPage() {
     const [range, setRange] = useState(getDefaultRange);
     const [expandedPartners, setExpandedPartners] = useState<string[]>([]);
     const [edit, setEdit] = useState(emptyEdit);
+    const [cropIconMap, setCropIconMap] = useState<Record<string, string>>({});
+    const [cropCategoryMap, setCropCategoryMap] = useState<Record<string, string>>({});
 
     // ────── 데이터 불러오기 ──────
     const fetchData = useCallback(async () => {
@@ -87,6 +89,23 @@ export default function SettledPage() {
     useEffect(() => {
         if (initialized && farm?.id) fetchData();
     }, [initialized, farm?.id, fetchData]);
+
+    // farm_crops 아이콘 맵 로드
+    useEffect(() => {
+        if (!farm?.id) return;
+        supabase.from('farm_crops').select('crop_name, crop_icon, category').eq('farm_id', farm.id).then(({ data }) => {
+            if (data) {
+                const iconMap: Record<string, string> = {};
+                const catMap: Record<string, string> = {};
+                data.forEach((c: { crop_name: string; crop_icon: string | null; category: string }) => {
+                    if (c.crop_icon) iconMap[c.crop_name] = c.crop_icon;
+                    catMap[c.crop_name] = c.category;
+                });
+                setCropIconMap(iconMap);
+                setCropCategoryMap(catMap);
+            }
+        });
+    }, [farm?.id]);
 
     // ────── 수정 모달 열기 ──────
     const openEdit = (rec: SettledRecord) => {
@@ -184,11 +203,31 @@ export default function SettledPage() {
     }, [records]);
 
     // 전체 합계
-    const grandTotal = useMemo(() => ({
-        qty: records.reduce((s, r) => s + (r.quantity || 0), 0),
-        expected: records.reduce((s, r) => s + (r.price || 0), 0),
-        settled: records.reduce((s, r) => s + (r.settled_amount || 0), 0),
-    }), [records]);
+    const grandTotal = useMemo(() => {
+        const unitTotals: Record<string, number> = {};
+        // 품목별 집계 (아이콘 카드용)
+        const cropTotals: { cropName: string; qty: number; unit: string; isProcessed: boolean }[] = [];
+        const cropMap = new Map<string, { qty: number; unit: string }>();
+        records.forEach(r => {
+            const u = r.sale_unit || '박스';
+            unitTotals[u] = (unitTotals[u] || 0) + (r.quantity || 0);
+            const key = r.crop_name || '미분류';
+            if (!cropMap.has(key)) cropMap.set(key, { qty: 0, unit: u });
+            cropMap.get(key)!.qty += r.quantity || 0;
+        });
+        cropMap.forEach((v, cropName) => {
+            cropTotals.push({ cropName, qty: v.qty, unit: v.unit, isProcessed: cropCategoryMap[cropName] === 'processed' });
+        });
+        const qtyStr = Object.entries(unitTotals).map(([u, q]) => `${q.toLocaleString()} ${u}`).join(' · ');
+        return {
+            qty: records.reduce((s, r) => s + (r.quantity || 0), 0),
+            qtyStr,
+            unitTotals,
+            cropTotals,
+            expected: records.reduce((s, r) => s + (r.price || 0), 0),
+            settled: records.reduce((s, r) => s + (r.settled_amount || 0), 0),
+        };
+    }, [records, cropCategoryMap]);
 
     // XLSX 다운로드 (품목명 포함)
     const handleDownloadXLSX = () => {
@@ -423,17 +462,36 @@ export default function SettledPage() {
                 </div>
 
                 {/* 전체 요약 카드 */}
-                <div className="grid grid-cols-3 gap-2">
-                    {[
-                        { label: '총 수량', value: grandTotal.qty.toLocaleString() + '박스', color: 'text-slate-800' },
-                        { label: '예상 총액', value: grandTotal.expected.toLocaleString() + '원', color: 'text-indigo-600' },
-                        { label: '정산 총액', value: grandTotal.settled.toLocaleString() + '원', color: 'text-emerald-600' },
-                    ].map(item => (
-                        <div key={item.label} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-3 text-center">
-                            <p className="text-[9px] font-black text-slate-400 uppercase mb-1">{item.label}</p>
-                            <p className={`text-sm font-black ${item.color} break-all`}>{item.value}</p>
-                        </div>
-                    ))}
+                <div className="flex flex-col gap-2">
+                    {/* 총 수량 - 품목별 카드 그리드 */}
+                    <div className="bg-emerald-50 rounded-2xl border-2 border-red-400 shadow-sm px-4 py-3">
+                        <p className="text-[9px] font-black text-emerald-600 uppercase mb-2.5">총 수량</p>
+                        {grandTotal.cropTotals.length > 0 ? (
+                            <div className="grid grid-cols-3 gap-2">
+                                {grandTotal.cropTotals.map(({ cropName, qty, unit, isProcessed }) => (
+                                    <div key={cropName} className="bg-white border border-emerald-100 rounded-2xl p-2.5 text-center shadow-sm flex flex-col items-center gap-1">
+                                        <span className="text-xl leading-none">
+                                            {cropIconMap[cropName] || getCropIcon(cropName)}
+                                        </span>
+                                        <p className="text-[9px] font-black text-slate-600 leading-tight truncate w-full text-center">{cropName}</p>
+                                        <p className="text-sm font-black text-emerald-700 leading-none">
+                                            {qty.toLocaleString()}{isProcessed ? '개' : ''}
+                                        </p>
+                                        <p className="text-[9px] font-bold text-emerald-400 leading-none">
+                                            {isProcessed ? unit : unit}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-slate-400 text-sm font-bold">-</p>
+                        )}
+                    </div>
+                    {/* 정산 총액 */}
+                    <div className="bg-emerald-50 rounded-2xl border-2 border-red-400 shadow-sm px-4 py-3 flex items-center justify-between">
+                        <p className="text-[9px] font-black text-emerald-600 uppercase">정산 총액 <span className="text-emerald-400 normal-case font-bold">(실입금)</span></p>
+                        <p className="text-base font-black text-emerald-600">{grandTotal.settled.toLocaleString()}원</p>
+                    </div>
                 </div>
 
                 {/* 로딩 */}
@@ -579,7 +637,7 @@ export default function SettledPage() {
                                             <tfoot>
                                                 <tr className="bg-emerald-50 border-t-2 border-emerald-100">
                                                     <td colSpan={2} className="px-3 py-2.5 font-black text-emerald-700 text-[11px]">소계</td>
-                                                    <td className="px-3 py-2.5 text-right font-black text-emerald-700">{group.totalQty.toLocaleString()}박스</td>
+                                                    <td className="px-3 py-2.5 text-right font-black text-emerald-700">{(() => { const m: Record<string,number> = {}; group.rows.forEach(r => { const u = r.sale_unit||'박스'; m[u]=(m[u]||0)+(r.quantity||0); }); return Object.entries(m).map(([u,q])=>`${q.toLocaleString()} ${u}`).join(' · '); })()}</td>
                                                     <td className="px-3 py-2.5 text-right font-black text-slate-600">{group.totalExpected.toLocaleString()}원</td>
                                                     <td className="px-3 py-2.5 text-right font-black text-emerald-700">{group.totalSettled.toLocaleString()}원</td>
                                                     <td className="px-3 py-2.5 text-right font-black">
@@ -611,7 +669,7 @@ export default function SettledPage() {
                                                     <div className="px-3 py-1.5 bg-gradient-to-r from-slate-50 to-white border-b flex items-center justify-between gap-2">
                                                         <div className="flex items-center gap-1.5 min-w-0">
                                                             <span className={`text-base shrink-0 ${getCropColor(rec.crop_name)}`}>
-                                                                {getCropIcon(rec.crop_name)}
+                                                                {cropIconMap[rec.crop_name || ''] || getCropIcon(rec.crop_name)}
                                                             </span>
                                                             <span className="font-bold text-slate-700 text-xs truncate">
                                                                 {rec.crop_name || '미분류'}
@@ -673,7 +731,7 @@ export default function SettledPage() {
                                                 <div className="flex gap-2 text-right text-[8px]">
                                                     <div>
                                                         <p className="font-bold text-emerald-600 mb-0.5">수량</p>
-                                                        <p className="font-black text-emerald-700">{group.totalQty.toLocaleString()}박</p>
+                                                        <p className="font-black text-emerald-700">{(() => { const m: Record<string,number> = {}; group.rows.forEach(r => { const u = r.sale_unit||'박스'; m[u]=(m[u]||0)+(r.quantity||0); }); return Object.entries(m).map(([u,q])=>`${q.toLocaleString()}${u}`).join(' · '); })()}</p>
                                                     </div>
                                                     <div>
                                                         <p className="font-bold text-slate-600 mb-0.5">예상</p>

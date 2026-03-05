@@ -13,9 +13,11 @@ export interface ModalCropEntry {
     unit: string;
     isProcessed: boolean;
     unitPrice?: number;   // initial unit price (0 or undefined = unknown)
+    isCompoundGrade?: boolean; // true if this entry came from a compound grade record
 }
 
 export interface SettlementSaveData {
+    saveAsPriceOnly?: boolean;
     // bulk-edit only
     date?: string;
     paymentStatus?: 'pending' | 'completed';
@@ -28,6 +30,7 @@ export interface SettlementSaveData {
         totalPrice: number;
         unit: string;
         recordId?: string | null;
+        isCompoundGrade?: boolean;
     }[];
     settleDate: string;
     actualAmount: number | null;
@@ -89,7 +92,7 @@ export default function SettlementModal({
     const [unitPrices, setUnitPrices] = useState<Record<string, string>>(() => {
         const init: Record<string, string> = {};
         cropEntries.forEach(e => {
-            init[`${e.cropName}:${e.grade}`] = (e.unitPrice && e.unitPrice > 0) ? e.unitPrice.toString() : '';
+            init[`${e.cropName}:${e.grade}`] = (e.unitPrice && e.unitPrice > 0) ? e.unitPrice.toLocaleString() : '';
         });
         return init;
     });
@@ -117,7 +120,7 @@ export default function SettlementModal({
         return cropEntries.reduce((sum, entry) => {
             const key = `${entry.cropName}:${entry.grade}`;
             const qty = Number(quantities[key] || 0);
-            const price = Number(unitPrices[key] || 0);
+            const price = Number((unitPrices[key] || '0').replace(/,/g, ''));
             return sum + qty * price;
         }, 0);
     }, [cropEntries, quantities, unitPrices]);
@@ -137,11 +140,10 @@ export default function SettlementModal({
         return Array.from(groups.entries());
     }, [cropEntries]);
 
-    const handleSave = async () => {
-        // Validation: bulk-edit completed must have unit prices
+    const handleSave = async (priceOnly: boolean = false) => {
         if (mode === 'bulk-edit' && paymentStatus === 'completed') {
             const missing = cropEntries.some(e => {
-                const key = `${e.cropName}:${e.grade}`;
+                const key = `${e.cropName}:${e.grade}`
                 const qty = Number(quantities[key] || 0);
                 const price = Number(unitPrices[key] || 0);
                 return qty > 0 && !price;
@@ -151,11 +153,17 @@ export default function SettlementModal({
                 return;
             }
         }
-
+        if (mode === 'finance' && !priceOnly) {
+            if (!actualAmountNum || actualAmountNum <= 0) {
+                alert('정산완료를 진행하려면 실 입금액을 입력해주세요. 단가만 저장하려면 단가 저장 버튼을 눌러주세요.');
+                return;
+            }
+            if (!confirm('실 입금액 ' + actualAmountNum.toLocaleString() + '원으로 정산을 완료합니다. 계속 진행하시겠습니까?')) return;
+        }
         const entries = cropEntries.map(e => {
             const key = `${e.cropName}:${e.grade}`;
             const qty = Number(quantities[key] || 0);
-            const price = Number(unitPrices[key] || 0);
+            const price = Number((unitPrices[key] || '0').replace(/,/g, ''));
             return {
                 cropName: e.cropName,
                 grade: e.grade,
@@ -164,15 +172,16 @@ export default function SettlementModal({
                 totalPrice: qty * price,
                 unit: e.unit,
                 recordId: e.recordId ?? null,
+                isCompoundGrade: e.isCompoundGrade ?? false,
             };
         });
-
         await onSave({
+            saveAsPriceOnly: priceOnly,
             date: mode === 'bulk-edit' ? date : undefined,
             paymentStatus: mode === 'bulk-edit' ? paymentStatus : undefined,
             entries,
             settleDate,
-            actualAmount: actualAmountNum,
+            actualAmount: priceOnly ? null : actualAmountNum,
             paymentMethod,
             deductionReason,
             memo,
@@ -254,13 +263,22 @@ export default function SettlementModal({
                                 {entries.map(entry => {
                                     const key = `${entry.cropName}:${entry.grade}`;
                                     const qty = Number(quantities[key] || 0);
+                                    const unitPriceNum = Number((unitPrices[key] || '0').replace(/,/g, ''));
+                                    const rowSubtotal = qty * unitPriceNum;
                                     return (
-                                        <div key={key} className="space-y-1">
-                                            {/* 수량 행 */}
-                                            <div className={`flex items-center gap-3 rounded-2xl border px-4 py-3 ${entry.isProcessed ? 'bg-violet-50/50 border-violet-100' : 'bg-slate-50/50 border-slate-100'}`}>
-                                                <span className={`text-xs font-black w-14 shrink-0 whitespace-nowrap ${entry.isProcessed ? 'text-violet-500' : 'text-indigo-500'}`}>
-                                                    {entry.isProcessed ? '수량' : entry.grade}
+                                        <div key={key} className={`rounded-2xl border overflow-hidden ${entry.isProcessed ? 'border-violet-200' : 'border-slate-200'}`}>
+                                            {/* 카드 헤더: 등급 + 소계 */}
+                                            <div className={`flex items-center justify-between px-4 py-2 ${entry.isProcessed ? 'bg-violet-50' : 'bg-slate-100'}`}>
+                                                <span className={`text-xs font-black ${entry.isProcessed ? 'text-violet-600' : 'text-slate-600'}`}>
+                                                    {entry.isProcessed ? '수량 · 단가' : entry.grade}
                                                 </span>
+                                                {rowSubtotal > 0 && (
+                                                    <span className="text-xs font-black text-emerald-600">= {rowSubtotal.toLocaleString()}원</span>
+                                                )}
+                                            </div>
+                                            {/* 수량 행 */}
+                                            <div className="flex items-center gap-3 px-4 py-3 bg-white">
+                                                <span className="text-[10px] font-black text-slate-400 w-8 shrink-0">수량</span>
                                                 {isEditableQty ? (
                                                     <input type="text" inputMode="numeric"
                                                         value={quantities[key] ?? ''}
@@ -270,20 +288,21 @@ export default function SettlementModal({
                                                 ) : (
                                                     <span className="flex-1 text-center text-xl font-black text-slate-800">{entry.quantity}</span>
                                                 )}
-                                                <span className="text-xs font-bold text-slate-400 shrink-0">{entry.unit}</span>
+                                                <span className="text-sm font-bold text-slate-500 shrink-0 whitespace-nowrap">{entry.unit}</span>
                                             </div>
                                             {/* 단가 행 */}
                                             {showUnitPrices && qty > 0 && (
-                                                <div className="flex items-center gap-3 bg-emerald-50 rounded-2xl border border-emerald-200 px-4 py-2.5">
-                                                    <span className="text-xs font-black text-emerald-600 w-14 shrink-0">
-                                                        {entry.isProcessed ? '단가 *' : `${entry.grade} *`}
-                                                    </span>
+                                                <div className={`flex items-center gap-3 px-4 py-3 border-t transition-colors ${unitPriceNum > 0 ? 'bg-emerald-100 border-emerald-200' : 'bg-orange-50 border-orange-100'}`}>
+                                                    <span className={`text-[10px] font-black w-8 shrink-0 ${unitPriceNum > 0 ? 'text-emerald-700' : 'text-orange-500'}`}>단가</span>
                                                     <input type="text" inputMode="numeric"
                                                         value={unitPrices[key] ?? ''}
-                                                        onChange={e => setUnitPrices(prev => ({ ...prev, [key]: e.target.value.replace(/[^0-9]/g, '') }))}
-                                                        className="flex-1 bg-transparent text-center text-lg font-black text-emerald-800 outline-none"
-                                                        placeholder="0" />
-                                                    <span className="text-xs font-bold text-emerald-400 shrink-0">원/{entry.unit}</span>
+                                                        onChange={e => setUnitPrices(prev => ({ ...prev, [key]: e.target.value.replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',') }))}
+                                                        className={`flex-1 bg-transparent text-center text-lg font-black outline-none ${unitPriceNum > 0 ? 'text-emerald-800' : 'text-orange-600'}`}
+                                                        placeholder="미입력" />
+                                                    <div className="text-right shrink-0">
+                                                        <p className={`text-xs font-black leading-tight ${unitPriceNum > 0 ? 'text-emerald-600' : 'text-orange-400'}`}>원</p>
+                                                        <p className={`text-[9px] font-bold leading-tight whitespace-nowrap ${unitPriceNum > 0 ? 'text-emerald-500' : 'text-orange-300'}`}>/{entry.unit}</p>
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>
@@ -294,7 +313,7 @@ export default function SettlementModal({
                                     const subtotal = entries.reduce((s, e) => s + Number(quantities[`${e.cropName}:${e.grade}`] || 0), 0);
                                     return subtotal > 0 ? (
                                         <div className="text-right text-[10px] font-bold text-slate-400 pr-1">
-                                            소계: {subtotal.toLocaleString()}{entries[0].unit}
+                                            소계: {subtotal.toLocaleString()} {entries[0].unit}
                                         </div>
                                     ) : null;
                                 })()}
@@ -312,7 +331,7 @@ export default function SettlementModal({
                                 <div className="flex items-center justify-between bg-indigo-50/50 rounded-2xl border border-indigo-100 px-4 py-3">
                                     <span className="text-xs font-black text-indigo-600">전체 합계</span>
                                     <span className="text-sm font-black text-indigo-700">
-                                        {Object.entries(unitTotals).map(([u, q]) => `${q.toLocaleString()}${u}`).join(', ')}
+                                        {Object.entries(unitTotals).map(([u, q]) => `${q.toLocaleString()} ${u}`).join('  ·  ')}
                                     </span>
                                 </div>
                             );
@@ -430,16 +449,32 @@ export default function SettlementModal({
                             삭제
                         </button>
                     )}
-                    <button onClick={handleSave} disabled={saving}
-                        className={`flex-[2] py-3.5 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg transition-all ${saving ? 'bg-emerald-400 cursor-not-allowed' : 'bg-emerald-500 hover:bg-emerald-600'} text-white`}>
-                        {saving ? (
-                            <><span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />저장 중...</>
-                        ) : (mode === 'bulk-edit' && paymentStatus === 'pending') ? (
-                            <><Save className="w-4 h-4" />저장</>
-                        ) : (
-                            <><ShoppingCart className="w-4 h-4" />정산완료로 저장</>
-                        )}
-                    </button>
+                    {mode === 'finance' ? (
+                        <>
+                            <button onClick={() => handleSave(true)} disabled={saving}
+                                className="flex-[1.5] py-3.5 rounded-2xl font-black text-sm flex items-center justify-center gap-1.5 bg-blue-500 hover:bg-blue-600 active:scale-95 text-white shadow-lg shadow-blue-100 transition-all">
+                                <Save className="w-4 h-4" />단가 저장
+                            </button>
+                            <button onClick={() => handleSave(false)} disabled={saving}
+                                className={`flex-[2] py-3.5 rounded-2xl font-black text-sm flex items-center justify-center gap-1.5 shadow-lg transition-all active:scale-95 ${saving ? "bg-emerald-400 cursor-not-allowed" : "bg-emerald-500 hover:bg-emerald-600"} text-white`}>
+                                {saving
+                                    ? <><span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />저장 중...</>
+                                    : <><ShoppingCart className="w-4 h-4" />정산완료</>
+                                }
+                            </button>
+                        </>
+                    ) : (
+                        <button onClick={() => handleSave(false)} disabled={saving}
+                            className={`flex-[2] py-3.5 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg transition-all ${saving ? "bg-emerald-400 cursor-not-allowed" : "bg-emerald-500 hover:bg-emerald-600"} text-white`}>
+                            {saving ? (
+                                <><span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />저장 중...</>
+                            ) : (mode === 'bulk-edit' && paymentStatus === 'pending') ? (
+                                <><Save className="w-4 h-4" />저장</>
+                            ) : (
+                                <><ShoppingCart className="w-4 h-4" />정산완료로 저장</>
+                            )}
+                        </button>
+                    )}
                 </div>
             </div>
         </div>

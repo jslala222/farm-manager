@@ -32,7 +32,6 @@ import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
 import { formatCurrency, getCropIcon } from "@/lib/utils";
 import { settlementService } from "@/lib/settlementService";
-import CalendarUI from "@/components/Calendar";
 import SettlementModal, { ModalCropEntry, SettlementSaveData } from "@/components/SettlementModal";
 
 export default function FinancePage() {
@@ -63,6 +62,8 @@ export default function FinancePage() {
     const [b2cRevenue, setB2cRevenue] = useState(0);
     const [settledB2bCount, setSettledB2bCount] = useState(0);
     const [unsettledB2bCount, setUnsettledB2bCount] = useState(0);
+    const [unpricedB2bCount, setUnpricedB2bCount] = useState(0);
+    const [unpricedB2bGroupCount, setUnpricedB2bGroupCount] = useState(0);
     const [unsettledB2cRecords, setUnsettledB2cRecords] = useState<any[]>([]); // 미결산 택배 내역
     const [financeTab, setFinanceTab] = useState<'b2b' | 'b2c'>('b2b');
 
@@ -78,8 +79,6 @@ export default function FinancePage() {
     const [actualSettleAmount, setActualSettleAmount] = useState<string>("");
     const [financeSaving, setFinanceSaving] = useState(false);
     const [expandedPartners, setExpandedPartners] = useState<string[]>([]);
-    const [showCalendar, setShowCalendar] = useState(false);
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
     // B2C 입금확인 모달용 상태
     const [b2cConfirmModal, setB2cConfirmModal] = useState(false);
@@ -435,6 +434,10 @@ export default function FinancePage() {
             })).sort((a, b) => b.totalAmount - a.totalAmount); // 금액 큰 순서대로
 
             setUnsettledRecords(finalGrouped);
+            setUnpricedB2bCount(uRecords.filter((r: any) => !r.price || r.price === 0).length);
+            const unpricedGroupCount = finalGrouped.reduce((acc: number, p: any) =>
+                acc + p.dailyGroups.filter((dg: any) => dg.records.some((r: any) => !r.price || r.price === 0)).length, 0);
+            setUnpricedB2bGroupCount(unpricedGroupCount);
             setLaborCost(finalWages);
             setMealCost(finalMeals);
             setExpense(totalExp);
@@ -603,14 +606,18 @@ export default function FinancePage() {
                     const parts = g.split(':');
                     const label = parts[0]?.trim() || '특/상';
                     const qty = Number(parts[1]) || 0;
-                    entries.push({ recordId: record.id, cropName, grade: label, quantity: qty, unit, isProcessed: label === '-' });
+                    const savedUnitPrice = Number(parts[2]) || 0;
+                    entries.push({ recordId: record.id, cropName, grade: label, quantity: qty, unit, isProcessed: label === '-', isCompoundGrade: true, unitPrice: savedUnitPrice });
                 });
             } else {
+                const simpleUnitPrice = (record.price && record.quantity) ? Math.round(record.price / record.quantity) : 0;
                 entries.push({
                     recordId: record.id, cropName,
                     grade: record.grade || '특/상',
                     quantity: record.quantity || 0, unit,
                     isProcessed: record.grade === '-',
+                    isCompoundGrade: false,
+                    unitPrice: simpleUnitPrice,
                 });
             }
         });
@@ -619,7 +626,59 @@ export default function FinancePage() {
 
     const handleFinanceSave = async (data: SettlementSaveData) => {
         if (!selectedGroup || !farm?.id) return;
-        if (!confirm("입력하신 정보로 정산을 확정하시겠습니까?")) return;
+        // 단가만 저장 (is_settled 변경 없음)
+        if (data.saveAsPriceOnly) {
+            setFinanceSaving(true);
+            try {
+                // recordId별 그룹화 (복합등급 vs 단순 구분)
+                const recordMap = new Map<string, {
+                    entries: typeof data.entries;
+                    totalPrice: number;
+                    isCompound: boolean;
+                }>();
+                data.entries.forEach(entry => {
+                    const rid = entry.recordId;
+                    if (!rid) return;
+                    if (!recordMap.has(rid)) recordMap.set(rid, { entries: [], totalPrice: 0, isCompound: false });
+                    const g = recordMap.get(rid)!;
+                    g.entries.push(entry);
+                    g.totalPrice += entry.totalPrice;
+                    if (entry.isCompoundGrade) g.isCompound = true;
+                });
+                // 순차 업데이트
+                for (const [recordId, group] of Array.from(recordMap.entries())) {
+                    let updateData: any;
+                    if (group.isCompound) {
+                        // 복합등급: grade 필드에 단가 포함 저장 "하:40:25000,특/상:20:0,중:30:0"
+                        const newGrade = group.entries
+                            .map(e => `${e.grade}:${e.quantity}:${e.unitPrice}`)
+                            .join(',');
+                        const allPriced = group.entries.every(e => (e.unitPrice ?? 0) > 0);
+                        updateData = {
+                            grade: newGrade,
+                            price: allPriced ? (group.totalPrice || null) : null,
+                        };
+                    } else {
+                        // 단순 품목: price = unitPrice * qty
+                        updateData = { price: group.totalPrice || null };
+                    }
+                    const { error } = await supabase
+                        .from('sales_records')
+                        .update(updateData)
+                        .eq('id', recordId);
+                    if (error) throw new Error(error.message);
+                }
+                alert("단가가 저장되었습니다. 입금 확인 후 정산완료 버튼을 눌러주세요.");
+                setIsSettleModalOpen(false);
+                setSelectedGroup(null);
+                fetchFinanceData();
+            } catch (e: any) {
+                alert('저장 오류: ' + (e.message || '알 수 없는 오류'));
+            } finally {
+                setFinanceSaving(false);
+            }
+            return;
+        }
         setFinanceSaving(true);
         const actualAmt = data.actualAmount || 0;
         try {
@@ -861,54 +920,6 @@ export default function FinancePage() {
                     </Link>
                 </div>
 
-                {/* [bkit 판매 달력 토글] */}
-                <div className="bg-white rounded-[2rem] border-2 border-green-100 p-3 flex flex-col gap-4 shadow-sm mb-6">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-green-50 rounded-xl">
-                                <CalendarIcon className="w-5 h-5 text-green-600" />
-                            </div>
-                            <div>
-                                <h3 className="text-base font-black text-gray-900">판매 출하 달력</h3>
-                                <p className="text-[10px] text-gray-700 font-bold uppercase tracking-widest">일자별 미결산 건 현황</p>
-                            </div>
-                        </div>
-                        <button
-                            onClick={() => setShowCalendar(!showCalendar)}
-                            className={`px-4 py-2 rounded-xl text-xs font-black transition-all ${showCalendar ? 'bg-gray-100 text-gray-700' : 'bg-green-600 text-white shadow-lg shadow-green-100'}`}
-                        >
-                            {showCalendar ? '달력 숨기기' : '달력 보기'}
-                        </button>
-                    </div>
-
-                    {showCalendar && (
-                        <div className="pt-4 border-t border-gray-50 animate-in fade-in slide-in-from-top-2 duration-300">
-                            <CalendarUI
-                                selectedDate={selectedDate}
-                                onChange={setSelectedDate}
-                                harvestedDates={(() => {
-                                    const dates: Record<string, number[]> = {};
-                                    unsettledRecords.forEach((p: any) => {
-                                        p.dailyGroups.forEach((d: any) => {
-                                            const dt = d.date;
-                                            if (!dates[dt]) dates[dt] = [];
-                                            if (!dates[dt].includes(2)) dates[dt].push(2);
-                                        });
-                                    });
-                                    return dates;
-                                })()}
-                                mode="expenditure"
-                                legend={{
-                                    label: '판매 현황',
-                                    items: [
-                                        { value: 2, label: '🚚 미결산 건 있음', color: 'bg-amber-400' }
-                                    ]
-                                }}
-                            />
-                        </div>
-                    )}
-                </div>
-
                 {/* B2B 미결산 관리 섹션 */}
                 <section className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden mb-6">
                     <div className="p-3 bg-amber-50/50 border-b border-gray-50 flex items-center justify-between">
@@ -923,6 +934,12 @@ export default function FinancePage() {
                                 <p className="text-xs font-bold text-gray-700 mb-1">입금 대기 중인 금액</p>
                                 <h4 className="text-xl font-black text-gray-900 break-all">{formatCurrency(unsettledB2B)}</h4>
                             </div>
+                            {unpricedB2bCount > 0 && (
+                                <div className="text-center shrink-0">
+                                    <p className="text-[10px] font-black text-red-500 mb-0.5">단가 미입력</p>
+                                    <p className="text-lg font-black text-red-600">{unpricedB2bGroupCount}건 · {unpricedB2bCount}개</p>
+                                </div>
+                            )}
                             <div className="text-right shrink-0">
                                 <p className="text-xs font-bold text-green-600 mb-1">확정/입금된 금액</p>
                                 <p className="text-base font-black text-gray-700">{formatCurrency(b2bRevenue - unsettledB2B)}</p>
@@ -940,6 +957,30 @@ export default function FinancePage() {
                             <div className="flex -space-x-2">
                                 <div className="w-8 h-2 bg-green-500 rounded-l-full" style={{ width: `${(settledB2bCount / (settledB2bCount + unsettledB2bCount || 1)) * 100}%` }}></div>
                                 <div className="w-8 h-2 bg-amber-400 rounded-r-full" style={{ width: `${(unsettledB2bCount / (settledB2bCount + unsettledB2bCount || 1)) * 100}%` }}></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* B2C 미결산 요약 카드 */}
+                <section className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden mb-6">
+                    <div className="p-3 bg-pink-50/50 border-b border-gray-50 flex items-center justify-between">
+                        <h3 className="text-sm font-black text-pink-900 flex items-center gap-2">
+                            <Truck className="w-4 h-4" /> 택배거래 미결재 리포트
+                        </h3>
+                        <span className="text-[10px] font-black text-pink-600 bg-pink-100 px-2.5 py-1 rounded-full">{unsettledB2cRecords.length}건 대기</span>
+                    </div>
+                    <div className="p-5 space-y-5">
+                        <div className="flex items-end justify-between gap-3">
+                            <div className="min-w-0">
+                                <p className="text-xs font-bold text-gray-700 mb-1">미입금 총액</p>
+                                <h4 className="text-xl font-black text-gray-900 break-all">
+                                    {formatCurrency(unsettledB2cRecords.reduce((s: number, r: any) => s + (r.price || 0), 0))}
+                                </h4>
+                            </div>
+                            <div className="text-right shrink-0">
+                                <p className="text-xs font-bold text-green-600 mb-1">입금 완료된 금액</p>
+                                <p className="text-base font-black text-gray-700">{formatCurrency(b2cRevenue)}</p>
                             </div>
                         </div>
                     </div>
@@ -1053,8 +1094,13 @@ export default function FinancePage() {
                                                             </div>
                                                             <div className="text-right">
                                                                 <div className="mb-2">
-                                                                    {dateGroup.amount > 0 ? (
+                                                                    {!dateGroup.records.some((r: any) => !r.price || r.price === 0) ? (
                                                                         <p className="text-xl font-black text-gray-900">{formatCurrency(dateGroup.amount)}</p>
+                                                                    ) : dateGroup.amount > 0 ? (
+                                                                        <div className="space-y-1 text-right">
+                                                                            <p className="text-base font-black text-gray-700">{formatCurrency(dateGroup.amount)}</p>
+                                                                            <span className="text-red-500 bg-red-50 px-2 py-1 rounded-lg text-[10px] font-black border border-red-100">단가 미입력</span>
+                                                                        </div>
                                                                     ) : (
                                                                         <span className="text-red-500 bg-red-50 px-3 py-1.5 rounded-xl text-xs font-black animate-pulse border border-red-100">단가 미입력</span>
                                                                     )}

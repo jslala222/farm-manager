@@ -512,7 +512,11 @@ export default function Home() {
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-sm font-bold truncate" style={{ color: '#111827' }}>
-                                                    {act.type === 'harvest' ? '수확' : '출하'} · {act.label} {act.qty.toLocaleString()}{act.unit}
+                                                    {act.type === 'harvest' ? '수확' : '출하'} · {act.label}{' '}
+                                                    {act.type === 'sales'
+                                                        ? <><span className="font-black">{act.qty.toLocaleString()}개</span><span className="mx-2 text-gray-300 font-normal">·</span><span className="text-gray-500">{act.unit}</span></>
+                                                        : <span>{act.qty.toLocaleString()}{act.unit}</span>
+                                                    }
                                                 </p>
                                                 <p className="text-[10px]" style={{ color: '#9ca3af' }}>{timeStr}</p>
                                             </div>
@@ -644,7 +648,11 @@ export default function Home() {
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-sm font-bold truncate" style={{ color: '#111827' }}>
-                                                    {act.type === 'harvest' ? '수확' : '출하'} · {act.label} {act.qty.toLocaleString()}{act.unit}
+                                                    {act.type === 'harvest' ? '수확' : '출하'} · {act.label}{' '}
+                                                    {act.type === 'sales'
+                                                        ? <><span className="font-black">{act.qty.toLocaleString()}개</span><span className="mx-2 text-gray-300 font-normal">·</span><span className="text-gray-500">{act.unit}</span></>
+                                                        : <span>{act.qty.toLocaleString()}{act.unit}</span>
+                                                    }
                                                 </p>
                                                 <p className="text-[10px] mt-0.5" style={{ color: '#9ca3af' }}>{timeStr}</p>
                                             </div>
@@ -703,7 +711,9 @@ export default function Home() {
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <p className="text-sm font-black text-gray-800 truncate">
-                                                {r.crop_name || '출하물'} {r.quantity?.toLocaleString()}{r.sale_unit}
+                                                {r.crop_name || '출하물'}{' '}
+                                                <span className="font-black">{r.quantity?.toLocaleString()}개</span>
+                                                {r.sale_unit && <><span className="mx-1.5 text-gray-300">·</span><span className="text-gray-500 font-medium">{r.sale_unit}</span></>}
                                             </p>
                                             <p className="text-[10px] text-gray-400 font-medium mt-0.5">
                                                 {isCourier ? '택배' : '거래처 납품'}
