@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase, FarmCrop } from "@/lib/supabase";
+import { supabase, FarmCrop, SalesRecord } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
-import { ChevronLeft, ImageIcon } from "lucide-react";
+import { ChevronLeft, ImageIcon, X, TrendingUp, Package, AlertCircle, Tag } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 const CROP_ICON_MAP: Record<string, string> = {
@@ -19,12 +19,26 @@ const getCropIcon = (name: string) => {
     return '🌱';
 };
 
+interface CropStats {
+    monthlyQty: number;
+    unit: string;
+    monthlyRevenue: number;
+    unsettledAmount: number;
+    recentPrices: { grade: string; price: number }[];
+    recentDeliveries: { partner: string; qty: number; unit: string; date: string; isSettled: boolean }[];
+}
+
 export default function CropsPage() {
     const router = useRouter();
     const { farm } = useAuthStore();
     const [crops, setCrops] = useState<FarmCrop[]>([]);
     const [loading, setLoading] = useState(true);
     const [tab, setTab] = useState<'all' | 'crop' | 'processed'>('all');
+
+    // 바텀시트 상태
+    const [selectedCrop, setSelectedCrop] = useState<FarmCrop | null>(null);
+    const [cropStats, setCropStats] = useState<CropStats | null>(null);
+    const [statsLoading, setStatsLoading] = useState(false);
 
     useEffect(() => {
         if (farm?.id) fetchCrops();
@@ -40,6 +54,97 @@ export default function CropsPage() {
             .order('sort_order');
         setCrops(data ?? []);
         setLoading(false);
+    };
+
+    const handleCropClick = async (crop: FarmCrop) => {
+        if (!farm?.id) return;
+        setSelectedCrop(crop);
+        setCropStats(null);
+        setStatsLoading(true);
+
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+        // 이번달 전체 + 최근 20건 한 번에 조회
+        const [monthRes, recentRes, unsettledRes] = await Promise.all([
+            supabase
+                .from('sales_records')
+                .select('quantity, price, sale_unit, is_settled')
+                .eq('farm_id', farm!.id)
+                .eq('crop_name', crop.crop_name)
+                .gte('recorded_at', monthStart),
+            supabase
+                .from('sales_records')
+                .select('quantity, price, grade, sale_unit, recorded_at, is_settled, sale_type, partner:partner_id(company_name)')
+                .eq('farm_id', farm!.id)
+                .eq('crop_name', crop.crop_name)
+                .order('recorded_at', { ascending: false })
+                .limit(20),
+            supabase
+                .from('sales_records')
+                .select('quantity, price')
+                .eq('farm_id', farm!.id)
+                .eq('crop_name', crop.crop_name)
+                .eq('is_settled', false),
+        ]);
+
+        const monthRecords: SalesRecord[] = monthRes.data ?? [];
+        const recentRecords: SalesRecord[] = recentRes.data ?? [];
+        const unsettledRecords: SalesRecord[] = unsettledRes.data ?? [];
+
+        // 이번달 출하량 / 매출
+        const monthlyQty = monthRecords.reduce((s, r) => s + (r.quantity ?? 0), 0);
+        const monthlyRevenue = monthRecords.reduce((s, r) => s + ((r.quantity ?? 0) * (r.price ?? 0)), 0);
+
+        // 미정산 금액
+        const unsettledAmount = unsettledRecords.reduce((s, r) => s + ((r.quantity ?? 0) * (r.price ?? 0)), 0);
+
+        // 등급별 최근 단가
+        const priceMap = new Map<string, number>();
+        recentRecords.forEach(r => {
+            const grade = r.grade ?? '미지정';
+            if ((r.price ?? 0) > 0 && !priceMap.has(grade)) {
+                priceMap.set(grade, r.price!);
+            }
+        });
+        const recentPrices = Array.from(priceMap.entries()).map(([grade, price]) => ({ grade, price }));
+
+        // 최근 납품 리스트 (B2B, 분 단위 그룹화로 중복 제거)
+        const deliveryMap = new Map<string, { partner: string; qty: number; unit: string; date: string; isSettled: boolean }>();
+        recentRecords
+            .filter(r => r.sale_type === 'b2b' || (r.sale_type === 'etc' && r.partner))
+            .forEach(r => {
+                const partner = (r.partner as { company_name?: string } | null)?.company_name ?? '거래처';
+                const dateKey = r.recorded_at.slice(0, 16); // 분 단위 키
+                if (!deliveryMap.has(dateKey)) {
+                    const dateStr = r.recorded_at.slice(0, 10).replace(/-/g, '/');
+                    deliveryMap.set(dateKey, {
+                        partner,
+                        qty: r.quantity ?? 0,
+                        unit: r.sale_unit ?? crop.default_unit,
+                        date: dateStr,
+                        isSettled: r.is_settled ?? false,
+                    });
+                } else {
+                    deliveryMap.get(dateKey)!.qty += r.quantity ?? 0;
+                }
+            });
+        const recentDeliveries = Array.from(deliveryMap.values()).slice(0, 5);
+
+        setCropStats({
+            monthlyQty,
+            unit: crop.default_unit,
+            monthlyRevenue,
+            unsettledAmount,
+            recentPrices,
+            recentDeliveries,
+        });
+        setStatsLoading(false);
+    };
+
+    const closeSheet = () => {
+        setSelectedCrop(null);
+        setCropStats(null);
     };
 
     const filtered = crops.filter(c =>
@@ -59,6 +164,9 @@ export default function CropsPage() {
         'linear-gradient(135deg, #1c1917 0%, #78716c 100%)',
         'linear-gradient(135deg, #134e4a 0%, #0d9488 100%)',
     ];
+
+    const now = new Date();
+    const monthLabel = `${now.getMonth() + 1}월`;
 
     return (
         <div className="p-4 md:p-6 pb-20 max-w-4xl mx-auto">
@@ -127,8 +235,10 @@ export default function CropsPage() {
             ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                     {filtered.map((crop, idx) => (
-                        <div key={crop.id}
-                            className="relative rounded-2xl overflow-hidden shadow-md aspect-[3/4]"
+                        <button
+                            key={crop.id}
+                            onClick={() => handleCropClick(crop)}
+                            className="relative rounded-2xl overflow-hidden shadow-md aspect-[3/4] text-left active:scale-[0.97] transition-transform"
                             style={{
                                 background: crop.crop_image_url
                                     ? undefined
@@ -143,7 +253,6 @@ export default function CropsPage() {
                                     className="absolute inset-0 w-full h-full object-cover"
                                 />
                             ) : (
-                                /* 이모지 배경 장식 */
                                 <div className="absolute -bottom-4 -right-4 w-24 h-24 rounded-full"
                                     style={{ background: 'rgba(255,255,255,0.07)' }} />
                             )}
@@ -175,7 +284,7 @@ export default function CropsPage() {
                                     단위: {crop.default_unit}
                                 </p>
                             </div>
-                        </div>
+                        </button>
                     ))}
                 </div>
             )}
@@ -187,6 +296,156 @@ export default function CropsPage() {
                         className="px-6 py-3 bg-white border border-gray-200 text-gray-600 rounded-2xl font-black text-sm hover:bg-gray-50 transition-all">
                         ⚙️ 사진 설정하기
                     </button>
+                </div>
+            )}
+
+            {/* ── 바텀시트 오버레이 ── */}
+            {selectedCrop && (
+                <div
+                    className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm"
+                    onClick={closeSheet}
+                >
+                    <div
+                        className="bg-white w-full max-w-md rounded-t-[2rem] shadow-2xl max-h-[82vh] flex flex-col animate-slide-up"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* 핸들 + 헤더 */}
+                        <div className="flex items-center justify-between px-5 pt-4 pb-3 shrink-0">
+                            <div className="flex items-center gap-3">
+                                <span className="text-3xl">
+                                    {selectedCrop.crop_icon || getCropIcon(selectedCrop.crop_name)}
+                                </span>
+                                <div>
+                                    <p className="text-base font-black text-slate-900">{selectedCrop.crop_name}</p>
+                                    <p className="text-[10px] text-slate-400 font-bold">
+                                        {selectedCrop.category === 'crop' ? '원물' : '가공품'} · 단위: {selectedCrop.default_unit}
+                                    </p>
+                                </div>
+                            </div>
+                            <button onClick={closeSheet}
+                                className="p-2 rounded-xl bg-slate-100 text-slate-400 hover:bg-slate-200 transition-all">
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        {/* 콘텐츠 */}
+                        <div className="overflow-y-auto flex-1 px-5 pb-6 space-y-4">
+                            {statsLoading ? (
+                                <div className="space-y-3 pt-2">
+                                    {[1, 2, 3].map(i => (
+                                        <div key={i} className="h-16 bg-slate-100 rounded-2xl animate-pulse" />
+                                    ))}
+                                </div>
+                            ) : cropStats ? (
+                                <>
+                                    {/* KPI 카드 4개 */}
+                                    <div className="grid grid-cols-2 gap-2.5">
+                                        {/* 이번달 출하량 */}
+                                        <div className="bg-emerald-50 rounded-2xl p-3.5 flex items-start gap-2.5">
+                                            <div className="p-1.5 bg-emerald-100 rounded-xl shrink-0">
+                                                <Package className="w-4 h-4 text-emerald-600" />
+                                            </div>
+                                            <div>
+                                                <p className="text-[9px] font-black text-emerald-500 uppercase">{monthLabel} 출하</p>
+                                                <p className="text-lg font-black text-emerald-800 leading-tight">
+                                                    {cropStats.monthlyQty.toLocaleString()}
+                                                    <span className="text-xs ml-0.5">{cropStats.unit}</span>
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* 이번달 매출 */}
+                                        <div className="bg-blue-50 rounded-2xl p-3.5 flex items-start gap-2.5">
+                                            <div className="p-1.5 bg-blue-100 rounded-xl shrink-0">
+                                                <TrendingUp className="w-4 h-4 text-blue-600" />
+                                            </div>
+                                            <div>
+                                                <p className="text-[9px] font-black text-blue-500 uppercase">{monthLabel} 매출</p>
+                                                <p className="text-lg font-black text-blue-800 leading-tight">
+                                                    {cropStats.monthlyRevenue > 0
+                                                        ? `${Math.round(cropStats.monthlyRevenue / 10000)}만`
+                                                        : '-'}
+                                                    {cropStats.monthlyRevenue > 0 && <span className="text-xs ml-0.5">원</span>}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* 미정산 금액 */}
+                                        <div className={`rounded-2xl p-3.5 flex items-start gap-2.5 ${cropStats.unsettledAmount > 0 ? 'bg-rose-50' : 'bg-slate-50'}`}>
+                                            <div className={`p-1.5 rounded-xl shrink-0 ${cropStats.unsettledAmount > 0 ? 'bg-rose-100' : 'bg-slate-100'}`}>
+                                                <AlertCircle className={`w-4 h-4 ${cropStats.unsettledAmount > 0 ? 'text-rose-500' : 'text-slate-400'}`} />
+                                            </div>
+                                            <div>
+                                                <p className={`text-[9px] font-black uppercase ${cropStats.unsettledAmount > 0 ? 'text-rose-400' : 'text-slate-400'}`}>미정산</p>
+                                                <p className={`text-lg font-black leading-tight ${cropStats.unsettledAmount > 0 ? 'text-rose-700' : 'text-slate-400'}`}>
+                                                    {cropStats.unsettledAmount > 0
+                                                        ? `${Math.round(cropStats.unsettledAmount / 10000)}만`
+                                                        : '없음'}
+                                                    {cropStats.unsettledAmount > 0 && <span className="text-xs ml-0.5">원</span>}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* 최근 단가 */}
+                                        <div className="bg-amber-50 rounded-2xl p-3.5 flex items-start gap-2.5">
+                                            <div className="p-1.5 bg-amber-100 rounded-xl shrink-0">
+                                                <Tag className="w-4 h-4 text-amber-600" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-[9px] font-black text-amber-500 uppercase">최근 단가</p>
+                                                {cropStats.recentPrices.length > 0 ? (
+                                                    <div className="mt-0.5 space-y-0.5">
+                                                        {cropStats.recentPrices.slice(0, 2).map(({ grade, price }) => (
+                                                            <p key={grade} className="text-xs font-black text-amber-800">
+                                                                <span className="text-amber-500">{grade} </span>
+                                                                {price.toLocaleString()}원
+                                                            </p>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-lg font-black text-slate-300">-</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* 최근 납품 리스트 */}
+                                    {cropStats.recentDeliveries.length > 0 && (
+                                        <div>
+                                            <p className="text-[9px] font-black text-slate-400 uppercase mb-2 px-1">최근 납품</p>
+                                            <div className="space-y-1.5">
+                                                {cropStats.recentDeliveries.map((d, i) => (
+                                                    <div key={i} className="flex items-center gap-3 bg-slate-50 rounded-2xl px-4 py-3">
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-sm font-black text-slate-800 truncate">{d.partner}</p>
+                                                            <p className="text-[10px] text-slate-400 font-bold">{d.date}</p>
+                                                        </div>
+                                                        <div className="text-right shrink-0">
+                                                            <p className="text-sm font-black text-slate-700">
+                                                                {d.qty.toLocaleString()}{d.unit}
+                                                            </p>
+                                                            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${d.isSettled
+                                                                ? 'bg-emerald-100 text-emerald-600'
+                                                                : 'bg-amber-100 text-amber-600'}`}>
+                                                                {d.isSettled ? '완료' : '미정산'}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* 데이터 없음 */}
+                                    {cropStats.monthlyQty === 0 && cropStats.recentDeliveries.length === 0 && (
+                                        <div className="py-8 text-center">
+                                            <p className="text-slate-300 font-black text-sm">이번달 출하 기록이 없습니다</p>
+                                        </div>
+                                    )}
+                                </>
+                            ) : null}
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
