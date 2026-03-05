@@ -7,12 +7,13 @@ import { supabase, SalesRecord, Customer } from "@/lib/supabase";
 import { formatCurrency, formatPhone, stripNonDigits, getCropIcon } from "@/lib/utils";
 import AddressSearch from "@/components/AddressSearch";
 import CalendarComponent from "@/components/Calendar";
+import { toast } from "sonner";
 
 const toLocalDateStr = (d: Date = new Date()) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 export default function CourierSalesPage() {
-    const { farm, initialized } = useAuthStore();
+    const { farm, initialized, cropIconMap } = useAuthStore();
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [history, setHistory] = useState<SalesRecord[]>([]);
     const [loading, setLoading] = useState(false);
@@ -63,7 +64,7 @@ export default function CourierSalesPage() {
         setCourierItems(prev => [...prev, {
             id: Date.now().toString() + Math.random().toString(36).slice(2, 7),
             cropName: crop.crop_name,
-            cropIcon: getCropIcon(crop.crop_name),
+            cropIcon: cropIconMap[crop.crop_name] || getCropIcon(crop.crop_name),
             unit: getEffectiveUnits(crop)[0],
             quantity: '', unitPrice: ''
         }]);
@@ -148,9 +149,9 @@ export default function CourierSalesPage() {
 
     const handleSave = async () => {
         if (!farm?.id || saving) return;
-        if (!ordererName) { alert("주문자 성함을 입력해주세요."); return; }
+        if (!ordererName) { toast.error("주문자 성함을 입력해주세요."); return; }
         const validItems = courierItems.filter(i => Number(i.quantity) > 0);
-        if (validItems.length === 0) { alert("품목을 추가하고 수량을 입력해주세요."); return; }
+        if (validItems.length === 0) { toast.error("품목을 추가하고 수량을 입력해주세요."); return; }
         const finalShipping = Number(stripNonDigits(shippingCost)) || 0;
         setSaving(true);
         try {
@@ -186,13 +187,13 @@ export default function CourierSalesPage() {
             setIsEditMode(false);
             setDetailModal(null);
             setTimeout(() => fetchHistory(), 200);
-            alert("✅ 기록이 성공적으로 저장되었습니다!");
+            toast.success("✅ 기록이 성공적으로 저장되었습니다!");
             setErrorMsg(null);
         } catch (error: any) {
             console.error("저장 중 오류 상세:", JSON.stringify(error, null, 2));
             const msg = error.message || "알 수 없는 오류";
             setErrorMsg(msg);
-            alert("저장 실패: " + msg);
+            toast.error("저장 실패: " + msg);
         } finally {
             setSaving(false);
         }
@@ -213,7 +214,7 @@ export default function CourierSalesPage() {
         setCourierItems(group.map((r: any) => ({
             id: r.id,
             cropName: r.crop_name || '딸기',
-            cropIcon: getCropIcon(r.crop_name || ''),
+            cropIcon: cropIconMap[r.crop_name || ''] || getCropIcon(r.crop_name || ''),
             unit: r.sale_unit || '박스',
             quantity: r.quantity?.toString() || '',
             unitPrice: r.quantity && r.price ? Math.floor(r.price / r.quantity).toString() : ''
@@ -351,7 +352,7 @@ export default function CourierSalesPage() {
                                             <button key={crop.id}
                                                 onClick={() => addToCart(crop)}
                                                 className="min-w-[68px] flex flex-col items-center justify-center py-2.5 px-1.5 rounded-2xl border-2 transition-all gap-0.5 shrink-0 bg-white border-slate-100 hover:border-rose-300 hover:bg-rose-50 active:scale-95">
-                                                <span className="text-2xl leading-none">{getCropIcon(crop.crop_name)}</span>
+                                                <span className="text-2xl leading-none">{cropIconMap[crop.crop_name] || getCropIcon(crop.crop_name)}</span>
                                                 <span className="text-[9px] font-black text-slate-800 whitespace-nowrap truncate max-w-[60px]">{crop.crop_name}</span>
                                             </button>
                                         ))}
@@ -520,14 +521,14 @@ export default function CourierSalesPage() {
                             {groupedHistory.map(group => {
                                 const first = group[0];
                                 const totalPrice = group.reduce((s, r) => s + (r.price || 0), 0);
-                                const groupIcons = group.map(r => getCropIcon(r.crop_name || ''));
+                                const groupIcons = group.map(r => cropIconMap[r.crop_name || ''] || getCropIcon(r.crop_name || ''));
                                 const qtySummary = group.length > 1
                                     ? group.map(r => `${r.quantity}${r.sale_unit}`).join('+')
                                     : `${first.quantity}${first.sale_unit}`;
                                 return (
                                     <button key={first.id}
                                         onClick={() => setDetailModal(group)}
-                                        className="w-full text-left bg-white p-3 rounded-2xl border border-slate-100 hover:border-rose-200 transition-all shadow-sm active:scale-[0.98] flex flex-col gap-1.5">
+                                        className={`w-full text-left bg-white p-3 rounded-2xl border transition-all shadow-sm active:scale-[0.98] flex flex-col gap-1.5 ${first.is_settled ? 'border-slate-100 hover:border-rose-200' : 'border-red-700 hover:border-red-800'}`}>
                                         {/* 상단: 아이콘 + 정산상태 */}
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-0.5">
@@ -589,7 +590,7 @@ export default function CourierSalesPage() {
                                         <div className="space-y-0.5 mt-1">
                                             {allItems.map((item, idx) => (
                                                 <p key={idx} className="text-xs text-slate-400 font-bold">
-                                                    {getCropIcon(item.crop_name || '')} {item.crop_name} {item.quantity}{item.sale_unit} · {formatCurrency(item.price || 0)}
+                                                    {cropIconMap[item.crop_name || ''] || getCropIcon(item.crop_name || '')} {item.crop_name} {item.quantity}{item.sale_unit} · {formatCurrency(item.price || 0)}
                                                 </p>
                                             ))}
                                             {allItems.length > 1 && (

@@ -9,6 +9,7 @@ import {
 import { useAuthStore } from "@/store/authStore";
 import { supabase, Worker, AttendanceRecord, LaborCost } from "@/lib/supabase";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 // ─── 상수 ─────────────────────────────────────────────────────────────────────
 type Source = '인력사무소' | '개별직접';
@@ -96,7 +97,7 @@ export default function LaborPage() {
             const { data } = await supabase
                 .from('workers')
                 .select('*')
-                .eq('farm_id', farm!.id)
+                .eq('farm_id', farm?.id ?? '')
                 .eq('is_active', true)
                 .in('role', ['staff', 'family', 'foreign'])
                 .order('name');
@@ -112,7 +113,7 @@ export default function LaborPage() {
             const { data } = await supabase
                 .from('labor_costs')
                 .select('*')
-                .eq('farm_id', farm!.id)
+                .eq('farm_id', farm?.id ?? '')
                 .eq('work_date', selectedDate)
                 .order('created_at');
             return (data ?? []) as LaborCost[];
@@ -127,7 +128,7 @@ export default function LaborPage() {
             const { data } = await supabase
                 .from('attendance_records')
                 .select('*')
-                .eq('farm_id', farm!.id)
+                .eq('farm_id', farm?.id ?? '')
                 .eq('work_date', selectedDate);
             return (data ?? []) as AttendanceRecord[];
         },
@@ -154,7 +155,7 @@ export default function LaborPage() {
             const { data } = await supabase
                 .from('labor_costs')
                 .select('*')
-                .eq('farm_id', farm!.id)
+                .eq('farm_id', farm?.id ?? '')
                 .gte('work_date', weekDates[0])
                 .lte('work_date', weekDates[6]);
             return (data ?? []) as LaborCost[];
@@ -169,7 +170,7 @@ export default function LaborPage() {
             const { data } = await supabase
                 .from('attendance_records')
                 .select('*')
-                .eq('farm_id', farm!.id)
+                .eq('farm_id', farm?.id ?? '')
                 .gte('work_date', weekDates[0])
                 .lte('work_date', weekDates[6]);
             return (data ?? []) as AttendanceRecord[];
@@ -215,7 +216,7 @@ export default function LaborPage() {
             const { data } = await supabase
                 .from('labor_costs')
                 .select('source, headcount, daily_wage, tip')
-                .eq('farm_id', farm!.id)
+                .eq('farm_id', farm?.id ?? '')
                 .gte('work_date', monthStart)
                 .lte('work_date', monthEnd);
             return (data ?? []) as Pick<LaborCost, 'source' | 'headcount' | 'daily_wage' | 'tip'>[];
@@ -229,7 +230,7 @@ export default function LaborPage() {
             const { data } = await supabase
                 .from('attendance_records')
                 .select('is_present')
-                .eq('farm_id', farm!.id)
+                .eq('farm_id', farm?.id ?? '')
                 .gte('work_date', monthStart)
                 .lte('work_date', monthEnd)
                 .eq('is_present', true);
@@ -376,7 +377,7 @@ export default function LaborPage() {
             setSavedFlash(true);
             setTimeout(() => setSavedFlash(false), 2000);
         } catch (err: any) {
-            alert(`저장 실패: ${err.message}`);
+            toast.error(`저장 실패: ${err.message}`);
         } finally {
             setSaving(false);
         }
@@ -387,7 +388,7 @@ export default function LaborPage() {
         if (!farm?.id || totals.grand === 0) return;
         const unpaid = rows.filter(r => !r.paid);
         if (unpaid.length === 0) {
-            alert('이미 모두 지급완료 처리된 항목입니다.');
+            toast.error('이미 모두 지급완료 처리된 항목입니다.');
             return;
         }
         const unpaidTotal = unpaid.reduce((s, r) => s + rowSubtotal(r), 0);
@@ -431,9 +432,9 @@ export default function LaborPage() {
 
             queryClient.invalidateQueries({ queryKey: ['labor_costs'] });
             queryClient.invalidateQueries({ queryKey: ['expenditures'] });
-            alert(`✅ 지급 완료!\n${unpaidTotal.toLocaleString()}원이 지출에 등록되었습니다.`);
+            toast.success(`✅ 지급 완료!\n${unpaidTotal.toLocaleString()}원이 지출에 등록되었습니다.`);
         } catch (err: any) {
-            alert(`오류: ${err.message}`);
+            toast.error(`오류: ${err.message}`);
         } finally {
             setSaving(false);
         }

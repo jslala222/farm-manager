@@ -1,16 +1,26 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { CheckCircle, XCircle, Users, Sprout } from "lucide-react";
 import { supabase, Farm } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
+import { toast } from "sonner";
 
 export default function AdminPage() {
     const { profile } = useAuthStore();
+    const router = useRouter();
     const [farms, setFarms] = useState<(Farm & { owner_email?: string })[]>([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => { fetchFarms(); }, []);
+    useEffect(() => {
+        if (profile && profile.role !== 'admin') {
+            toast.error('관리자 전용 페이지입니다.');
+            router.push('/');
+            return;
+        }
+        if (profile) fetchFarms();
+    }, [profile]);
 
     const fetchFarms = async () => {
         setLoading(true);
@@ -22,7 +32,7 @@ export default function AdminPage() {
 
         if (error) {
             console.error("농장 로드 실패:", error);
-            alert("농장 정보를 불러오는데 실패했습니다.");
+            toast.error("농장 정보를 불러오는데 실패했습니다.");
         } else {
             setFarms(data ?? []);
         }
@@ -36,7 +46,7 @@ export default function AdminPage() {
         const { error: farmError } = await supabase.from('farms').update({ is_active: newStatus }).eq('id', id);
 
         if (farmError) {
-            alert("상태 변경 실패: " + farmError.message);
+            toast.error("상태 변경 실패: " + farmError.message);
             return;
         }
 

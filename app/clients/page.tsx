@@ -7,6 +7,7 @@ import { supabase, Partner, Customer } from "@/lib/supabase";
 import { formatPhone, formatCurrency, stripNonDigits, formatBusinessNumber } from "@/lib/utils";
 import NavBar from "@/components/NavBar";
 import AddressSearch from "@/components/AddressSearch";
+import { toast } from "sonner";
 
 export default function ClientsPage() {
     const { farm, initialized } = useAuthStore();
@@ -160,7 +161,7 @@ export default function ClientsPage() {
                 }
             } else {
                 if (!customerFormData.name) {
-                    alert("고객명을 입력해주세요.");
+                    toast.error("고객명을 입력해주세요.");
                     return;
                 }
 
@@ -193,7 +194,7 @@ export default function ClientsPage() {
             fetchData();
         } catch (error: any) {
             console.error("Save error detail:", error);
-            alert(`저장 실패: ${error.message}`);
+            toast.error(`저장 실패: ${error.message}`);
         }
     };
 
@@ -201,7 +202,7 @@ export default function ClientsPage() {
         if (!confirm("정말 삭제하시겠습니까? 연결된 모든 판매 내역이 함께 삭제됩니다.")) return;
         const table = activeTab === 'business' ? 'partners' : 'customers';
         const { error } = await supabase.from(table).delete().eq('id', id);
-        if (error) alert(`삭제 실패: ${error.message}`);
+        if (error) toast.error(`삭제 실패: ${error.message}`);
         else fetchData();
     };
 

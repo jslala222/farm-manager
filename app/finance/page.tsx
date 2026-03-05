@@ -33,6 +33,7 @@ import { supabase } from "@/lib/supabase";
 import { formatCurrency, getCropIcon } from "@/lib/utils";
 import { settlementService } from "@/lib/settlementService";
 import SettlementModal, { ModalCropEntry, SettlementSaveData } from "@/components/SettlementModal";
+import { toast } from "sonner";
 
 export default function FinancePage() {
     const { farm, initialized } = useAuthStore();
@@ -466,9 +467,9 @@ export default function FinancePage() {
         const { error } = await supabase.rpc('exec_sql', { sql_query: sql });
 
         if (error) {
-            alert("자동 복구 도중 오류가 발생했습니다.\n사장님, 죄송하지만 'SQL Editor'에 제가 드린 코드를 한 번만 붙여넣어 주세요.\n(RPC 권한 부족 등의 이유일 수 있습니다.)");
+            toast.error("자동 복구 도중 오류가 발생했습니다.\n사장님, 죄송하지만 'SQL Editor'에 제가 드린 코드를 한 번만 붙여넣어 주세요.\n(RPC 권한 부족 등의 이유일 수 있습니다.)");
         } else {
-            alert("DB 구조가 성공적으로 복구되었습니다! 이제 시원하게 정산하실 수 있습니다. 🍓");
+            toast.success("DB 구조가 성공적으로 복구되었습니다! 이제 시원하게 정산하실 수 있습니다. 🍓");
             fetchFinanceData();
         }
         setLoading(false);
@@ -580,12 +581,12 @@ export default function FinancePage() {
                 throw new Error(`DB 저장 오류: ${messages}`);
             }
 
-            alert("정산이 성공적으로 완료되었습니다! 🍓");
+            toast.success("정산이 성공적으로 완료되었습니다! 🍓");
             setIsSettleModalOpen(false);
             fetchFinanceData();
         } catch (error: any) {
             console.error("Settlement Error:", error);
-            alert("정산 처리 중 오류가 발생했습니다: " + (error.message || "알 수 없는 오류"));
+            toast.error("정산 처리 중 오류가 발생했습니다: " + (error.message || "알 수 없는 오류"));
         } finally {
             setLoading(false);
         }
@@ -668,12 +669,12 @@ export default function FinancePage() {
                         .eq('id', recordId);
                     if (error) throw new Error(error.message);
                 }
-                alert("단가가 저장되었습니다. 입금 확인 후 정산완료 버튼을 눌러주세요.");
+                toast.error("단가가 저장되었습니다. 입금 확인 후 정산완료 버튼을 눌러주세요.");
                 setIsSettleModalOpen(false);
                 setSelectedGroup(null);
                 fetchFinanceData();
             } catch (e: any) {
-                alert('저장 오류: ' + (e.message || '알 수 없는 오류'));
+                toast.error('저장 오류: ' + (e.message || '알 수 없는 오류'));
             } finally {
                 setFinanceSaving(false);
             }
@@ -728,13 +729,13 @@ export default function FinancePage() {
             const results = await Promise.all(promises);
             const errorResults = results.filter(r => r.error);
             if (errorResults.length > 0) throw new Error(errorResults.map(r => r.error?.message).join('\n'));
-            alert("정산이 성공적으로 완료되었습니다! 🍓");
+            toast.success("정산이 성공적으로 완료되었습니다! 🍓");
             setIsSettleModalOpen(false);
             setSelectedGroup(null);
             fetchFinanceData();
         } catch (e: any) {
             console.error("Finance save error:", e);
-            alert("정산 오류: " + (e.message || "알 수 없는 오류"));
+            toast.error("정산 오류: " + (e.message || "알 수 없는 오류"));
         } finally {
             setFinanceSaving(false);
         }
@@ -1229,7 +1230,7 @@ export default function FinancePage() {
                                             setB2cConfirmRecord(null);
                                             fetchFinanceData();
                                         } else {
-                                            alert('입금 확인 실패: ' + error.message);
+                                            toast.error('입금 확인 실패: ' + error.message);
                                         }
                                     }}
                                     className={`flex-1 py-3 rounded-xl text-sm font-black text-white shadow-lg transition-all

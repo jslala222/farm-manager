@@ -17,6 +17,7 @@ import {
 import { useAuthStore } from "@/store/authStore";
 import { supabase, OtherIncome } from "@/lib/supabase";
 import { formatCurrency } from "@/lib/utils";
+import { toast } from "sonner";
 
 // 기타수입 카테고리 목록
 const INCOME_TYPES = [
@@ -80,7 +81,7 @@ export default function OtherIncomePage() {
         if (!farm?.id) return;
         const amount = parseInt(formAmount.replace(/[^0-9]/g, ''));
         if (!amount || amount <= 0) {
-            alert('금액을 입력해주세요.');
+            toast.error('금액을 입력해주세요.');
             return;
         }
 
@@ -99,7 +100,7 @@ export default function OtherIncomePage() {
                 .eq('id', editingId);
 
             if (error) {
-                alert('수정 실패: ' + error.message);
+                toast.error('수정 실패: ' + error.message);
             } else {
                 setEditingId(null);
                 setShowAddForm(false);
@@ -119,7 +120,7 @@ export default function OtherIncomePage() {
                 });
 
             if (error) {
-                alert('추가 실패: ' + error.message);
+                toast.error('추가 실패: ' + error.message);
             } else {
                 setShowAddForm(false);
                 resetForm();
@@ -133,7 +134,7 @@ export default function OtherIncomePage() {
         if (!confirm('이 기타수입 내역을 삭제하시겠습니까?')) return;
         const { error } = await supabase.from('other_incomes').delete().eq('id', id);
         if (error) {
-            alert('삭제 실패: ' + error.message);
+            toast.error('삭제 실패: ' + error.message);
         } else {
             fetchIncomes();
         }

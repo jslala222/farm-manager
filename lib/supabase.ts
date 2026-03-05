@@ -10,7 +10,6 @@ const getSupabaseClient = () => {
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
     if (typeof window !== 'undefined') {
-        console.log("🍓 [bkit] 하이퍼-커넥트 엔진 가동 중...");
     }
 
     supabaseInstance = createBrowserClient(url, key, {

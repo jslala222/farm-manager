@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { supabase, CropCatalog, CropCatalogGroup } from "@/lib/supabase";
 import { X, Upload, ImageIcon, Check, ChevronLeft } from "lucide-react";
 import { compressImage } from "@/lib/utils";
+import { toast } from "sonner";
 
 const TARGET_KB = 150; // 자동 압축 목표
 
@@ -105,7 +106,7 @@ export default function CropImagePicker({
             const { data: urlData } = supabase.storage.from('crop-photos').getPublicUrl(path);
             onSelect(urlData.publicUrl + `?t=${Date.now()}`, 'custom');
         } catch (err: any) {
-            alert('업로드 실패: ' + err.message);
+            toast.error('업로드 실패: ' + err.message);
         } finally {
             setUploading(false);
             e.target.value = '';

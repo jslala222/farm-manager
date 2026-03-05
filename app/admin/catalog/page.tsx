@@ -6,6 +6,7 @@ import { useAuthStore } from "@/store/authStore";
 import { Upload, Trash2, ChevronLeft, ImageIcon, Eye, EyeOff, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { compressImage } from "@/lib/utils";
+import { toast } from "sonner";
 
 const TARGET_KB = 150; // 자동 압축 목표
 
@@ -36,7 +37,7 @@ export default function AdminCatalogPage() {
 
     useEffect(() => {
         if (profile && profile.role !== 'admin') {
-            alert('관리자 전용 페이지입니다.');
+            toast('관리자 전용 페이지입니다.');
             router.push('/');
             return;
         }
@@ -81,14 +82,14 @@ export default function AdminCatalogPage() {
             setPendingFile(compressed);
             setPreviewUrl(URL.createObjectURL(compressed));
         } catch {
-            alert('이미지 처리 중 오류가 발생했습니다.');
+            toast.error('이미지 처리 중 오류가 발생했습니다.');
         }
     };
 
     // 신규 작물 등록 (작물명 + 첫 사진)
     const handleRegister = async () => {
         if (!pendingFile || !newName.trim()) {
-            alert('작물명과 사진을 모두 입력해주세요.');
+            toast.error('작물명과 사진을 모두 입력해주세요.');
             return;
         }
         setUploading(true);
@@ -117,7 +118,7 @@ export default function AdminCatalogPage() {
             setNewName(''); setNewIcon('🌱'); setPendingFile(null); setPreviewUrl(null);
             fetchCatalog();
         } catch (err: any) {
-            alert('등록 실패: ' + err.message);
+            toast.error('등록 실패: ' + err.message);
         } finally {
             setUploading(false);
         }
@@ -133,7 +134,7 @@ export default function AdminCatalogPage() {
             setAddFile(compressed);
             setAddPreview(URL.createObjectURL(compressed));
         } catch {
-            alert('이미지 처리 중 오류가 발생했습니다.');
+            toast.error('이미지 처리 중 오류가 발생했습니다.');
         }
     };
 
@@ -166,7 +167,7 @@ export default function AdminCatalogPage() {
             setAddPreview(null);
             fetchCatalog();
         } catch (err: any) {
-            alert('업로드 실패: ' + err.message);
+            toast.error('업로드 실패: ' + err.message);
         } finally {
             setUploading(false);
         }

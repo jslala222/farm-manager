@@ -7,6 +7,7 @@ import { useAuthStore } from "@/store/authStore";
 import { supabase, Expenditure } from "@/lib/supabase";
 import { formatCurrency, stripNonDigits } from "@/lib/utils";
 import Calendar from "@/components/Calendar";
+import { toast } from "sonner";
 
 const CATEGORY_MAP: Record<string, string[]> = {
     '농작관리': ["비료/영양제", "농약/종자", "시설보수", "농기계유지/유류", "농기계구입/할부", "수도/전기/가스", "포장재/소모품", "기타 영농비"],
@@ -90,7 +91,7 @@ export default function ExpensesPage() {
             setNotes("");
             setIsAdding(false);
         },
-        onError: (error: any) => alert(`저장 실패: ${error.message}`)
+        onError: (error: any) => toast.error(`저장 실패: ${error.message}`)
     });
 
     // 지출 삭제 Mutation
@@ -103,7 +104,7 @@ export default function ExpensesPage() {
             queryClient.invalidateQueries({ queryKey: ['expenses', farm?.id] });
             setEditModal(null);
         },
-        onError: () => alert("삭제 실패")
+        onError: () => toast.error("삭제 실패")
     });
 
     // 지출 수정 Mutation
@@ -116,7 +117,7 @@ export default function ExpensesPage() {
             queryClient.invalidateQueries({ queryKey: ['expenses', farm?.id] });
             setEditModal(null);
         },
-        onError: (e: any) => alert(`수정 실패: ${e.message}`)
+        onError: (e: any) => toast.error(`수정 실패: ${e.message}`)
     });
 
     // 수정 모달 상태

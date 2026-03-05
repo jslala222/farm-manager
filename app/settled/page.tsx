@@ -10,6 +10,7 @@ import SettlementModal, { ModalCropEntry, SettlementSaveData } from "@/component
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { toast } from "sonner";
 
 // 날짜 범위 기본값: 이번달 1일 ~ 오늘
 const toLocalDateStr = (d: Date = new Date()) =>
@@ -157,7 +158,7 @@ export default function SettledPage() {
             fetchData();
         } catch (e: any) {
             console.error('handleSave 에러:', e);
-            alert('저장 실패: ' + (e?.message || '알 수 없는 오류'));
+            toast.error('저장 실패: ' + (e?.message || '알 수 없는 오류'));
         } finally {
             setSaving(false);
         }
@@ -173,7 +174,7 @@ export default function SettledPage() {
         if (!error) {
             fetchData();
         } else {
-            alert('삭제 실패: ' + error.message);
+            toast.error('삭제 실패: ' + error.message);
         }
     };
 
@@ -373,7 +374,7 @@ export default function SettledPage() {
             document.body.removeChild(tempDiv);
         } catch (e: any) {
             console.error('PDF 생성 오류:', e);
-            alert('리포트 생성에 실패했습니다.');
+            toast.error('리포트 생성에 실패했습니다.');
         }
     };
 

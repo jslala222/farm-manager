@@ -24,6 +24,7 @@ import {
 import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
 import { formatCurrency } from "@/lib/utils";
+import { toast } from "sonner";
 
 // 날짜 범위 기본값: 이번달 1일 ~ 오늘
 const toLocalDateStr = (d: Date = new Date()) =>
@@ -127,7 +128,7 @@ export default function B2CSettledPage() {
             setRecords((data as CourierRecord[]) || []);
         } catch (e: any) {
             console.error('B2C 택배 데이터 불러오기 실패:', e.message);
-            alert('데이터 로드 실패: ' + e.message);
+            toast.error('데이터 로드 실패: ' + e.message);
         } finally {
             setLoading(false);
         }
@@ -166,7 +167,7 @@ export default function B2CSettledPage() {
             fetchData();
         } catch (e: any) {
             console.error('입금확인 오류:', e);
-            alert('입금 확인 실패: ' + (e?.message || '알 수 없는 오류'));
+            toast.error('입금 확인 실패: ' + (e?.message || '알 수 없는 오류'));
         } finally {
             setConfirmingId(null);
         }

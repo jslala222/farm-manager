@@ -6,6 +6,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useHarvestStore } from "@/store/harvestStore";
 import { supabase, FarmHouse, HarvestRecord } from "@/lib/supabase";
 import Calendar from "@/components/Calendar";
+import { toast } from "sonner";
 
 // [bkit] 기록 필터링 및 그룹화 헬퍼 함수
 function bkit_filtered_diaries(diaries: any[], houseFilter: number | null) {
@@ -113,10 +114,11 @@ export default function HarvestPage() {
     }, [farm, initialized]); // activeTab, statsPeriod 제거
 
     const fetchHouses = async () => {
+        if (!farm?.id) return;
         const { data } = await supabase
             .from('farm_houses')
             .select('*')
-            .eq('farm_id', farm!.id)
+            .eq('farm_id', farm?.id ?? '')
             // .eq('is_active', true) // 사장님 요청: 휴작동도 일지 작성을 위해 표시하도록 필터 제거
             .order('house_number');
         setHouses(data ?? []);
@@ -282,7 +284,7 @@ export default function HarvestPage() {
 
     const handleSave = async () => {
         if (!selectedHouse || !farm?.id) {
-            alert("하우스 동을 선택해주세요!");
+            toast.error("하우스 동을 선택해주세요!");
             return;
         }
 
@@ -290,7 +292,7 @@ export default function HarvestPage() {
         const jung = parseInt(qtyJung) || 0;
         const ha = parseInt(qtyHa) || 0;
         if (sang === 0 && jung === 0 && ha === 0) {
-            alert("수량을 입력해주세요!");
+            toast.error("수량을 입력해주세요!");
             return;
         }
 
@@ -315,10 +317,10 @@ export default function HarvestPage() {
 
         const { error } = await supabase.from('harvest_records').insert(records as any[]);
         if (error) {
-            alert(`저장 실패: ${error.message}`);
+            toast.error(`저장 실패: ${error.message}`);
         } else {
             const parts = [sang > 0 && `특/상 ${sang}박스`, jung > 0 && `중 ${jung}박스`, ha > 0 && `하 ${ha}박스`].filter(Boolean).join(', ');
-            alert(`✅ 저장 완료!\n${selectedDate}\n${selectedHouse}동 / ${parts}`);
+            toast.success(`✅ 저장 완료!\n${selectedDate}\n${selectedHouse}동 / ${parts}`);
             setQtySang('');
             setQtyJung('');
             setQtyHa('');
@@ -351,7 +353,7 @@ export default function HarvestPage() {
 
         const { error } = await supabase.from('harvest_records').update(updateData).eq('id', editingId);
 
-        if (error) alert("수정 실패");
+        if (error) toast.error("수정 실패");
         else {
             setEditingId(null);
             // 수정 후 통계 및 메모 다시 불러오기 (정합성 유지)
@@ -363,7 +365,7 @@ export default function HarvestPage() {
 
     const handleUpdateNote = async () => {
         if (!selectedHouse || !farm?.id) {
-            alert("농장 정보 또는 하우스가 선택되지 않았습니다.");
+            toast.error("농장 정보 또는 하우스가 선택되지 않았습니다.");
             return;
         }
         setSaving(true);
@@ -381,14 +383,14 @@ export default function HarvestPage() {
 
             if (error) {
                 console.error("[Diary] Save error:", error);
-                alert(`일지 저장 실패: ${error.message} (날짜: ${selectedDate})`);
+                toast.error(`일지 저장 실패: ${error.message} (날짜: ${selectedDate})`);
             } else {
-                alert(`✅ ${selectedDate} 현장 리포트가 저장되었습니다.`);
+                toast.success(`✅ ${selectedDate} 현장 리포트가 저장되었습니다.`);
                 fetchDiaries(); // 최신 데이터 다시 불러오기
             }
         } catch (err: any) {
             console.error("[Diary] Unexpected error:", err);
-            alert(`일지 저장 중 예기치 못한 오류 발생: ${err.message || err.toString()}`);
+            toast.error(`일지 저장 중 예기치 못한 오류 발생: ${err.message || err.toString()}`);
         } finally {
             setSaving(false);
         }
@@ -397,7 +399,7 @@ export default function HarvestPage() {
     const handleDelete = async (id: string) => {
         if (!confirm("이 기록을 삭제하시겠습니까?")) return;
         const { error } = await supabase.from('harvest_records').delete().eq('id', id);
-        if (error) alert("삭제 실패");
+        if (error) toast.error("삭제 실패");
         else {
             fetchHistory();
             fetchHarvestedDates(); // 삭제 후 달력 업데이트

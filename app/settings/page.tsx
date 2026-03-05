@@ -8,6 +8,7 @@ import { formatPhone, formatBusinessNumber, getCropIcon } from "@/lib/utils";
 import AddressSearch from "@/components/AddressSearch";
 import { Search } from "lucide-react";
 import CropImagePicker from "@/components/CropImagePicker";
+import { toast } from "sonner";
 
 export default function SettingsPage() {
     const { user, farm: storeFarm, profile, initialize, initialized } = useAuthStore();
@@ -107,7 +108,7 @@ export default function SettingsPage() {
             setEditCropModal(null);
             fetchCrops();
         } catch (e: any) {
-            alert('저장 실패: ' + e.message);
+            toast.error('저장 실패: ' + e.message);
         } finally {
             setEditSaving(false);
         }
@@ -115,7 +116,6 @@ export default function SettingsPage() {
 
     // 컴포넌트 마운트 시 초기화 확인
     useEffect(() => {
-        console.log("SettingsPage 마운트. User:", user?.email, "Initialized:", initialized);
         if (!initialized) {
             initialize();
         }
@@ -123,7 +123,6 @@ export default function SettingsPage() {
 
     // 스토어의 농장 정보가 변경되면 로컬 상태 동기화
     useEffect(() => {
-        console.log("Store Farm 변경 감지:", storeFarm?.farm_name);
         if (storeFarm) {
             setFarm(storeFarm);
             fetchHouses();
@@ -138,7 +137,6 @@ export default function SettingsPage() {
     const fetchHouses = async () => {
         if (!storeFarm?.id) return;
         setLoadingHouses(true);
-        console.log("하우스 목록 가져오기 시도... Farm ID:", storeFarm.id);
         const { data, error } = await supabase.from('farm_houses').select('*')
             .eq('farm_id', storeFarm.id).order('house_number');
 
@@ -148,18 +146,14 @@ export default function SettingsPage() {
     };
 
     const handleSaveFarm = async () => {
-        console.log("--- handleSaveFarm 호출됨 ---");
-        console.log("현재 User 상태:", user);
-        console.log("현재 Farm ID:", storeFarm?.id);
-        console.log("입력된 Farm 데이터:", farm);
 
         if (!user) {
-            alert("로그인 세션이 만료되었습니다. 다시 로그인해 주세요.");
+            toast.error("로그인 세션이 만료되었습니다. 다시 로그인해 주세요.");
             return;
         }
 
         if (!farm.farm_name?.trim()) {
-            alert("농장 이름을 입력해주세요.");
+            toast.error("농장 이름을 입력해주세요.");
             return;
         }
 
@@ -168,7 +162,6 @@ export default function SettingsPage() {
         try {
             if (storeFarm?.id) {
                 // 기존 농장 정보 수정
-                console.log("기존 농장 수정 프로세스 시작...");
                 const { data: updatedData, error } = await supabase.from('farms').update({
                     farm_name: farm.farm_name,
                     phone: farm.phone,
@@ -185,16 +178,15 @@ export default function SettingsPage() {
                 if (error) throw error;
 
                 if (!updatedData || updatedData.length === 0) {
-                    alert("⚠️ 저장에 실패했습니다. 농장주 본인이나 관리자 권한이 있는지 확인해 주세요. (RLS 정책 위반)");
+                    toast.error("⚠️ 저장에 실패했습니다. 농장주 본인이나 관리자 권한이 있는지 확인해 주세요. (RLS 정책 위반)");
                     setSaving(false);
                     return;
                 }
 
-                alert("✅ 농장 정보가 성공적으로 수정되었습니다!");
+                toast.success("✅ 농장 정보가 성공적으로 수정되었습니다!");
                 await initialize(true); // 강제 갱신 호출
             } else {
                 // 신규 농장 등록
-                console.log("신규 농장 등록 프로세스 시작...");
                 const { data: newFarm, error } = await supabase.from('farms').insert({
                     owner_id: user.id,
                     farm_name: farm.farm_name,
@@ -211,12 +203,10 @@ export default function SettingsPage() {
                 }).select().single();
 
                 if (error) throw error;
-                console.log("신규 농장 생성 완료 ID:", newFarm.id);
 
                 // 초기 동 자동 생성
                 const count = parseInt(initialHouseCount);
                 if (count > 0 && !isNaN(count)) {
-                    console.log(`초기 동 ${count}개 생성 중...`);
                     const initialHouses = [];
                     for (let i = 1; i <= count; i++) {
                         initialHouses.push({
@@ -230,20 +220,19 @@ export default function SettingsPage() {
                     if (houseError) console.error("초기 동 생성 중 오류:", houseError);
                 }
 
-                alert("✅ 농장 등록 및 하우스 세팅이 완료되었습니다!");
+                toast.success("✅ 농장 등록 및 하우스 세팅이 완료되었습니다!");
                 await initialize();
             }
         } catch (error: any) {
             console.error("데이터 저장 실패 상세 에러:", error);
-            alert(`저장 중 오류가 발생했습니다: ${error.message || '알 수 없는 오류'}`);
+            toast.error(`저장 중 오류가 발생했습니다: ${error.message || '알 수 없는 오류'}`);
         } finally {
             setSaving(false);
-            console.log("--- handleSaveFarm 종료 ---");
         }
     };
 
     const addHouse = async () => {
-        if (!newHouseNum.trim()) { alert("추가할 동 정보를 입력해주세요."); return; }
+        if (!newHouseNum.trim()) { toast.error("추가할 동 정보를 입력해주세요."); return; }
         if (!storeFarm?.id) return;
 
         let nums: number[] = [];
@@ -276,7 +265,7 @@ export default function SettingsPage() {
         }
 
         if (nums.length === 0) {
-            alert("입력 형식이 올바르지 않습니다. (숫자 또는 1-6 형식을 사용하세요)");
+            toast.error("입력 형식이 올바르지 않습니다. (숫자 또는 1-6 형식을 사용하세요)");
             return;
         }
 
@@ -285,7 +274,7 @@ export default function SettingsPage() {
         const uniqueNewNums = nums.filter(num => !existingNums.includes(num));
 
         if (uniqueNewNums.length === 0) {
-            alert("이미 등록된 하우스 번호입니다.");
+            toast.error("이미 등록된 하우스 번호입니다.");
             return;
         }
 
@@ -300,7 +289,7 @@ export default function SettingsPage() {
         const { error } = await supabase.from('farm_houses').insert(newHouses);
 
         if (error) {
-            alert(`동 추가 실패: ${error.message}`);
+            toast.error(`동 추가 실패: ${error.message}`);
         } else {
             setNewHouseNum("");
             fetchHouses();
@@ -356,7 +345,7 @@ export default function SettingsPage() {
         const icon = rawIcon.trim() || guessIcon(name.trim(), category === 'crop' ? '🌱' : '🏭');
         if (!name.trim() || !storeFarm?.id) return;
         const exists = farmCrops.some(c => c.crop_name === name.trim());
-        if (exists) { alert('이미 등록된 항목입니다.'); return; }
+        if (exists) { toast.error('이미 등록된 항목입니다.'); return; }
 
         const defaultUnits = name.trim() === '딸기' ? ['박스', 'kg', '다라'] :
             category === 'processed' ? ['개', '병', '박스', 'kg'] : ['kg', '박스', '포대'];
@@ -369,7 +358,7 @@ export default function SettingsPage() {
             sort_order: farmCrops.length,
             category,
         });
-        if (error) { alert(`추가 실패: ${error.message}`); return; }
+        if (error) { toast.error(`추가 실패: ${error.message}`); return; }
         if (category === 'crop') { setNewCropName(''); setNewCropIcon('🌱'); }
         else { setNewProcessedName(''); setNewProcessedIcon('🍯'); }
         fetchCrops();
@@ -386,7 +375,7 @@ export default function SettingsPage() {
         if (!storeFarm?.id) return;
         const existing = farmCrops.map(c => c.crop_name);
         const newOnes = presets.filter(p => !existing.includes(p.name));
-        if (newOnes.length === 0) { alert('모든 항목이 이미 등록되어 있습니다.'); return; }
+        if (newOnes.length === 0) { toast.error('모든 항목이 이미 등록되어 있습니다.'); return; }
         const inserts = newOnes.map((p, i) => ({
             farm_id: storeFarm.id,
             crop_name: p.name,
@@ -398,7 +387,7 @@ export default function SettingsPage() {
             category,
         }));
         const { error } = await supabase.from('farm_crops').insert(inserts);
-        if (error) { alert(`프리셋 추가 실패: ${error.message}`); return; }
+        if (error) { toast.error(`프리셋 추가 실패: ${error.message}`); return; }
         fetchCrops();
     };
 
@@ -451,10 +440,10 @@ export default function SettingsPage() {
         const crop = farmCrops.find(c => c.id === cropId);
         if (!crop) return;
         const currentSpecs = crop.available_specs || [];
-        if (currentSpecs.includes(newSpecInput.trim())) { alert('이미 등록된 규격입니다.'); return; }
+        if (currentSpecs.includes(newSpecInput.trim())) { toast.error('이미 등록된 규격입니다.'); return; }
         const updatedSpecs = [...currentSpecs, newSpecInput.trim()];
         const { error } = await supabase.from('farm_crops').update({ available_specs: updatedSpecs }).eq('id', cropId);
-        if (error) { alert('규격 추가 실패: ' + error.message); return; }
+        if (error) { toast.error('규격 추가 실패: ' + error.message); return; }
         setNewSpecInput('');
         setEditingSpecId(null);
         fetchCrops();

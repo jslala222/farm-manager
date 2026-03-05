@@ -58,7 +58,7 @@ export default function RegisterPage() {
 
         // 2. 농장 정보 저장 (is_active = false, 관리자 승인 대기)
         if (authData.user) {
-            await supabase.from('farms').insert({
+            const { error: farmError } = await supabase.from('farms').insert({
                 owner_id: authData.user.id,
                 farm_name: form.farm_name,
                 phone: form.phone || null,
@@ -68,6 +68,11 @@ export default function RegisterPage() {
                 notes: form.notes || null,
                 is_active: false, // 무조건 비활성 상태로 시작
             });
+            if (farmError) {
+                setError('농장 정보 저장 실패: ' + farmError.message);
+                setLoading(false);
+                return;
+            }
         }
 
         setLoading(false);

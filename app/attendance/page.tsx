@@ -5,6 +5,7 @@ import { Save, UserCheck, UserX, UserPlus, Clock, History, CalendarDays, CheckCi
 import { useAuthStore } from "@/store/authStore";
 import { supabase, Worker, AttendanceRecord } from "@/lib/supabase";
 import Link from "next/link";
+import { toast } from "sonner";
 
 const toLocalDateStr = (d: Date = new Date()) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -156,15 +157,15 @@ export default function AttendancePage() {
 
             if (error) {
                 console.error("저장 실패 상세:", error);
-                alert(`저장 실패: ${error.message}\n(DB 스키마 변경이 반영되지 않았을 경우 페이지를 새로고침 후 다시 시도해 주세요.)`);
+                toast.error(`저장 실패: ${error.message}\n(DB 스키마 변경이 반영되지 않았을 경우 페이지를 새로고침 후 다시 시도해 주세요.)`);
             } else {
                 const totalHeadcount = workers.reduce((acc, w) => acc + (presence[w.id] ? parseInt(headcounts[w.id] || "1") : 0), 0);
-                alert(`✅ 저장 완료!\n${selectedDate} - 총 ${totalHeadcount}명 출근 확인`);
+                toast.success(`✅ 저장 완료!\n${selectedDate} - 총 ${totalHeadcount}명 출근 확인`);
                 await fetchHistory();
             }
         } catch (err: any) {
             console.error("예상치 못한 오류:", err);
-            alert(`오류 발생: ${err.message || '알 수 없는 오류가 발생했습니다.'}`);
+            toast.error(`오류 발생: ${err.message || '알 수 없는 오류가 발생했습니다.'}`);
         } finally {
             setSaving(false);
         }

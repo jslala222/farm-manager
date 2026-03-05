@@ -9,6 +9,7 @@ import { useAuthStore } from "@/store/authStore";
 import { supabase, Worker } from "@/lib/supabase";
 import { formatPhone } from "@/lib/utils";
 import AddressSearch from "@/components/AddressSearch";
+import { toast } from "sonner";
 
 const toLocalDateStr = (d: Date = new Date()) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -80,7 +81,6 @@ export default function WorkersPage() {
         }, 15000); // 15초로 연장하여 안정성 확보
 
         try {
-            console.log("[Worker] Fetching workers for farm:", farm.id);
             const { data, error } = await supabase.from('workers').select('*')
                 .eq('farm_id', farm.id).order('name', { ascending: true });
 
@@ -109,7 +109,7 @@ export default function WorkersPage() {
 
     const handleAddWorker = async () => {
         if (!newName || !farm?.id) {
-            alert("이름을 입력해주세요.");
+            toast.error("이름을 입력해주세요.");
             return;
         }
         const { error } = await supabase.from('workers').insert({
@@ -126,7 +126,7 @@ export default function WorkersPage() {
         });
         if (error) {
             console.error(error);
-            alert(`추가 실패: ${error.message}`);
+            toast.error(`추가 실패: ${error.message}`);
         } else {
             setNewName("");
             setNewPhone("");
@@ -169,7 +169,7 @@ export default function WorkersPage() {
             default_daily_wage: parseInt(editDailyWage.replace(/,/g, "")) || 0
         }).eq('id', editingId);
 
-        if (error) alert("수정 실패: " + error.message);
+        if (error) toast.error("수정 실패: " + error.message);
         else {
             setEditingId(null);
             fetchWorkers();
@@ -184,7 +184,7 @@ export default function WorkersPage() {
     const deleteWorker = async (id: string) => {
         if (!confirm("정말 이 근로자를 삭제하겠습니까?\n과거 기록 데이터는 유지되지만 목록에서는 제거됩니다.")) return;
         const { error } = await supabase.from('workers').delete().eq('id', id);
-        if (error) alert("삭제 실패: " + error.message);
+        if (error) toast.error("삭제 실패: " + error.message);
         else fetchWorkers();
     };
 
@@ -229,9 +229,9 @@ export default function WorkersPage() {
         const { error } = await supabase.rpc('exec_sql', { sql_query: sql });
 
         if (error) {
-            alert("자동 복구 도중 오류가 발생했습니다.\n사장님, 시스템 권한 문제로 인해 수동 조치가 필요할 수 있습니다.");
+            toast.error("자동 복구 도중 오류가 발생했습니다.\n사장님, 시스템 권한 문제로 인해 수동 조치가 필요할 수 있습니다.");
         } else {
-            alert("DB 구조가 성공적으로 복구되었습니다! 이제 시원하게 사용하실 수 있습니다. 🍓");
+            toast.success("DB 구조가 성공적으로 복구되었습니다! 이제 시원하게 사용하실 수 있습니다. 🍓");
             fetchWorkers();
             fetchAttendances();
         }

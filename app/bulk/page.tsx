@@ -7,12 +7,13 @@ import { supabase, SalesRecord, Partner } from "@/lib/supabase";
 import { formatCurrency, getCropIcon } from "@/lib/utils";
 import CalendarComponent from "@/components/Calendar";
 import SettlementModal, { ModalCropEntry, SettlementSaveData } from "@/components/SettlementModal";
+import { toast } from "sonner";
 
 const toLocalDateStr = (d: Date = new Date()) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 export default function BulkSalesPage() {
-    const { farm, initialized } = useAuthStore();
+    const { farm, initialized, cropIconMap } = useAuthStore();
     const [partners, setPartners] = useState<Partner[]>([]);
     const [history, setHistory] = useState<SalesRecord[]>([]);
     const [loading, setLoading] = useState(false);
@@ -52,7 +53,7 @@ export default function BulkSalesPage() {
     const addToBulkCart = (crop: any) => {
         setBulkItems(prev => [...prev, {
             id: Date.now().toString() + Math.random().toString(36).slice(2, 7),
-            cropName: crop.crop_name, cropIcon: getCropIcon(crop.crop_name),
+            cropName: crop.crop_name, cropIcon: cropIconMap[crop.crop_name] || getCropIcon(crop.crop_name),
             unit: getEffectiveUnits(crop)[0],
             category: crop.category || 'crop',
             qty: '', qtySang: '', qtyJung: '', qtyHa: ''
@@ -134,9 +135,9 @@ export default function BulkSalesPage() {
 
     const handleSavePending = async () => {
         if (!farm?.id || saving) return;
-        if (!selectedClientId) { alert("거래처를 선택해주세요."); return; }
+        if (!selectedClientId) { toast.error("거래처를 선택해주세요."); return; }
         const allGrades = buildAllGrades();
-        if (allGrades.length === 0) { alert("품목을 추가하고 수량을 입력해주세요."); return; }
+        if (allGrades.length === 0) { toast.error("품목을 추가하고 수량을 입력해주세요."); return; }
         setSaving(true);
         try {
             const nowTs = selectedDate + 'T' + new Date().toTimeString().split(' ')[0];
@@ -152,17 +153,17 @@ export default function BulkSalesPage() {
             }
             handleResetAllStates();
             setTimeout(() => fetchHistory(), 200);
-            alert("✅ 납품 기록이 저장되었습니다! (미정산)");
+            toast.success("✅ 납품 기록이 저장되었습니다! (미정산)");
         } catch (error: any) {
-            alert("저장 실패: " + (error.message || "알 수 없는 오류"));
+            toast.error("저장 실패: " + (error.message || "알 수 없는 오류"));
         } finally { setSaving(false); }
     };
 
     const handleSaveSettled = async () => {
         if (!farm?.id || saving) return;
-        if (!selectedClientId) { alert("거래처를 선택해주세요."); setShowSettlementSheet(false); return; }
+        if (!selectedClientId) { toast.error("거래처를 선택해주세요."); setShowSettlementSheet(false); return; }
         const allGrades = buildAllGrades();
-        if (allGrades.length === 0) { alert("품목을 추가하고 수량을 입력해주세요."); setShowSettlementSheet(false); return; }
+        if (allGrades.length === 0) { toast.error("품목을 추가하고 수량을 입력해주세요."); setShowSettlementSheet(false); return; }
         setSaving(true);
         try {
             const actualTotal = sheetActualAmount ? Number(sheetActualAmount) : null;
@@ -201,9 +202,9 @@ export default function BulkSalesPage() {
             setSheetUnitPrices({}); setSheetActualAmount(''); setSheetDeductionReason(''); setSheetMemo('');
             handleResetAllStates();
             setTimeout(() => fetchHistory(), 200);
-            alert("✅ 납품 기록이 저장되었습니다! (정산 완료)");
+            toast.success("✅ 납품 기록이 저장되었습니다! (정산 완료)");
         } catch (error: any) {
-            alert("저장 실패: " + (error.message || "알 수 없는 오류"));
+            toast.error("저장 실패: " + (error.message || "알 수 없는 오류"));
         } finally { setSaving(false); }
     };
 
@@ -393,7 +394,7 @@ export default function BulkSalesPage() {
             fetchHistory();
         } catch (error: any) {
             console.error('수정 모달 저장 오류:', error);
-            alert('저장 중 오류가 발생했습니다: ' + (error.message || '알 수 없는 오류'));
+            toast.error('저장 중 오류가 발생했습니다: ' + (error.message || '알 수 없는 오류'));
         } finally {
             setModalSaving(false);
         }
@@ -408,7 +409,7 @@ export default function BulkSalesPage() {
                 setCompoundSourceIds([]);
                 fetchHistory();
             })
-            .catch((err: any) => alert("삭제 중 오류가 발생했습니다: " + err.message));
+            .catch((err: any) => toast.error("삭제 중 오류가 발생했습니다: " + err.message));
     };
 
     const handleDelete = async (id: string) => { if (!confirm("삭제하시겠습니까?")) return; const { error } = await supabase.from('sales_records').delete().eq('id', id); if (!error) fetchHistory(); };
@@ -432,7 +433,7 @@ export default function BulkSalesPage() {
             pGroup.totalAmount += rec.price || 0;
             const date = rec.recorded_at.split('T')[0];
             if (!pGroup.dailyMap.has(date)) pGroup.dailyMap.set(date, new Map());
-            const txKey = rec.recorded_at; // 같은 recorded_at = 같은 거래
+            const txKey = rec.recorded_at.slice(0, 16); // 분 단위 그룹화 (YYYY-MM-DDTHH:mm)
             const dayMap = pGroup.dailyMap.get(date)!;
             if (!dayMap.has(txKey)) dayMap.set(txKey, []);
             dayMap.get(txKey)!.push(rec);
@@ -736,7 +737,7 @@ export default function BulkSalesPage() {
                             <button key={crop.id}
                                 onClick={() => addToBulkCart(crop)}
                                 className="min-w-[68px] flex flex-col items-center justify-center py-2.5 px-1.5 rounded-2xl border-2 transition-all gap-0.5 shrink-0 bg-white border-slate-100 hover:border-indigo-300 hover:bg-indigo-50 active:scale-95">
-                                <span className="text-2xl leading-none">{getCropIcon(crop.crop_name)}</span>
+                                <span className="text-2xl leading-none">{cropIconMap[crop.crop_name] || getCropIcon(crop.crop_name)}</span>
                                 <span className="text-[9px] font-black text-slate-800 whitespace-nowrap truncate max-w-[60px]">{crop.crop_name}</span>
                             </button>
                         ))}
@@ -906,7 +907,7 @@ export default function BulkSalesPage() {
                                                                                 <div className="flex items-center gap-1.5">
                                                                                     <div className="flex items-center gap-0.5">
                                                                                         {tx.cropGroups.map((cg: any, i: number) => (
-                                                                                            <span key={i} className="text-lg leading-none">{getCropIcon(cg.cropName)}</span>
+                                                                                            <span key={i} className="text-lg leading-none">{cropIconMap[cg.cropName] || getCropIcon(cg.cropName)}</span>
                                                                                         ))}
                                                                                     </div>
                                                                                     <span className="text-[8px] font-black bg-indigo-50 text-indigo-500 px-1.5 py-0.5 rounded-full">{tx.cropGroups.length}종류</span>
@@ -918,7 +919,7 @@ export default function BulkSalesPage() {
                                                                         <div className={`px-3 pb-2 space-y-1 ${tx.cropGroups.length === 1 ? 'pt-2.5' : ''}`}>
                                                                             {tx.cropGroups.map((cg: any, i: number) => (
                                                                                 <div key={i} className="flex items-center gap-2 text-xs">
-                                                                                    <span className="text-sm shrink-0">{getCropIcon(cg.cropName)}</span>
+                                                                                    <span className="text-sm shrink-0">{cropIconMap[cg.cropName] || getCropIcon(cg.cropName)}</span>
                                                                                     <span className="font-black text-slate-700 shrink-0">{cg.cropName}</span>
                                                                                     {cg.isProcessed ? (
                                                                                         <span className="font-bold text-violet-500">{cg.totalQty}{cg.unit}</span>

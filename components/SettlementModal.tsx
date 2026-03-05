@@ -4,6 +4,7 @@
 import React, { useState, useMemo } from 'react';
 import { X, Save, ShoppingCart } from 'lucide-react';
 import { getCropIcon } from '@/lib/utils';
+import { toast } from "sonner";
 
 export interface ModalCropEntry {
     recordId?: string | null;
@@ -149,13 +150,13 @@ export default function SettlementModal({
                 return qty > 0 && !price;
             });
             if (missing) {
-                alert('정산완료로 저장하려면 수량이 있는 모든 품목의 단가를 입력해주세요.');
+                toast.error('정산완료로 저장하려면 수량이 있는 모든 품목의 단가를 입력해주세요.');
                 return;
             }
         }
         if (mode === 'finance' && !priceOnly) {
             if (!actualAmountNum || actualAmountNum <= 0) {
-                alert('정산완료를 진행하려면 실 입금액을 입력해주세요. 단가만 저장하려면 단가 저장 버튼을 눌러주세요.');
+                toast.error('정산완료를 진행하려면 실 입금액을 입력해주세요. 단가만 저장하려면 단가 저장 버튼을 눌러주세요.');
                 return;
             }
             if (!confirm('실 입금액 ' + actualAmountNum.toLocaleString() + '원으로 정산을 완료합니다. 계속 진행하시겠습니까?')) return;

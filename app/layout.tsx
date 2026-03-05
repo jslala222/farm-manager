@@ -4,6 +4,8 @@ import "./globals.css";
 import NavBar from "@/components/NavBar";
 import AuthProvider from "@/components/AuthProvider";
 import QueryProvider from "@/components/QueryProvider";
+import { Toaster } from "sonner";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -28,11 +30,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <div className="min-h-screen flex flex-col">
               <NavBar />
               <main className="flex-1 max-w-5xl mx-auto w-full">
-                {children}
+                <ErrorBoundary>
+                  {children}
+                </ErrorBoundary>
               </main>
             </div>
           </QueryProvider>
         </AuthProvider>
+        <Toaster richColors position="top-center" />
       </body>
     </html>
   );

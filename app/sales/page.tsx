@@ -8,6 +8,7 @@ import { settlementService } from '@/lib/settlementService';
 import { formatCurrency } from "@/lib/utils";
 import AddressSearch from "@/components/AddressSearch";
 import CalendarComponent from "@/components/Calendar";
+import { toast } from "sonner";
 
 const toLocalDateStr = (d: Date = new Date()) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -128,7 +129,7 @@ export default function SalesPage() {
             category: 'processed', available_units: ['개', '박스', 'kg'],
             is_active: true, sort_order: farmCrops.length
         }]);
-        if (error) { alert('추가 실패: ' + error.message); return; }
+        if (error) { toast.error('추가 실패: ' + error.message); return; }
         await fetchFarmCrops(name);
         setProductSpec('');
         setIsAddingProcessed(false);
@@ -180,9 +181,9 @@ export default function SalesPage() {
         setSaving(true);
         try {
             if (activeTab === 'bulk') {
-                if (!selectedClientId) { alert("거래처를 선택해주세요."); setSaving(false); return; }
+                if (!selectedClientId) { toast.error("거래처를 선택해주세요."); setSaving(false); return; }
                 const validLines = orderLines.filter(l => Number(l.quantity) > 0);
-                if (validLines.length === 0) { alert("주문행을 추가하고 수량을 입력해주세요."); setSaving(false); return; }
+                if (validLines.length === 0) { toast.error("주문행을 추가하고 수량을 입력해주세요."); setSaving(false); return; }
                 for (const line of validLines) {
                     const selCrop = farmCrops.find(c => c.crop_name === line.cropName);
                     const isProc = selCrop?.category === 'processed';
@@ -199,7 +200,7 @@ export default function SalesPage() {
                     else await supabase.from('sales_records').insert([saleData]);
                 }
             } else {
-                if (!ordererName) { alert("주문자를 입력하거나 선택해주세요."); setSaving(false); return; }
+                if (!ordererName) { toast.error("주문자를 입력하거나 선택해주세요."); setSaving(false); return; }
                 const courierData = {
                     farm_id: farm.id, customer_id: selectedSearchResult?.id, customer_name: ordererName, phone: ordererPhone,
                     recipient_name: recipientName, recipient_phone: recipientPhone, address: recipientAddress, detail_address: recipientDetailAddress,
@@ -212,7 +213,7 @@ export default function SalesPage() {
                 else await supabase.from('sales_records').insert([courierData]);
             }
             handleResetAllStates(); await fetchHistory();
-        } catch (error: any) { alert("저장 실패: " + error.message); } finally { setSaving(false); }
+        } catch (error: any) { toast.error("저장 실패: " + error.message); } finally { setSaving(false); }
     };
 
     const handleEdit = (record: any) => {

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Sprout } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 
 export default function LoginPage() {
     const [loading, setLoading] = useState(false);
@@ -18,7 +19,7 @@ export default function LoginPage() {
         const password = formData.get("password") as string;
 
         if (!email || !password) {
-            alert("이메일과 비밀번호를 입력해주세요.");
+            toast.error("이메일과 비밀번호를 입력해주세요.");
             setLoading(false);
             setMsg("");
             return;
@@ -28,7 +29,7 @@ export default function LoginPage() {
             const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
             if (error) {
-                alert("로그인 실패: " + error.message);
+                toast.error("로그인 실패: " + error.message);
                 setMsg("에러: " + error.message);
             } else if (data.user) {
                 // [신규] 사장님(관리자) 승인 여부 체크 게이트
@@ -40,18 +41,18 @@ export default function LoginPage() {
                     if (!farm || !farm.is_active) {
                         // 승인되지 않은 유저는 즉시 로그아웃 및 차단
                         await supabase.auth.signOut();
-                        alert("🔒 승인 대기 중입니다.\n\n사장님(관리자)의 승인이 완료된 후 로그인이 가능합니다. 잠시만 기다려 주세요.");
+                        toast.error("🔒 승인 대기 중입니다.\n\n사장님(관리자)의 승인이 완료된 후 로그인이 가능합니다. 잠시만 기다려 주세요.");
                         setMsg("사장님 승인 대기 중 (미승인 계정)");
                         setLoading(false);
                         return;
                     }
                 }
 
-                alert("로그인 성공! 대시보드로 이동합니다.");
+                toast.success("로그인 성공! 대시보드로 이동합니다.");
                 window.location.href = "/";
             }
         } catch (err: any) {
-            alert("오류 발생: " + err.message);
+            toast.error("오류 발생: " + err.message);
             setMsg("오류: " + err.message);
         } finally {
             setLoading(false);
@@ -64,12 +65,12 @@ export default function LoginPage() {
             // count: 'exact', head: true 를 사용하여 실제 컬럼 데이터 로드 없이 연결만 확인
             const { error } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
             if (error) {
-                alert("Supabase 연결 실패 (키 확인 필요): " + error.message);
+                toast.error("Supabase 연결 실패 (키 확인 필요): " + error.message);
             } else {
-                alert("Supabase 연결 성공!");
+                toast.success("Supabase 연결 성공!");
             }
         } catch (err: any) {
-            alert("연결 시도 중 치명적 오류: " + err.message);
+            toast.error("연결 시도 중 치명적 오류: " + err.message);
         }
         setMsg("");
     };
