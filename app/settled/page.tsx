@@ -6,6 +6,7 @@ import { CheckCircle, ChevronDown, ChevronRight, Download, RefreshCcw, Calendar,
 import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
 import { getCropIcon, getCropColor } from "@/lib/utils";
+import SettlementModal, { ModalCropEntry, SettlementSaveData } from "@/components/SettlementModal";
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -100,13 +101,14 @@ export default function SettledPage() {
         });
     };
 
-    // ────── 수정 저장 ──────
-    const handleSave = async () => {
+    // ────── 수정 저장 (SettlementModal 콜백) ──────
+    const handleSave = async (data: SettlementSaveData) => {
         if (!edit.rec) return;
         setSaving(true);
         try {
-            const priceNum = edit.price ? Number(edit.price.replace(/,/g, '')) : null;
-            const settledNum = edit.settled_amount ? Number(edit.settled_amount.replace(/,/g, '')) : null;
+            const entry = data.entries[0];
+            const priceNum = entry?.totalPrice > 0 ? entry.totalPrice : (edit.price ? Number(edit.price.replace(/,/g, '')) : null);
+            const settledNum = data.actualAmount;
 
             // 10초 안에 응답 없으면 타임아웃 처리
             const updateQuery = supabase
@@ -114,9 +116,9 @@ export default function SettledPage() {
                 .update({
                     price: priceNum,
                     settled_amount: settledNum,
-                    payment_method: edit.payment_method || null,
-                    harvest_note: edit.harvest_note || null,
-                    delivery_note: edit.delivery_note || null,
+                    payment_method: data.paymentMethod || null,
+                    harvest_note: data.deductionReason || null,
+                    delivery_note: data.memo || null,
                 })
                 .eq('id', edit.rec.id)
                 .select();
@@ -345,135 +347,35 @@ export default function SettledPage() {
     return (
         <div className="min-h-screen bg-slate-50/40 pb-20">
 
-            {/* ── 수정 모달 ── */}
-            {edit.open && edit.rec && (
-                <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm"
-                    onClick={() => setEdit(emptyEdit)}>
-                    <div className="bg-white w-full max-w-md rounded-t-[2rem] shadow-2xl flex flex-col max-h-[90vh]"
-                        onClick={e => e.stopPropagation()}>
-
-                        {/* 헤더 */}
-                        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
-                            <div>
-                                <p className="text-[10px] font-black text-slate-400 uppercase">정산 내역 수정</p>
-                                <p className="text-sm font-black text-slate-900">
-                                    {(edit.rec.partner as any)?.company_name || '미지정'} ·{' '}
-                                    {new Date(edit.rec.recorded_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })} ·{' '}
-                                    {edit.rec.grade} {edit.rec.quantity}{edit.rec.sale_unit}
-                                </p>
-                            </div>
-                            <button onClick={() => setEdit(emptyEdit)}
-                                className="p-2 rounded-xl bg-slate-100 text-slate-400">
-                                <X className="w-4 h-4" />
-                            </button>
-                        </div>
-
-                        {/* 폼 */}
-                        <div className="p-5 space-y-4 overflow-y-auto flex-1">
-
-                            {/* 예상금액 입력 */}
-                            <div className="bg-slate-50 rounded-2xl p-4">
-                                <p className="text-[9px] font-black text-slate-400 uppercase mb-2">예상금액 <span className="normal-case font-bold text-slate-300">(단가×수량)</span></p>
-                                <div className="flex items-center gap-2">
-                                    <input type="text" inputMode="numeric"
-                                        value={edit.price}
-                                        onChange={e => setEdit(prev => ({
-                                            ...prev,
-                                            price: e.target.value.replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-                                        }))}
-                                        placeholder="0"
-                                        className="flex-1 bg-transparent text-xl font-black text-slate-600 outline-none text-right" />
-                                    <span className="text-sm font-black text-slate-400">원</span>
-                                </div>
-                            </div>
-
-                            {/* 정산금액 입력 */}
-                            <div className="bg-slate-50 rounded-2xl p-4">
-                                <p className="text-[9px] font-black text-slate-400 uppercase mb-2">정산금액 <span className="normal-case font-bold text-slate-300">(실제 받은 금액)</span></p>
-                                <div className="flex items-center gap-2">
-                                    <input type="text" inputMode="numeric"
-                                        value={edit.settled_amount}
-                                        onChange={e => setEdit(prev => ({
-                                            ...prev,
-                                            settled_amount: e.target.value.replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-                                        }))}
-                                        placeholder="0"
-                                        className="flex-1 bg-transparent text-2xl font-black text-slate-800 outline-none text-right" />
-                                    <span className="text-sm font-black text-slate-400">원</span>
-                                </div>
-                                {/* 차액 미리보기 */}
-                                {edit.price && edit.settled_amount && (() => {
-                                    const priceNum = Number(edit.price.replace(/,/g, ''));
-                                    const settledNum = Number(edit.settled_amount.replace(/,/g, ''));
-                                    const diff = settledNum - priceNum;
-                                    return (
-                                        <p className={`text-right text-xs font-black mt-1 ${diff < 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
-                                            차액 {diff > 0 ? '+' : ''}{diff.toLocaleString()}원
-                                        </p>
-                                    );
-                                })()}
-                            </div>
-
-                            {/* 결제수단 */}
-                            <div>
-                                <p className="text-[9px] font-black text-slate-400 uppercase mb-2">결제수단</p>
-                                <div className="flex gap-1.5 p-1.5 bg-slate-100 rounded-2xl">
-                                    {PAYMENT_METHODS.map(m => (
-                                        <button key={m} onClick={() => setEdit(prev => ({ ...prev, payment_method: m }))}
-                                            className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all
-                                            ${edit.payment_method === m ? 'bg-emerald-500 text-white shadow-sm' : 'text-slate-400'}`}>
-                                            {m}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* 차액 사유 */}
-                            <div>
-                                <p className="text-[9px] font-black text-slate-400 uppercase mb-2">차액 사유 <span className="normal-case font-bold text-slate-300">(선택)</span></p>
-                                <div className="flex flex-wrap gap-1.5">
-                                    {DEDUCTION_REASONS.map(r => (
-                                        <button key={r}
-                                            onClick={() => setEdit(prev => ({ ...prev, harvest_note: prev.harvest_note === r ? '' : r }))}
-                                            className={`px-3 py-1.5 rounded-xl text-xs font-black border transition-all
-                                            ${edit.harvest_note === r
-                                                    ? 'bg-rose-500 text-white border-rose-500'
-                                                    : 'bg-white text-slate-500 border-slate-200 hover:border-rose-200'}`}>
-                                            {r}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* 메모 */}
-                            <div className="bg-slate-50 rounded-2xl p-3">
-                                <p className="text-[9px] font-black text-slate-400 uppercase mb-2">메모 <span className="normal-case font-bold text-slate-300">(선택)</span></p>
-                                <input type="text" value={edit.delivery_note}
-                                    onChange={e => setEdit(prev => ({ ...prev, delivery_note: e.target.value }))}
-                                    placeholder="예: 운임 공제 후 입금"
-                                    className="w-full bg-transparent text-sm font-bold text-slate-700 outline-none placeholder:text-slate-300" />
-                            </div>
-                        </div>
-
-                        {/* 하단 저장 버튼 */}
-                        <div className="flex gap-2 p-5 pt-3 border-t border-slate-100 shrink-0">
-                            <button onClick={() => setEdit(emptyEdit)}
-                                className="flex-1 py-3.5 rounded-2xl bg-slate-100 text-slate-500 font-black text-sm">
-                                취소
-                            </button>
-                            <button onClick={handleSave} disabled={saving}
-                                className={`flex-[2] py-3.5 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg transition-all
-                                ${saving ? 'bg-emerald-400 cursor-not-allowed' : 'bg-emerald-500 hover:bg-emerald-600'} text-white`}>
-                                {saving
-                                    ? <><span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />저장 중...</>
-                                    : <><Save className="w-4 h-4" />저장</>
-                                }
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
+            {/* ── 수정 모달 (SettlementModal 통합) ── */}
+            {edit.open && edit.rec && (() => {
+                const rec = edit.rec!;
+                const unitPrice = (rec.price && rec.quantity > 0) ? Math.round(rec.price / rec.quantity) : 0;
+                const settledEntry: ModalCropEntry = {
+                    recordId: rec.id,
+                    cropName: rec.crop_name || '미지정',
+                    grade: rec.grade || '특/상',
+                    quantity: rec.quantity || 0,
+                    unit: rec.sale_unit || '박스',
+                    isProcessed: rec.grade === '-',
+                    unitPrice,
+                };
+                return (
+                    <SettlementModal
+                        mode="settled-edit"
+                        companyName={(rec.partner as any)?.company_name || '미지정'}
+                        deliveryDate={rec.recorded_at.split('T')[0]}
+                        cropEntries={[settledEntry]}
+                        initialPaymentMethod={rec.payment_method || '계좌이체'}
+                        initialDeductionReason={rec.harvest_note || ''}
+                        initialMemo={rec.delivery_note || ''}
+                        initialActualAmount={rec.settled_amount ?? null}
+                        onSave={handleSave}
+                        onClose={() => setEdit(emptyEdit)}
+                        saving={saving}
+                    />
+                );
+            })()}
             {/* ── 본문 ── */}
             <div className="max-w-4xl mx-auto px-3 py-4 space-y-4">
 

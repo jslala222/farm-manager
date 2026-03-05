@@ -30,9 +30,10 @@ import {
 import Link from "next/link";
 import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, getCropIcon } from "@/lib/utils";
 import { settlementService } from "@/lib/settlementService";
 import CalendarUI from "@/components/Calendar";
+import SettlementModal, { ModalCropEntry, SettlementSaveData } from "@/components/SettlementModal";
 
 export default function FinancePage() {
     const { farm, initialized } = useAuthStore();
@@ -75,6 +76,7 @@ export default function FinancePage() {
     } | null>(null);
     const [settleDate, setSettleDate] = useState(new Date().toISOString().split('T')[0]);
     const [actualSettleAmount, setActualSettleAmount] = useState<string>("");
+    const [financeSaving, setFinanceSaving] = useState(false);
     const [expandedPartners, setExpandedPartners] = useState<string[]>([]);
     const [showCalendar, setShowCalendar] = useState(false);
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -588,6 +590,95 @@ export default function FinancePage() {
 
     const handleQuickSettle = async (id: string, finalPrice: number) => {
         // ... (Legacy or fallback)
+    };
+
+    // SettlementModal용 entries 변환 (compound grade 파싱)
+    const financeModalEntries: ModalCropEntry[] = selectedGroup ? (() => {
+        const entries: ModalCropEntry[] = [];
+        selectedGroup.records.forEach((record: any) => {
+            const unit = record.sale_unit || '박스';
+            const cropName = record.crop_name || '딸기';
+            if (record.grade && record.grade.includes(':')) {
+                record.grade.split(',').forEach((g: string) => {
+                    const parts = g.split(':');
+                    const label = parts[0]?.trim() || '특/상';
+                    const qty = Number(parts[1]) || 0;
+                    entries.push({ recordId: record.id, cropName, grade: label, quantity: qty, unit, isProcessed: label === '-' });
+                });
+            } else {
+                entries.push({
+                    recordId: record.id, cropName,
+                    grade: record.grade || '특/상',
+                    quantity: record.quantity || 0, unit,
+                    isProcessed: record.grade === '-',
+                });
+            }
+        });
+        return entries;
+    })() : [];
+
+    const handleFinanceSave = async (data: SettlementSaveData) => {
+        if (!selectedGroup || !farm?.id) return;
+        if (!confirm("입력하신 정보로 정산을 확정하시겠습니까?")) return;
+        setFinanceSaving(true);
+        const actualAmt = data.actualAmount || 0;
+        try {
+            // Group entries by recordId
+            const recordMap = new Map<string, { entries: typeof data.entries; totalPrice: number }>();
+            data.entries.forEach(entry => {
+                const rid = entry.recordId;
+                if (!rid) return;
+                if (!recordMap.has(rid)) recordMap.set(rid, { entries: [], totalPrice: 0 });
+                const g = recordMap.get(rid)!;
+                g.entries.push(entry);
+                g.totalPrice += entry.totalPrice;
+            });
+            const totalExpected = Array.from(recordMap.values()).reduce((s, g) => s + g.totalPrice, 0);
+            const promises: Promise<any>[] = [];
+            recordMap.forEach((group, recordId) => {
+                let gradeStr: string;
+                let totalQty: number;
+                if (group.entries.length === 1) {
+                    gradeStr = group.entries[0].grade;
+                    totalQty = group.entries[0].quantity;
+                } else {
+                    gradeStr = group.entries.map(e => `${e.grade}:${e.quantity}`).join(',');
+                    totalQty = group.entries.reduce((s, e) => s + e.quantity, 0);
+                }
+                let finalSettledAmt = 0;
+                if (actualAmt > 0) {
+                    finalSettledAmt = totalExpected > 0
+                        ? Math.round(actualAmt * (group.totalPrice / totalExpected))
+                        : Math.round(actualAmt / recordMap.size);
+                } else {
+                    finalSettledAmt = group.totalPrice;
+                }
+                promises.push(
+                    supabase.from('sales_records').update({
+                        quantity: totalQty, grade: gradeStr,
+                        price: group.totalPrice || null,
+                        is_settled: true,
+                        settled_amount: finalSettledAmt,
+                        settled_at: data.settleDate,
+                        payment_method: data.paymentMethod,
+                        harvest_note: data.deductionReason || null,
+                        delivery_note: data.memo || null,
+                    }).eq('id', recordId) as any
+                );
+            });
+            const results = await Promise.all(promises);
+            const errorResults = results.filter(r => r.error);
+            if (errorResults.length > 0) throw new Error(errorResults.map(r => r.error?.message).join('\n'));
+            alert("정산이 성공적으로 완료되었습니다! 🍓");
+            setIsSettleModalOpen(false);
+            setSelectedGroup(null);
+            fetchFinanceData();
+        } catch (e: any) {
+            console.error("Finance save error:", e);
+            alert("정산 오류: " + (e.message || "알 수 없는 오류"));
+        } finally {
+            setFinanceSaving(false);
+        }
     };
 
     const netProfit = revenue + otherIncomeTotal - laborCost - expense - shippingCost - householdCost - mealCost;
@@ -1201,176 +1292,20 @@ export default function FinancePage() {
                     </button>
                 </div>
 
-                {/* [bkit 정밀 정산 모달 UI] */}
+                {/* [통합 SettlementModal] */}
                 {isSettleModalOpen && selectedGroup && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-                        <div className="bg-white w-full max-w-sm sm:max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-                            <div className="p-4 bg-orange-500 text-white flex justify-between items-center shadow-lg">
-                                <div>
-                                    <h3 className="text-xl font-black tracking-tighter truncate">{selectedGroup.companyName} 정산</h3>
-                                    <div className="flex items-center gap-2 mt-2">
-                                        <span className="bg-white/20 px-2 py-1 rounded text-[11px] font-black uppercase tracking-wider text-orange-50 border border-white/20">납품일자</span>
-                                        <p className="text-lg text-white font-black tracking-tight">{selectedGroup.date}</p>
-                                    </div>
-                                </div>
-                                <button onClick={() => setIsSettleModalOpen(false)} className="p-3 hover:bg-black/10 rounded-full transition-colors">
-                                    <X className="w-8 h-8 text-white" />
-                                </button>
-                            </div>
-
-                            <div className="p-5 space-y-5 overflow-y-auto max-h-[80vh]">
-                                {/* 1. 품목별 등급 물량 및 가격 */}
-                                <section className="space-y-3">
-                                    <div className="flex items-center justify-between pb-2 border-b-2 border-blue-100">
-                                        <div className="flex items-center gap-2 text-blue-600">
-                                            <Package className="w-4 h-4" />
-                                            <span className="text-xs font-black uppercase tracking-widest">품목별 물량 &amp; 단가</span>
-                                        </div>
-                                        <span className="text-[10px] font-black text-gray-700 bg-gray-100 px-2 py-1 rounded">{selectedGroup.records.length}품목</span>
-                                    </div>
-
-                                    {selectedGroup.records.map((record: any, recIdx: number) => {
-                                        const cropIcon = record.crop_name === '딸기' ? '🍓' : record.crop_name === '고구마' ? '🍠' : record.crop_name === '감자' ? '🥔' : record.crop_name === '샤인머스켓' ? '🍇' : '📦';
-                                        const unit = record.sale_unit || '박스';
-                                        let gradeEntries: { grade: string; qty: number }[] = [];
-                                        if (record.grade && record.grade.includes(':')) {
-                                            gradeEntries = record.grade.split(',').map((g: string) => {
-                                                const [label, qty] = g.split(':');
-                                                return { grade: label, qty: Number(qty) || 0 };
-                                            });
-                                        } else {
-                                            gradeEntries = [{ grade: record.grade || '특/상', qty: record.quantity || 0 }];
-                                        }
-
-                                        return (
-                                            <div key={record.id || recIdx} className="bg-gray-50 rounded-2xl p-4 space-y-2 border border-gray-100">
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-sm font-black text-gray-800 flex items-center gap-2">
-                                                        <span className="text-lg">{cropIcon}</span> {record.crop_name || '딸기'}
-                                                    </span>
-                                                    <span className="text-xs font-black text-gray-700 bg-white px-2 py-1 rounded-lg border">
-                                                        총 {record.quantity?.toLocaleString()}{unit}
-                                                    </span>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    {gradeEntries.map((entry, gIdx) => (
-                                                        <div key={gIdx} className="bg-white rounded-xl p-3 border border-blue-100 flex items-center gap-2">
-                                                            {/* 등급 라벨 */}
-                                                            <div className="shrink-0">
-                                                                <span className="w-12 text-xs font-black text-blue-700 bg-blue-50 px-2 py-2 rounded-lg text-center border border-blue-100 block shrink-0">{entry.grade}</span>
-                                                            </div>
-
-                                                            {/* 입력 필드 (3:7 비율) */}
-                                                            <div className="flex-1 flex items-center gap-2">
-                                                                {/* 수량 (3) */}
-                                                                <div className="flex-[3] relative flex items-center">
-                                                                    <input type="number" id={`modal-qty-${recIdx}-${entry.grade}`} defaultValue={entry.qty} placeholder="0"
-                                                                        className="w-full bg-gray-50 border-2 border-blue-400 rounded-xl py-3 px-2 text-center text-base font-black text-gray-900 focus:ring-4 focus:ring-blue-100 outline-none" />
-                                                                    <span className="absolute right-2 text-[10px] font-bold text-gray-700 pointer-events-none">{unit}</span>
-                                                                </div>
-
-                                                                {/* 단가 (7) */}
-                                                                <div className="flex-[7] relative flex items-center">
-                                                                    <input type="text" id={`modal-price-${recIdx}-${entry.grade}`} placeholder="단가입력"
-                                                                        className="w-full bg-gray-50 border-2 border-blue-400 rounded-xl py-3 px-3 text-center text-base font-black text-gray-900 focus:ring-4 focus:ring-blue-100 outline-none"
-                                                                        onChange={(e) => {
-                                                                            const val = e.target.value.replace(/[^0-9]/g, '');
-                                                                            e.target.value = val ? formatCurrency(val) : '';
-                                                                            const totalEl = document.getElementById('modal-total-display');
-                                                                            if (totalEl) {
-                                                                                let total = 0;
-                                                                                selectedGroup.records.forEach((r: any, rIdx: number) => {
-                                                                                    let cEs: { grade: string; qty: number }[] = [];
-                                                                                    if (r.grade && r.grade.includes(':')) {
-                                                                                        cEs = r.grade.split(',').map((gg: string) => {
-                                                                                            const [ll, qq] = gg.split(':');
-                                                                                            return { grade: ll, qty: Number(qq) || 0 };
-                                                                                        });
-                                                                                    } else {
-                                                                                        cEs = [{ grade: r.grade || '특/상', qty: r.quantity || 0 }];
-                                                                                    }
-                                                                                    cEs.forEach(en => {
-                                                                                        const qq = parseInt((document.getElementById(`modal-qty-${rIdx}-${en.grade}`) as HTMLInputElement)?.value) || 0;
-                                                                                        const pp = parseInt((document.getElementById(`modal-price-${rIdx}-${en.grade}`) as HTMLInputElement)?.value.replace(/[^0-9]/g, "")) || 0;
-                                                                                        total += (qq * pp);
-                                                                                    });
-                                                                                });
-                                                                                totalEl.innerText = formatCurrency(total);
-                                                                            }
-                                                                        }} />
-                                                                    <span className="absolute right-3 text-[10px] font-bold text-gray-700 pointer-events-none">원</span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-
-                                    {/* 총합 표시 */}
-                                    <div className="pt-3 mt-1 border-t-2 border-dashed border-blue-100 flex justify-between items-center px-2">
-                                        <div className="flex flex-col">
-                                            <span className="text-[10px] font-black text-blue-400 uppercase italic">예상 정산 합계</span>
-                                            <span className="text-[8px] text-gray-700 font-bold">* 단가 입력 시 자동 계산 (참고용)</span>
-                                        </div>
-                                        <span id="modal-total-display" className="text-xl font-black text-blue-600">0원</span>
-                                    </div>
-                                </section>
-
-                                {/* 2. 입금 설정 */}
-                                <section className="space-y-4 pt-4 border-t-2 border-gray-100">
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div className="space-y-1.5">
-                                            <label className="text-[11px] font-black text-blue-500 uppercase ml-1">입금 날짜</label>
-                                            <input
-                                                type="date"
-                                                value={settleDate}
-                                                onChange={(e) => setSettleDate(e.target.value)}
-                                                className="w-full bg-white border-2 border-blue-500 rounded-2xl p-3.5 text-xs font-black text-gray-900 outline-none focus:ring-4 focus:ring-blue-100 shadow-sm"
-                                            />
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <label className="text-[11px] font-black text-blue-500 uppercase ml-1">실제 입금액</label>
-                                            <input
-                                                type="text"
-                                                value={actualSettleAmount}
-                                                placeholder="입금 확인액"
-                                                onChange={(e) => {
-                                                    const val = e.target.value.replace(/[^0-9]/g, "");
-                                                    setActualSettleAmount(val ? formatCurrency(val) : "");
-                                                }}
-                                                className="w-full bg-white border-2 border-blue-500 rounded-2xl p-3.5 text-center text-sm font-black text-gray-900 outline-none focus:ring-4 focus:ring-blue-100 shadow-sm placeholder:text-gray-600"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="bg-blue-50/50 p-3 rounded-2xl border border-blue-100">
-                                        <p className="text-[10px] text-blue-600 font-bold leading-relaxed break-keep">
-                                            💡 <strong>여러 건을 한 번에 정산할 때:</strong> 입금액을 적으면 예상금액 비율에 따라 자동으로 분배됩니다. 단가를 모르신다면 <strong>입금 날짜</strong>와 <strong>실제 입금액</strong>만 적고 [정산 확정]을 하셔도 매출에 정상 반영됩니다.
-                                        </p>
-                                    </div>
-                                </section>
-
-                                <div className="pt-2 flex gap-3">
-                                    <button
-                                        onClick={() => setIsSettleModalOpen(false)}
-                                        className="flex-1 py-4 text-sm font-black text-gray-700 hover:text-gray-600 transition-colors"
-                                    >
-                                        취소
-                                    </button>
-                                    <button
-                                        onClick={handleGradeSettle}
-                                        disabled={loading}
-                                        className="flex-[2] bg-blue-600 text-white py-4 rounded-2xl text-sm font-black shadow-xl shadow-blue-100 hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-50"
-                                    >
-                                        {loading ? "처리중..." : "정산 확정하기"}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <SettlementModal
+                        mode="finance"
+                        companyName={selectedGroup.companyName}
+                        deliveryDate={selectedGroup.date}
+                        cropEntries={financeModalEntries}
+                        initialSettleDate={settleDate}
+                        initialPaymentMethod="계좌이체"
+                        onSave={handleFinanceSave}
+                        onClose={() => { setIsSettleModalOpen(false); setSelectedGroup(null); }}
+                        saving={financeSaving}
+                    />
                 )}
-
                 {/* 지출 상세 모달 */}
                 {expenseDetailModal && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setExpenseDetailModal(null)}>

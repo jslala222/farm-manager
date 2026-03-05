@@ -6,6 +6,7 @@ import { useAuthStore } from "@/store/authStore";
 import { supabase, SalesRecord, Partner } from "@/lib/supabase";
 import { formatCurrency, getCropIcon } from "@/lib/utils";
 import CalendarComponent from "@/components/Calendar";
+import SettlementModal, { ModalCropEntry, SettlementSaveData } from "@/components/SettlementModal";
 
 const toLocalDateStr = (d: Date = new Date()) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -28,6 +29,7 @@ export default function BulkSalesPage() {
     const [modalQties, setModalQties] = useState<Record<string, string>>({}); // { [cropName:grade]: qty }
     const [modalPaymentMethod, setModalPaymentMethod] = useState('카드');
     const [modalPaymentStatus, setModalPaymentStatus] = useState<'pending' | 'completed'>('pending');
+    const [modalPrices, setModalPrices] = useState<Record<string, string>>({}); // { [cropName:grade]: 단가 }
     const [modalSaving, setModalSaving] = useState(false);
     const [compoundSourceIds, setCompoundSourceIds] = useState<string[]>([]); // 구형 복합 레코드 ID
 
@@ -283,69 +285,106 @@ export default function BulkSalesPage() {
             }
         });
 
+        // 기존 단가 복원
+        const prices: Record<string, string> = {};
+        cropGroups.forEach(cg => {
+            if (cg.isProcessed) {
+                const p = cg.records[0]?.price;
+                const q = cg.records.reduce((s: number, r: any) => s + (r.quantity || 0), 0);
+                prices[`${cg.cropName}:-`] = p && q ? String(Math.round(p / q)) : '';
+            } else {
+                cg.records.forEach((rec: any) => {
+                    const p = rec.price;
+                    const q = rec.quantity || 0;
+                    prices[`${cg.cropName}:${rec.grade}`] = p && q ? String(Math.round(p / q)) : '';
+                });
+            }
+        });
+
         setModalQties(qties);
+        setModalPrices(prices);
         setCompoundSourceIds(Array.from(srcIds));
         setEditModal({ open: true, records, cropGroups, companyName });
     };
 
-    const handleModalSave = async () => {
+    // SettlementModal용 crop entries 계산
+    const bulkCropEntries = useMemo((): ModalCropEntry[] => {
+        if (!editModal.open) return [];
+        const entries: ModalCropEntry[] = [];
+        editModal.cropGroups.forEach(cg => {
+            if (cg.isProcessed) {
+                entries.push({
+                    recordId: cg.records[0]?.id ?? null,
+                    cropName: cg.cropName,
+                    grade: '-',
+                    quantity: Number(modalQties[`${cg.cropName}:-`] || '0'),
+                    unit: cg.unit,
+                    isProcessed: true,
+                    unitPrice: Number(modalPrices[`${cg.cropName}:-`] || '0'),
+                });
+            } else {
+                cg.records.forEach((rec: any) => {
+                    entries.push({
+                        recordId: (rec.id && !rec._isCompound) ? rec.id : null,
+                        cropName: cg.cropName,
+                        grade: rec.grade,
+                        quantity: Number(modalQties[`${cg.cropName}:${rec.grade}`] || '0'),
+                        unit: cg.unit,
+                        isProcessed: false,
+                        unitPrice: Number(modalPrices[`${cg.cropName}:${rec.grade}`] || '0'),
+                    });
+                });
+            }
+        });
+        return entries;
+    }, [editModal.open, editModal.cropGroups, modalQties, modalPrices]);
+
+    const handleBulkSave = async (data: SettlementSaveData) => {
         if (!editModal.cropGroups.length || modalSaving || !farm?.id) return;
         setModalSaving(true);
         try {
             const first = editModal.records[0];
             const timeStr = first.recorded_at.split('T')[1] || new Date().toTimeString().split(' ')[0];
-            const recordedAt = modalDate + 'T' + timeStr;
+            const recordedAt = (data.date || modalDate) + 'T' + timeStr;
+            const isSettled = data.paymentStatus === 'completed';
 
             // 1. 구형 복합 레코드 삭제
             for (const srcId of compoundSourceIds) {
                 await supabase.from('sales_records').delete().eq('id', srcId);
             }
 
-            // 2. 각 품목별 처리
-            for (const cg of editModal.cropGroups) {
+            // 2. 각 entry 처리
+            for (const entry of data.entries) {
+                const qty = entry.quantity;
+                const price = isSettled && entry.unitPrice && qty ? entry.unitPrice * qty : null;
                 const baseData = {
-                    farm_id: farm.id, partner_id: first.partner_id, crop_name: cg.cropName,
-                    sale_unit: cg.unit, recorded_at: recordedAt,
-                    payment_method: modalPaymentMethod, payment_status: modalPaymentStatus,
-                    is_settled: modalPaymentStatus === 'completed',
+                    farm_id: farm.id, partner_id: first.partner_id,
+                    crop_name: entry.cropName, sale_unit: entry.unit,
+                    recorded_at: recordedAt,
+                    payment_method: data.paymentMethod, payment_status: data.paymentStatus,
+                    is_settled: isSettled,
+                    settled_at: isSettled ? data.settleDate : null,
+                    settled_amount: isSettled ? (data.actualAmount ?? price) : null,
                     delivery_method: 'direct', sale_type: 'b2b',
+                    harvest_note: data.deductionReason || null,
+                    delivery_note: data.memo || null,
                 };
-
-                if (cg.isProcessed) {
-                    // 가공품: 단일 레코드
-                    const qty = Number(modalQties[`${cg.cropName}:-`] || '0');
-                    const existingRec = cg.records[0];
-                    if (existingRec?.id) {
-                        if (qty === 0) {
-                            await supabase.from('sales_records').delete().eq('id', existingRec.id);
-                        } else {
-                            await supabase.from('sales_records').update({
-                                recorded_at: recordedAt, quantity: qty,
-                                payment_method: modalPaymentMethod, payment_status: modalPaymentStatus,
-                                is_settled: modalPaymentStatus === 'completed',
-                            }).eq('id', existingRec.id);
-                        }
-                    } else if (qty > 0) {
-                        await supabase.from('sales_records').insert({ ...baseData, quantity: qty, grade: '-' });
+                if (entry.recordId) {
+                    if (qty === 0) {
+                        await supabase.from('sales_records').delete().eq('id', entry.recordId);
+                    } else {
+                        await supabase.from('sales_records').update({
+                            recorded_at: recordedAt, quantity: qty,
+                            payment_method: data.paymentMethod, payment_status: data.paymentStatus,
+                            is_settled: isSettled, price,
+                            settled_at: isSettled ? data.settleDate : null,
+                            settled_amount: isSettled ? (data.actualAmount ?? price) : null,
+                            harvest_note: data.deductionReason || null,
+                            delivery_note: data.memo || null,
+                        }).eq('id', entry.recordId);
                     }
-                } else {
-                    // 원물: 등급별 처리
-                    for (const rec of cg.records) {
-                        const qty = Number(modalQties[`${cg.cropName}:${rec.grade}`] || '0');
-                        if (rec.id && !rec._isCompound) {
-                            if (qty === 0) {
-                                await supabase.from('sales_records').delete().eq('id', rec.id);
-                            } else {
-                                await supabase.from('sales_records').update({
-                                    recorded_at: recordedAt, quantity: qty,
-                                    payment_method: modalPaymentMethod, payment_status: modalPaymentStatus,
-                                    is_settled: modalPaymentStatus === 'completed',
-                                }).eq('id', rec.id);
-                            }
-                        } else if (qty > 0) {
-                            await supabase.from('sales_records').insert({ ...baseData, quantity: qty, grade: rec.grade });
-                        }
-                    }
+                } else if (qty > 0) {
+                    await supabase.from('sales_records').insert({ ...baseData, quantity: qty, grade: entry.grade, price });
                 }
             }
 
@@ -358,6 +397,18 @@ export default function BulkSalesPage() {
         } finally {
             setModalSaving(false);
         }
+    };
+
+    const handleBulkDelete = () => {
+        if (!confirm("정말 삭제하시겠습니까? 삭제하시면 되돌릴 수 없으니, 자세히 확인 후 삭제하기 바랍니다.")) return;
+        const allRecs = editModal.records.filter((r: any) => r.id);
+        Promise.all(allRecs.map((rec: any) => supabase.from('sales_records').delete().eq('id', rec.id)))
+            .then(() => {
+                setEditModal({ open: false, records: [], cropGroups: [], companyName: '' });
+                setCompoundSourceIds([]);
+                fetchHistory();
+            })
+            .catch((err: any) => alert("삭제 중 오류가 발생했습니다: " + err.message));
     };
 
     const handleDelete = async (id: string) => { if (!confirm("삭제하시겠습니까?")) return; const { error } = await supabase.from('sales_records').delete().eq('id', id); if (!error) fetchHistory(); };
@@ -604,154 +655,24 @@ export default function BulkSalesPage() {
                 </div>
             )}
 
-            {/* 수정 모달 (다중 품목 대응) */}
+            {/* 수정 모달 (SettlementModal 통합) */}
             {editModal.open && editModal.cropGroups.length > 0 && (
-                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm px-4 pb-4"
-                    onClick={() => { setEditModal({ open: false, records: [], cropGroups: [], companyName: '' }); setCompoundSourceIds([]); }}>
-                    <div className="bg-white w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
-                        onClick={e => e.stopPropagation()}>
-                        {/* 헤더 */}
-                        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
-                            <div>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase">납품 내역 수정</p>
-                                <div className="flex items-center gap-2">
-                                    <p className="text-sm font-black text-slate-900">{editModal.companyName}</p>
-                                    {editModal.cropGroups.length > 1 && (
-                                        <span className="text-[8px] font-black bg-indigo-50 text-indigo-500 px-1.5 py-0.5 rounded-full">{editModal.cropGroups.length}종류</span>
-                                    )}
-                                </div>
-                            </div>
-                            <button onClick={() => { setEditModal({ open: false, records: [], cropGroups: [], companyName: '' }); setCompoundSourceIds([]); }}
-                                className="p-2 rounded-xl bg-slate-100 text-slate-400 hover:bg-slate-200 transition-all">
-                                <X className="w-4 h-4" />
-                            </button>
-                        </div>
-                        {/* 스크롤 가능한 폼 */}
-                        <div className="p-5 space-y-4 overflow-y-auto flex-1">
-                            {/* 날짜 */}
-                            <div className="bg-slate-50 rounded-2xl p-3">
-                                <p className="text-[9px] font-black text-slate-400 uppercase mb-1">날짜</p>
-                                <input type="date" value={modalDate} onChange={e => setModalDate(e.target.value)}
-                                    className="bg-transparent text-sm font-black text-slate-800 outline-none w-full" />
-                            </div>
-                            {/* 품목별 수량 (적응형) */}
-                            {editModal.cropGroups.map((cg, cgIdx) => (
-                                <div key={cg.cropName} className="space-y-2">
-                                    <div className="flex items-center gap-2 px-1">
-                                        <span className="text-lg">{getCropIcon(cg.cropName)}</span>
-                                        <p className="text-xs font-black text-slate-700">{cg.cropName}</p>
-                                        {cg.isProcessed && <span className="text-[8px] font-bold text-violet-500 bg-violet-50 px-1.5 py-0.5 rounded-full">가공품</span>}
-                                    </div>
-                                    {cg.isProcessed ? (
-                                        /* 가공품: 단순 수량 1칸 */
-                                        <div className="flex items-center gap-3 bg-violet-50/50 rounded-2xl border border-violet-100 px-4 py-3">
-                                            <span className="text-xs font-black text-violet-500 w-14 shrink-0">수량</span>
-                                            <input type="text" inputMode="numeric"
-                                                value={modalQties[`${cg.cropName}:-`] ?? ''}
-                                                onChange={e => setModalQties(prev => ({ ...prev, [`${cg.cropName}:-`]: e.target.value.replace(/[^0-9]/g, '') }))}
-                                                className="flex-1 bg-transparent text-center text-xl font-black text-slate-800 outline-none" placeholder="0" />
-                                            <span className="text-xs font-bold text-slate-400 shrink-0">{cg.unit}</span>
-                                        </div>
-                                    ) : (
-                                        /* 원물: 등급별 수량 */
-                                        <>
-                                            {cg.records.map(rec => (
-                                                <div key={rec.grade} className="flex items-center gap-3 bg-slate-50/50 rounded-2xl border border-slate-100 px-4 py-3">
-                                                    <span className="text-xs font-black text-indigo-500 w-14 shrink-0 whitespace-nowrap">{rec.grade}</span>
-                                                    <input type="text" inputMode="numeric"
-                                                        value={modalQties[`${cg.cropName}:${rec.grade}`] ?? ''}
-                                                        onChange={e => setModalQties(prev => ({ ...prev, [`${cg.cropName}:${rec.grade}`]: e.target.value.replace(/[^0-9]/g, '') }))}
-                                                        className="flex-1 bg-transparent text-center text-xl font-black text-slate-800 outline-none" placeholder="0" />
-                                                    <span className="text-xs font-bold text-slate-400 shrink-0">{cg.unit}</span>
-                                                </div>
-                                            ))}
-                                        </>
-                                    )}
-                                    {/* 품목별 소계 */}
-                                    {(() => {
-                                        const subtotal = cg.isProcessed
-                                            ? Number(modalQties[`${cg.cropName}:-`] || 0)
-                                            : cg.records.reduce((s: number, r: any) => s + Number(modalQties[`${cg.cropName}:${r.grade}`] || 0), 0);
-                                        return subtotal > 0 ? (
-                                            <div className="text-right text-[10px] font-bold text-slate-400 pr-1">
-                                                소계: {subtotal.toLocaleString()}{cg.unit}
-                                            </div>
-                                        ) : null;
-                                    })()}
-                                    {cgIdx < editModal.cropGroups.length - 1 && <div className="border-b border-dashed border-slate-100 mt-2" />}
-                                </div>
-                            ))}
-                            {/* 전체 합계 (다중 품목일 때만) */}
-                            {editModal.cropGroups.length > 1 && (
-                                <div className="flex items-center justify-between bg-indigo-50/50 rounded-2xl border border-indigo-100 px-4 py-3">
-                                    <span className="text-xs font-black text-indigo-600">전체 합계</span>
-                                    <div className="text-right text-sm font-black text-indigo-700">
-                                        {(() => {
-                                            const unitTotals: Record<string, number> = {};
-                                            editModal.cropGroups.forEach(cg => {
-                                                const qty = cg.isProcessed
-                                                    ? Number(modalQties[`${cg.cropName}:-`] || 0)
-                                                    : cg.records.reduce((s: number, r: any) => s + Number(modalQties[`${cg.cropName}:${r.grade}`] || 0), 0);
-                                                unitTotals[cg.unit] = (unitTotals[cg.unit] || 0) + qty;
-                                            });
-                                            return Object.entries(unitTotals).map(([u, q]) => `${q.toLocaleString()}${u}`).join(', ');
-                                        })()}
-                                    </div>
-                                </div>
-                            )}
-                            {/* 결제수단 + 정산상태 */}
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="flex gap-1 p-1 bg-slate-100 rounded-xl">
-                                    {['카드', '현금', '계좌'].map(m => (
-                                        <button key={m} onClick={() => setModalPaymentMethod(m)}
-                                            className={`flex-1 py-2 rounded-lg text-xs font-black transition-all ${modalPaymentMethod === m ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400'}`}>
-                                            {m}
-                                        </button>
-                                    ))}
-                                </div>
-                                <button onClick={() => setModalPaymentStatus(modalPaymentStatus === 'completed' ? 'pending' : 'completed')}
-                                    className={`py-3 rounded-xl border-2 font-black text-xs transition-all ${modalPaymentStatus === 'completed' ? 'border-emerald-500 bg-emerald-50 text-emerald-600' : 'border-amber-400 bg-amber-50 text-amber-600'}`}>
-                                    {modalPaymentStatus === 'completed' ? '정산 완료' : '미정산 (외상)'}
-                                </button>
-                            </div>
-                            {/* 저장/취소/삭제 */}
-                            <div className="flex gap-2 pt-1">
-                                <button onClick={() => { setEditModal({ open: false, records: [], cropGroups: [], companyName: '' }); setCompoundSourceIds([]); }}
-                                    className="flex-1 py-3 rounded-2xl bg-slate-100 text-slate-500 font-black text-sm">
-                                    취소
-                                </button>
-                                <button onClick={() => {
-                                    if (confirm("정말 삭제하시겠습니까? 삭제하시면 되돌릴 수 없으니, 자세히 확인 후 삭제하기 바랍니다.")) {
-                                        const allRecs = editModal.records.filter(r => r.id);
-                                        Promise.all(allRecs.map(rec => supabase.from('sales_records').delete().eq('id', rec.id)))
-                                            .then(() => {
-                                                setEditModal({ open: false, records: [], cropGroups: [], companyName: '' });
-                                                setCompoundSourceIds([]);
-                                                fetchHistory();
-                                            })
-                                            .catch((err) => alert("삭제 중 오류가 발생했습니다: " + err.message));
-                                    }
-                                }}
-                                    className="flex-1 py-3 rounded-2xl bg-rose-50 text-rose-500 font-black text-sm hover:bg-rose-100 transition-all">
-                                    삭제하기
-                                </button>
-                                <button onClick={handleModalSave} disabled={modalSaving}
-                                    className={`flex-[1.5] py-3 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg transition-all ${modalSaving ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}>
-                                    {modalSaving ? (
-                                        <>
-                                            <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
-                                            저장 중
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Save className="w-4 h-4" /> 저장하기
-                                        </>
-                                    )}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <SettlementModal
+                    mode="bulk-edit"
+                    companyName={editModal.companyName}
+                    deliveryDate={modalDate}
+                    cropEntries={bulkCropEntries}
+                    initialDate={modalDate}
+                    initialPaymentStatus={modalPaymentStatus}
+                    initialPaymentMethod={modalPaymentMethod}
+                    initialDeductionReason={editModal.records[0]?.harvest_note || ''}
+                    initialMemo={editModal.records[0]?.delivery_note || ''}
+                    initialActualAmount={editModal.records[0]?.settled_amount ?? null}
+                    onSave={handleBulkSave}
+                    onDelete={handleBulkDelete}
+                    onClose={() => { setEditModal({ open: false, records: [], cropGroups: [], companyName: '' }); setCompoundSourceIds([]); }}
+                    saving={modalSaving}
+                />
             )}
             <div className="max-w-2xl mx-auto p-3 md:p-3 space-y-4">
 
