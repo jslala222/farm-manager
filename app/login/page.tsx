@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Sprout } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
 export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const [msg, setMsg] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
 
     const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -32,16 +33,15 @@ export default function LoginPage() {
                 toast.error("로그인 실패: " + error.message);
                 setMsg("에러: " + error.message);
             } else if (data.user) {
-                // [신규] 사장님(관리자) 승인 여부 체크 게이트
                 const { data: profile } = await supabase.from('profiles').select('role').eq('id', data.user.id).single();
 
                 if (profile?.role !== 'admin') {
                     const { data: farm } = await supabase.from('farms').select('is_active').eq('owner_id', data.user.id).maybeSingle();
 
                     if (!farm || !farm.is_active) {
-                        // 승인되지 않은 유저는 즉시 로그아웃 및 차단
                         await supabase.auth.signOut();
-                        toast.error("🔒 승인 대기 중입니다.\n\n사장님(관리자)의 승인이 완료된 후 로그인이 가능합니다. 잠시만 기다려 주세요.");
+                        toast.error("승인 대기 중입니다.\n\n사장님(관리자)의 승인이 완료된 후 로그인이 가능합니다. 잠시만 기다려 주세요.");
+
                         setMsg("사장님 승인 대기 중 (미승인 계정)");
                         setLoading(false);
                         return;
@@ -62,7 +62,6 @@ export default function LoginPage() {
     const testSupabase = async () => {
         setMsg("Supabase 연결 확인 중...");
         try {
-            // count: 'exact', head: true 를 사용하여 실제 컬럼 데이터 로드 없이 연결만 확인
             const { error } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
             if (error) {
                 toast.error("Supabase 연결 실패 (키 확인 필요): " + error.message);
@@ -76,59 +75,96 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-            <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-4 border border-gray-100">
+        <div className="relative min-h-screen flex items-center justify-center p-4">
+            {/* 배경 이미지 + 오버레이 */}
+            <div
+                className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+                style={{ backgroundImage: "url('/bg-farm.jpg')" }}
+            />
+            <div className="relative z-10 w-full max-w-sm">
+                {/* 로그 영역 */}
                 <div className="text-center mb-8">
-                    <div className="inline-flex items-center justify-center w-12 h-12 bg-red-100 rounded-xl mb-3">
-                        <Sprout className="w-6 h-6 text-red-600" />
-                    </div>
-                    <h1 className="text-xl font-bold">농장관리</h1>
-                    <p className="text-gray-700 text-sm">로그인 후 사용 가능합니다</p>
+<h1 className="text-xl font-bold text-white drop-shadow-lg">농장 관리 시스템</h1>
+                    <div className="w-12 h-0.5 bg-red-600 mx-auto mt-2 rounded-full" />
                 </div>
 
-                <form onSubmit={handleLogin} className="space-y-3 sm:space-y-4">
-                    <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1 uppercase">Email</label>
-                        <input
-                            name="email"
-                            type="email"
-                            placeholder="farm@example.com"
-                            className="w-full p-3 sm:p-4 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-red-500 outline-none text-gray-900"
-                            required
-                        />
+                {/* 카드 */}
+                <div className="bg-gray-900/85 backdrop-blur-md border border-gray-700/60 rounded-2xl p-6 shadow-2xl">
+                    <form onSubmit={handleLogin} className="space-y-4">
+                        {/* 이메일 */}
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-400 mb-2 uppercase tracking-widest">
+                                이메일
+                            </label>
+                            <input
+                                name="email"
+                                type="email"
+                                placeholder="farm@example.com"
+                                className="w-full px-4 py-3 bg-gray-800/80 border border-gray-700 rounded-xl text-white placeholder-gray-600 text-sm outline-none transition-all focus:border-red-500 focus:ring-2 focus:ring-red-500/20"
+                                required
+                            />
+                        </div>
+
+                        {/* 비밀번호 */}
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-400 mb-2 uppercase tracking-widest">
+                                비밀번호
+                            </label>
+                            <div className="relative">
+                                <input
+                                    name="password"
+                                    type={showPassword ? "text" : "password"}
+                                    placeholder="••••••••"
+                                    className="w-full px-4 py-3 pr-11 bg-gray-800/80 border border-gray-700 rounded-xl text-white placeholder-gray-600 text-sm outline-none transition-all focus:border-red-500 focus:ring-2 focus:ring-red-500/20"
+                                    required
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
+                                    tabIndex={-1}
+                                >
+                                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* 로그인 버튼 */}
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full bg-red-600 text-white py-3 rounded-xl font-bold text-sm tracking-wide hover:bg-red-500 active:scale-[0.98] transition-all disabled:opacity-40 shadow-[0_0_20px_rgba(220,38,38,0.35)] hover:shadow-[0_0_28px_rgba(220,38,38,0.5)] mt-2"
+                        >
+                            {loading ? "처리 중..." : "로그인하기"}
+                        </button>
+
+                        {msg && (
+                            <p className="text-center text-xs font-medium text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg py-2 px-3">
+                                {msg}
+                            </p>
+                        )}
+                    </form>
+
+                    {/* 하단 링크 */}
+                    <div className="mt-5 pt-4 border-t border-gray-700/50 flex items-center justify-center gap-4 text-xs text-gray-500">
+                        <a href="/forgot-password" className="hover:text-red-400 transition-colors">
+                            비밀번호 찾기
+                        </a>
+                        <span className="text-gray-700">·</span>
+                        <a href="/register" className="hover:text-red-400 transition-colors">
+                            계정 신청
+                        </a>
                     </div>
-                    <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1 uppercase">Password</label>
-                        <input
-                            name="password"
-                            type="password"
-                            placeholder="••••••"
-                            className="w-full p-3 sm:p-4 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-red-500 outline-none text-gray-900"
-                            required
-                        />
-                    </div>
+                </div>
 
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full bg-red-600 text-white py-3 sm:py-4 rounded-xl font-bold text-lg hover:bg-red-700 active:scale-95 transition-all disabled:opacity-50"
-                    >
-                        {loading ? "처리 중..." : "로그인"}
-                    </button>
-
-                    {msg && <p className="text-center text-sm font-medium text-red-600">{msg}</p>}
-                </form>
-
-                <div className="mt-8 flex flex-col gap-3">
+                {/* DB 상태 확인 */}
+                <div className="mt-4 text-center">
                     <button
                         onClick={testSupabase}
-                        className="text-xs text-gray-700 hover:text-gray-600 underline"
+                        className="text-xs text-gray-600 hover:text-gray-400 transition-colors underline underline-offset-2"
                     >
                         데이터베이스 연결 상태 확인
                     </button>
-                    <a href="/register" className="text-center text-sm text-red-600 font-bold hover:underline">
-                        계정이 없으신가요? 회원가입 신청
-                    </a>
                 </div>
             </div>
         </div>
