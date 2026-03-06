@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
-import { Eye, EyeOff, Lock, CheckCircle } from "lucide-react";
+import { Eye, EyeOff, Lock, CheckCircle, AlertCircle } from "lucide-react";
 
 export default function ResetPasswordPage() {
     const [password, setPassword] = useState("");
@@ -11,12 +11,35 @@ export default function ResetPasswordPage() {
     const [loading, setLoading] = useState(false);
     const [done, setDone] = useState(false);
     const [ready, setReady] = useState(false);
+    const [linkError, setLinkError] = useState("");
 
     useEffect(() => {
+        const hash = window.location.hash.substring(1);
+        const params = new URLSearchParams(hash);
+        const accessToken = params.get("access_token");
+        const refreshToken = params.get("refresh_token");
+        const type = params.get("type");
+        const errorCode = params.get("error_code");
+
+        if (errorCode === "otp_expired" || params.get("error") === "access_denied") {
+            setLinkError("링크가 만료되었습니다. 비밀번호 찾기를 다시 요청해주세요.");
+            return;
+        }
+
+        if (type === "recovery" && accessToken && refreshToken) {
+            supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+                .then(({ error }) => {
+                    if (error) {
+                        setLinkError("링크가 만료되었습니다. 비밀번호 찾기를 다시 요청해주세요.");
+                    } else {
+                        setReady(true);
+                        window.history.replaceState(null, "", window.location.pathname);
+                    }
+                });
+        }
+
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-            if (event === "PASSWORD_RECOVERY") {
-                setReady(true);
-            }
+            if (event === "PASSWORD_RECOVERY") setReady(true);
         });
         return () => subscription.unsubscribe();
     }, []);
@@ -48,6 +71,14 @@ export default function ResetPasswordPage() {
                             <a href="/login" className="block w-full text-center bg-red-600 text-white py-3 rounded-xl text-sm font-bold hover:bg-red-500 transition-all shadow-[0_0_20px_rgba(220,38,38,0.35)]">
                                 로그인하기
                             </a>
+                        </div>
+                    ) : linkError ? (
+                        <div className="text-center space-y-4">
+                            <AlertCircle className="w-12 h-12 text-red-400 mx-auto" />
+                            <p className="text-white font-bold">링크 만료</p>
+                            <p className="text-gray-400 text-sm">{linkError}</p>
+                            <a href="/forgot-password" className="block w-full text-center bg-red-600 text-white py-3 rounded-xl text-sm font-bold hover:bg-red-500 transition-all shadow-[0_0_20px_rgba(220,38,38,0.35)]">비밀번호 찾기 다시 요청</a>
+                            <a href="/login" className="block text-center text-xs text-gray-500 hover:text-gray-300 transition-colors">로그인으로 돌아가기</a>
                         </div>
                     ) : !ready ? (
                         <div className="text-center py-8 space-y-2">
