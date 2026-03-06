@@ -26,6 +26,8 @@ export async function proxy(request: NextRequest) {
     const publicPaths = ['/login', '/register', '/pending', '/forgot-password', '/reset-password'];
 
     if (publicPaths.includes(pathname)) {
+        // reset-password는 로그인 상태여도 항상 허용 (비밀번호 재설정 흐름)
+        if (pathname === '/reset-password') return response;
         // 이미 로그인된 유저가 로그인/회원가입 페이지에 접근하면 상황에 따라 리다이렉트
         if (user && pathname !== '/pending') {
             return NextResponse.redirect(new URL('/', request.url));
