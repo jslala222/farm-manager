@@ -1,169 +1,307 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle, XCircle, Users, Sprout } from "lucide-react";
+import {
+    CheckCircle, XCircle, Users, Sprout, RefreshCcw, Download,
+    Eye, EyeOff, Edit2, Save, X, ShieldCheck, Clock, AlertTriangle
+} from "lucide-react";
 import { supabase, Farm } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { toast } from "sonner";
+import * as XLSX from "xlsx";
+
+interface AdminFarm extends Farm {
+    owner_full_name?: string;
+    owner_role?: string;
+}
 
 export default function AdminPage() {
     const { profile } = useAuthStore();
     const router = useRouter();
-    const [farms, setFarms] = useState<(Farm & { owner_email?: string })[]>([]);
+    const [farms, setFarms] = useState<AdminFarm[]>([]);
     const [loading, setLoading] = useState(true);
+    const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
+    const [editingNotes, setEditingNotes] = useState<Record<string, string>>({});
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [savingId, setSavingId] = useState<string | null>(null);
+    const [filterStatus, setFilterStatus] = useState<"all" | "active" | "pending">("all");
 
     useEffect(() => {
-        if (profile && profile.role !== 'admin') {
-            toast.error('관리자 전용 페이지입니다.');
-            router.push('/');
+        if (profile && profile.role !== "admin") {
+            toast.error("관리자 전용 페이지입니다.");
+            router.push("/");
             return;
         }
         if (profile) fetchFarms();
     }, [profile]);
 
-    const fetchFarms = async () => {
+    const fetchFarms = useCallback(async () => {
         setLoading(true);
-        // 복합 조인으로 인한 오류를 방지하기 위해 단순 쿼리로 복구합니다.
-        const { data, error } = await supabase
-            .from('farms')
-            .select('*')
-            .order('created_at', { ascending: false });
+        try {
+            // farms + profiles 조인
+            const { data, error } = await supabase
+                .from("farms")
+                .select("*, profiles!owner_id(full_name, role)")
+                .order("created_at", { ascending: false });
 
-        if (error) {
-            console.error("농장 로드 실패:", error);
-            toast.error("농장 정보를 불러오는데 실패했습니다.");
-        } else {
-            setFarms(data ?? []);
+            if (error) throw error;
+
+            const mapped: AdminFarm[] = (data ?? []).map((f: any) => ({
+                ...f,
+                owner_full_name: f.profiles?.full_name || null,
+                owner_role: f.profiles?.role || null,
+            }));
+            setFarms(mapped);
+        } catch (e: any) {
+            toast.error("데이터 로드 실패: " + e.message);
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
-    };
+    }, []);
 
     const toggleActive = async (id: string, current: boolean, email?: string) => {
         const newStatus = !current;
-
-        // 1. 농장 활성화 상태 업데이트
-        const { error: farmError } = await supabase.from('farms').update({ is_active: newStatus }).eq('id', id);
-
-        if (farmError) {
-            toast.error("상태 변경 실패: " + farmError.message);
-            return;
-        }
-
-        // 2. [핵심] 승인 시 이메일 미인증 상태라면 즉시 강제 인증 처리 (One-Click 통합)
+        const { error } = await supabase.from("farms").update({ is_active: newStatus }).eq("id", id);
+        if (error) { toast.error("상태 변경 실패: " + error.message); return; }
         if (newStatus && email) {
-            await supabase.rpc('force_confirm_user', { target_email: email });
+            await supabase.rpc("force_confirm_user", { target_email: email });
         }
-
+        toast.success(newStatus ? "✅ 승인 완료" : "❌ 승인 취소");
         fetchFarms();
+    };
+
+    const saveNotes = async (id: string) => {
+        setSavingId(id);
+        const { error } = await supabase.from("farms").update({ notes: editingNotes[id] ?? "" }).eq("id", id);
+        if (error) { toast.error("저장 실패"); }
+        else { toast.success("저장 완료"); setEditingId(null); fetchFarms(); }
+        setSavingId(null);
+    };
+
+    const togglePassword = (id: string) => {
+        setShowPasswords(prev => ({ ...prev, [id]: !prev[id] }));
+    };
+
+    const startEdit = (farm: AdminFarm) => {
+        setEditingId(farm.id);
+        setEditingNotes(prev => ({ ...prev, [farm.id]: farm.notes || "" }));
+    };
+
+    const handleDownloadXLSX = () => {
+        const rows = filteredFarms.map((f, i) => ({
+            "번호": i + 1,
+            "농장명": f.farm_name,
+            "소유자": f.owner_full_name || "-",
+            "연락이메일": f.email || "-",
+            "전화번호": f.phone || "-",
+            "테스트비밀번호": f.notes || "-",
+            "주소": f.address || "-",
+            "사업자번호": f.business_number || "-",
+            "가입일": new Date(f.created_at).toLocaleDateString("ko-KR"),
+            "상태": f.is_active ? "승인완료" : "대기중",
+        }));
+        const ws = XLSX.utils.json_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "농장목록");
+        XLSX.writeFile(wb, `농장목록_${new Date().toISOString().slice(0, 10)}.xlsx`);
+        toast.success("엑셀 다운로드 완료");
     };
 
     const activeFarms = farms.filter(f => f.is_active);
     const pendingFarms = farms.filter(f => !f.is_active);
+    const filteredFarms = filterStatus === "active" ? activeFarms : filterStatus === "pending" ? pendingFarms : farms;
 
     return (
-        <div className="p-4 md:p-3 pb-20 md:pb-6 max-w-4xl mx-auto">
-            <div className="flex items-center justify-between mb-6">
+        <div className="p-4 md:p-6 pb-24 md:pb-8 max-w-6xl mx-auto space-y-5">
+
+            {/* 헤더 */}
+            <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-xl font-bold text-gray-900">관리자 대시보드</h1>
-                    <p className="text-gray-700 text-sm mt-1">전체 농장 현황 및 승인 관리</p>
+                    <h1 className="text-xl font-black text-gray-900 flex items-center gap-2">
+                        <ShieldCheck className="w-5 h-5 text-red-600" />
+                        관리자 대시보드
+                    </h1>
+                    <p className="text-xs text-gray-500 mt-0.5">전체 농장 및 사용자 관리</p>
                 </div>
-                <a href="/admin/catalog"
-                    className="flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-2xl text-sm font-black transition-all shadow-lg shadow-green-100">
-                    <Sprout className="w-4 h-4" />
-                    사진 카탈로그
-                </a>
-            </div>
-
-            {/* 요약 카드 */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                        <Sprout className="w-5 h-5 text-green-600" />
-                        <span className="text-sm text-gray-700">전체 농장</span>
-                    </div>
-                    <p className="text-3xl font-bold text-gray-900">{farms.length}</p>
-                </div>
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                        <CheckCircle className="w-5 h-5 text-blue-600" />
-                        <span className="text-sm text-gray-700">승인 완료</span>
-                    </div>
-                    <p className="text-3xl font-bold text-gray-900">{activeFarms.length}</p>
-                </div>
-                <div className="bg-white rounded-2xl border-2 border-yellow-200 shadow-lg p-5 animate-pulse-subtle bg-yellow-50/30">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="bg-yellow-100 p-2 rounded-xl">
-                            <XCircle className="w-5 h-5 text-yellow-600" />
-                        </div>
-                        <span className="text-sm font-black text-yellow-700 uppercase tracking-tighter">신규 승인 대기</span>
-                    </div>
-                    <p className="text-3xl font-black text-yellow-900">{pendingFarms.length}</p>
-                    <p className="text-[10px] text-yellow-600 font-bold mt-1">사장님의 확인이 필요한 새로운 농장 신청입니다.</p>
+                <div className="flex gap-2">
+                    <button onClick={() => router.push("/admin/catalog")}
+                        className="flex items-center gap-1.5 px-3 py-2 bg-green-600 text-white rounded-xl text-xs font-black shadow-lg">
+                        <Sprout className="w-3.5 h-3.5" />카탈로그
+                    </button>
+                    <button onClick={fetchFarms} disabled={loading}
+                        className="p-2 rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all">
+                        <RefreshCcw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+                    </button>
                 </div>
             </div>
 
-            {/* 승인 대기 */}
-            {pendingFarms.length > 0 && (
-                <div className="mb-6">
-                    <h2 className="text-base font-bold text-yellow-700 mb-3 flex items-center gap-2">
-                        ⏳ 승인 대기 ({pendingFarms.length})
-                    </h2>
-                    <div className="space-y-3">
-                        {pendingFarms.map(farm => (
-                            <FarmCard key={farm.id} farm={farm} onToggle={toggleActive} />
-                        ))}
-                    </div>
+            {/* KPI 카드 */}
+            <div className="grid grid-cols-3 gap-3">
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-center">
+                    <p className="text-[10px] font-black text-gray-400 uppercase mb-1">전체</p>
+                    <p className="text-2xl font-black text-gray-900">{farms.length}</p>
                 </div>
-            )}
+                <div className="bg-emerald-50 rounded-2xl border border-emerald-100 shadow-sm p-4 text-center">
+                    <p className="text-[10px] font-black text-emerald-500 uppercase mb-1">승인완료</p>
+                    <p className="text-2xl font-black text-emerald-700">{activeFarms.length}</p>
+                </div>
+                <div className={`rounded-2xl border shadow-sm p-4 text-center ${pendingFarms.length > 0 ? "bg-amber-50 border-amber-200" : "bg-gray-50 border-gray-100"}`}>
+                    <p className="text-[10px] font-black text-amber-500 uppercase mb-1">승인대기</p>
+                    <p className={`text-2xl font-black ${pendingFarms.length > 0 ? "text-amber-700" : "text-gray-400"}`}>{pendingFarms.length}</p>
+                </div>
+            </div>
 
-            {/* 승인된 농장 */}
-            <div>
-                <h2 className="text-base font-bold text-gray-700 mb-3">✅ 승인된 농장 ({activeFarms.length})</h2>
+            {/* 필터 + 다운로드 */}
+            <div className="flex items-center justify-between gap-2">
+                <div className="flex bg-gray-100 p-1 rounded-2xl gap-1">
+                    {([
+                        { key: "all", label: `전체 (${farms.length})` },
+                        { key: "active", label: `승인 (${activeFarms.length})` },
+                        { key: "pending", label: `대기 (${pendingFarms.length})` },
+                    ] as { key: typeof filterStatus; label: string }[]).map(f => (
+                        <button key={f.key} onClick={() => setFilterStatus(f.key)}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${filterStatus === f.key ? "bg-white shadow-sm text-gray-900" : "text-gray-500"}`}>
+                            {f.label}
+                        </button>
+                    ))}
+                </div>
+                <button onClick={handleDownloadXLSX}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white rounded-xl text-xs font-black shadow-lg">
+                    <Download className="w-3.5 h-3.5" />엑셀
+                </button>
+            </div>
+
+            {/* 테이블 */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                {/* 테이블 헤더 */}
+                <div className="grid grid-cols-[2rem_1fr_1fr_1fr_1fr_1fr_6rem_6rem] gap-0 bg-gray-50 border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase">
+                    <div className="px-3 py-3">#</div>
+                    <div className="px-3 py-3">농장명</div>
+                    <div className="px-3 py-3">소유자</div>
+                    <div className="px-3 py-3">연락이메일 / 전화</div>
+                    <div className="px-3 py-3">테스트 비밀번호</div>
+                    <div className="px-3 py-3">가입일</div>
+                    <div className="px-3 py-3">상태</div>
+                    <div className="px-3 py-3">관리</div>
+                </div>
+
                 {loading ? (
-                    <p className="text-gray-700 text-sm text-center py-8">로딩 중...</p>
-                ) : (
-                    <div className="space-y-3">
-                        {activeFarms.map(farm => (
-                            <FarmCard key={farm.id} farm={farm} onToggle={toggleActive} />
-                        ))}
+                    <div className="flex items-center justify-center py-16 gap-2 text-gray-400">
+                        <RefreshCcw className="w-5 h-5 animate-spin" />
+                        <span className="text-sm font-bold">로딩 중...</span>
                     </div>
+                ) : filteredFarms.length === 0 ? (
+                    <div className="text-center py-12 text-gray-400 text-sm font-bold">데이터가 없습니다</div>
+                ) : (
+                    filteredFarms.map((farm, idx) => (
+                        <div key={farm.id}
+                            className={`grid grid-cols-[2rem_1fr_1fr_1fr_1fr_1fr_6rem_6rem] gap-0 border-b border-gray-50 hover:bg-gray-50/50 transition-colors text-sm
+                                ${!farm.is_active ? "bg-amber-50/30" : ""}`}>
+                            {/* # */}
+                            <div className="px-3 py-3 text-[10px] text-gray-400 font-bold self-center">{idx + 1}</div>
+
+                            {/* 농장명 */}
+                            <div className="px-3 py-3 self-center">
+                                <p className="font-black text-gray-900 text-sm">{farm.farm_name}</p>
+                                {farm.address && <p className="text-[10px] text-gray-400 truncate max-w-[120px]">{farm.address}</p>}
+                            </div>
+
+                            {/* 소유자 */}
+                            <div className="px-3 py-3 self-center">
+                                <p className="font-bold text-gray-700 text-xs">{farm.owner_full_name || "-"}</p>
+                                <p className="text-[10px] text-gray-400">{farm.owner_id.substring(0, 8)}...</p>
+                            </div>
+
+                            {/* 이메일 / 전화 */}
+                            <div className="px-3 py-3 self-center">
+                                <p className="text-xs font-bold text-blue-600 truncate">{farm.email || "-"}</p>
+                                <p className="text-[10px] text-gray-500">{farm.phone || "-"}</p>
+                            </div>
+
+                            {/* 테스트 비밀번호 */}
+                            <div className="px-3 py-3 self-center">
+                                {editingId === farm.id ? (
+                                    <div className="flex items-center gap-1">
+                                        <input
+                                            type="text"
+                                            value={editingNotes[farm.id] ?? ""}
+                                            onChange={e => setEditingNotes(prev => ({ ...prev, [farm.id]: e.target.value }))}
+                                            placeholder="비밀번호 메모"
+                                            className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1 outline-none focus:border-blue-400"
+                                        />
+                                        <button onClick={() => saveNotes(farm.id)} disabled={savingId === farm.id}
+                                            className="p-1 rounded-lg bg-emerald-500 text-white shrink-0">
+                                            <Save className="w-3 h-3" />
+                                        </button>
+                                        <button onClick={() => setEditingId(null)}
+                                            className="p-1 rounded-lg bg-gray-200 text-gray-600 shrink-0">
+                                            <X className="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-1">
+                                        <span className={`text-xs font-mono ${farm.notes ? "text-gray-800" : "text-gray-300"}`}>
+                                            {farm.notes
+                                                ? showPasswords[farm.id] ? farm.notes : "••••••••"
+                                                : "없음"}
+                                        </span>
+                                        {farm.notes && (
+                                            <button onClick={() => togglePassword(farm.id)}
+                                                className="p-1 text-gray-400 hover:text-gray-700">
+                                                {showPasswords[farm.id] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                                            </button>
+                                        )}
+                                        <button onClick={() => startEdit(farm)}
+                                            className="p-1 text-gray-400 hover:text-blue-500">
+                                            <Edit2 className="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* 가입일 */}
+                            <div className="px-3 py-3 self-center">
+                                <p className="text-xs text-gray-600">{new Date(farm.created_at).toLocaleDateString("ko-KR")}</p>
+                            </div>
+
+                            {/* 상태 */}
+                            <div className="px-3 py-3 self-center">
+                                {farm.is_active ? (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">
+                                        <CheckCircle className="w-3 h-3" />승인
+                                    </span>
+                                ) : (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-black text-amber-600 bg-amber-50 px-2 py-1 rounded-lg">
+                                        <Clock className="w-3 h-3" />대기
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* 관리 */}
+                            <div className="px-3 py-3 self-center">
+                                <button
+                                    onClick={() => toggleActive(farm.id, farm.is_active, farm.email || undefined)}
+                                    className={`text-[10px] font-black px-3 py-1.5 rounded-xl transition-all active:scale-95
+                                        ${farm.is_active
+                                            ? "bg-red-50 text-red-500 border border-red-100 hover:bg-red-100"
+                                            : "bg-emerald-500 text-white shadow-lg shadow-emerald-100 hover:bg-emerald-600"}`}>
+                                    {farm.is_active ? "승인취소" : "즉시승인"}
+                                </button>
+                            </div>
+                        </div>
+                    ))
                 )}
             </div>
-        </div>
-    );
-}
 
-function FarmCard({ farm, onToggle }: { farm: Farm; onToggle: (id: string, current: boolean, email?: string) => void }) {
-    return (
-        <div className={`bg-white rounded-2xl border shadow-sm p-4 ${farm.is_active ? 'border-gray-100' : 'border-yellow-200 bg-yellow-50'}`}>
-            <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-gray-900">{farm.farm_name}</h3>
-                    <div className="text-sm text-gray-700 mt-1 space-y-0.5">
-                        <p className="font-medium text-blue-600">👤 소유자 ID: {farm.owner_id.substring(0, 8)}...</p>
-                        {farm.phone && <p>📞 {farm.phone}</p>}
-                        {farm.address && <p>📍 {farm.address}</p>}
-                        {farm.business_number && <p>🏢 {farm.business_number}</p>}
-                        {farm.notes && <p className="text-xs text-gray-700 mt-1">💬 {farm.notes}</p>}
-                    </div>
-                    <p className="text-xs text-gray-700 mt-2">
-                        등록일: {new Date(farm.created_at).toLocaleDateString('ko-KR')}
-                    </p>
-                </div>
-                <div className="flex flex-col gap-2">
-                    <button
-                        onClick={() => onToggle(farm.id, farm.is_active, (farm as any).profiles?.email || farm.owner_id)}
-                        className={`px-6 py-2.5 rounded-2xl text-sm font-black transition-all shadow-lg active:scale-95
-                ${farm.is_active
-                                ? 'bg-red-50 text-red-600 border border-red-100'
-                                : 'bg-green-600 text-white hover:bg-green-700 hover:shadow-green-200'}`}>
-                        {farm.is_active ? '승인 취소' : '즉시 승인'}
-                    </button>
-                    {!farm.is_active && (
-                        <p className="text-[10px] text-gray-700 text-center font-bold">승인 시 이메일도 함께 인증됩니다</p>
-                    )}
-                </div>
+            {/* 안내 */}
+            <div className="bg-amber-50 rounded-2xl border border-amber-100 p-3 flex gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-700 font-bold">
+                    테스트 비밀번호는 <strong>farms.notes</strong> 컈럼에 저장됩니다.
+                    로그인 이메일은 farms.email 컈럼에서 가져옵니다.
+                    실제 인증 이메일 확인이 필요하면 Supabase 대시보드 → Authentication 빔에서 확인하세요.
+                </p>
             </div>
         </div>
     );
