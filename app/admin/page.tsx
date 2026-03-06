@@ -26,6 +26,8 @@ export default function AdminPage() {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [savingId, setSavingId] = useState<string | null>(null);
     const [filterStatus, setFilterStatus] = useState<"all" | "active" | "pending">("all");
+    const [tempPwId, setTempPwId] = useState<string | null>(null);
+    const [tempPwInput, setTempPwInput] = useState("");
 
     useEffect(() => {
         if (profile && profile.role !== "admin") {
@@ -86,9 +88,33 @@ export default function AdminPage() {
 
     const saveNotes = async (id: string) => {
         setSavingId(id);
-        const { error } = await supabase.from("farms").update({ notes: editingNotes[id] ?? "" }).eq("id", id);
+        const { error } = await supabase.from("farms").update({ test_password: editingNotes[id] ?? "" }).eq("id", id);
         if (error) { toast.error("저장 실패"); }
         else { toast.success("저장 완료"); setEditingId(null); fetchFarms(); }
+        setSavingId(null);
+    };
+
+    const issueTempPassword = async (farm: AdminFarm) => {
+        if (!tempPwInput.trim()) { toast.error("임시 비밀번호를 입력하세요."); return; }
+        setSavingId(farm.id);
+        try {
+            // 1. Supabase Auth 비밀번호 변경
+            const res = await fetch("/api/admin/reset-password", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ userId: farm.owner_id, tempPassword: tempPwInput }),
+            });
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.error);
+            // 2. test_password 컨럼에도 저장
+            await supabase.from("farms").update({ test_password: tempPwInput }).eq("id", farm.id);
+            toast.success("✅ 임시 비밀번호 발급 완료");
+            setTempPwId(null);
+            setTempPwInput("");
+            fetchFarms();
+        } catch (e: any) {
+            toast.error("발급 실패: " + e.message);
+        }
         setSavingId(null);
     };
 
@@ -98,7 +124,7 @@ export default function AdminPage() {
 
     const startEdit = (farm: AdminFarm) => {
         setEditingId(farm.id);
-        setEditingNotes(prev => ({ ...prev, [farm.id]: farm.notes || "" }));
+        setEditingNotes(prev => ({ ...prev, [farm.id]: farm.test_password || "" }));
     };
 
     const handleDownloadXLSX = () => {
@@ -108,7 +134,7 @@ export default function AdminPage() {
             "소유자": f.owner_full_name || "-",
             "연락이메일": f.email || "-",
             "전화번호": f.phone || "-",
-            "테스트비밀번호": f.notes || "-",
+            "테스트비밀번호": f.test_password || "-",
             "주소": f.address || "-",
             "사업자번호": f.business_number || "-",
             "가입일": new Date(f.created_at).toLocaleDateString("ko-KR"),
@@ -254,12 +280,12 @@ export default function AdminPage() {
                                     </div>
                                 ) : (
                                     <div className="flex items-center gap-1">
-                                        <span className={`text-xs font-mono ${farm.notes ? "text-gray-800" : "text-gray-300"}`}>
-                                            {farm.notes
-                                                ? showPasswords[farm.id] ? farm.notes : "••••••••"
+                                        <span className={`text-xs font-mono ${farm.test_password ? "text-gray-800" : "text-gray-300"}`}>
+                                            {farm.test_password
+                                                ? showPasswords[farm.id] ? farm.test_password : "••••••••"
                                                 : "없음"}
                                         </span>
-                                        {farm.notes && (
+                                        {farm.test_password && (
                                             <button onClick={() => togglePassword(farm.id)}
                                                 className="p-1 text-gray-400 hover:text-gray-700">
                                                 {showPasswords[farm.id] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
@@ -292,7 +318,7 @@ export default function AdminPage() {
                             </div>
 
                             {/* 관리 */}
-                            <div className="px-3 py-3 self-center">
+                            <div className="px-3 py-3 self-center flex flex-col gap-1.5">
                                 <button
                                     onClick={() => toggleActive(farm.id, farm.is_active, farm.email || undefined)}
                                     className={`text-[10px] font-black px-3 py-1.5 rounded-xl transition-all active:scale-95
@@ -301,6 +327,32 @@ export default function AdminPage() {
                                             : "bg-emerald-500 text-white shadow-lg shadow-emerald-100 hover:bg-emerald-600"}`}>
                                     {farm.is_active ? "승인취소" : "즉시승인"}
                                 </button>
+                                {tempPwId === farm.id ? (
+                                    <div className="flex items-center gap-1">
+                                        <input
+                                            type="text"
+                                            value={tempPwInput}
+                                            onChange={e => setTempPwInput(e.target.value)}
+                                            placeholder="임시 PW"
+                                            className="w-full text-xs border border-orange-300 rounded-lg px-2 py-1 outline-none focus:border-orange-500"
+                                            onKeyDown={e => e.key === "Enter" && issueTempPassword(farm)}
+                                        />
+                                        <button onClick={() => issueTempPassword(farm)} disabled={savingId === farm.id}
+                                            className="p-1 rounded-lg bg-orange-500 text-white shrink-0">
+                                            <Save className="w-3 h-3" />
+                                        </button>
+                                        <button onClick={() => { setTempPwId(null); setTempPwInput(""); }}
+                                            className="p-1 rounded-lg bg-gray-200 text-gray-600 shrink-0">
+                                            <X className="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button
+                                        onClick={() => { setTempPwId(farm.id); setTempPwInput(""); }}
+                                        className="text-[10px] font-black px-3 py-1.5 rounded-xl bg-orange-50 text-orange-600 border border-orange-100 hover:bg-orange-100 transition-all active:scale-95">
+                                        임시 PW
+                                    </button>
+                                )}
                             </div>
                         </div>
                     ))
@@ -311,7 +363,7 @@ export default function AdminPage() {
             <div className="bg-amber-50 rounded-2xl border border-amber-100 p-3 flex gap-2">
                 <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                 <p className="text-xs text-amber-700 font-bold">
-                    테스트 비밀번호는 <strong>farms.notes</strong> 컈럼에 저장됩니다.
+                    테스트 비밀번호는 <strong>farms.test_password</strong> 컈럼에 저장됩니다.
                     로그인 이메일은 farms.email 컈럼에서 가져옵니다.
                     실제 인증 이메일 확인이 필요하면 Supabase 대시보드 → Authentication 빔에서 확인하세요.
                 </p>

@@ -97,6 +97,7 @@ export interface Farm {
     latitude: number | null;    // 농장 위도
     longitude: number | null;   // 농장 경도
     notes: string | null;
+    test_password: string | null;
     is_active: boolean;
     created_at: string;
     owner_email?: string; // 관리자용 필드
@@ -240,6 +241,7 @@ export interface Worker {
     latitude: number | null;    // 직원 거조지 위도
     longitude: number | null;   // 직원 거주지 경도
     notes: string | null;
+    test_password: string | null;
     is_active: boolean;
     default_daily_wage?: number; // 기본 일당
     created_at: string;
