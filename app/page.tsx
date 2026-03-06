@@ -254,7 +254,7 @@ export default function Home() {
                 <div className="absolute top-6 -right-4 w-32 h-32 rounded-full pointer-events-none" style={{ background: 'rgba(255,255,255,0.04)' }} />
 
                 {/* 날짜 + 인사 + 알림 */}
-                <div className="relative flex items-start justify-between mb-4 pl-12 md:pl-0">
+                <div className="relative flex items-start justify-between mb-4 pr-12 md:pr-0">
                     <div>
                         <p className="text-sm font-medium" style={{ color: '#C8E8D5' }}>{fullDateLabel}</p>
                         <h1 className="text-white text-xl font-bold mt-0.5">

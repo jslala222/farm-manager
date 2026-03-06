@@ -200,7 +200,7 @@ export default function NavBar() {
             {pathname === '/' && (
                 <button
                     onClick={() => setMobileOpen(!mobileOpen)}
-                    className="md:hidden fixed top-4 left-4 z-50 p-2.5 rounded-2xl transition-all active:scale-90"
+                    className="md:hidden fixed top-4 right-4 z-50 p-2.5 rounded-2xl transition-all active:scale-90"
                     style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(4px)' }}
                 >
                     {mobileOpen ? <X size={20} className="text-white" /> : <AlignLeft size={20} className="text-white" />}
@@ -284,7 +284,7 @@ export default function NavBar() {
                 })}
             </nav>
 
-            <div className="md:hidden h-14" />
+            <div className={`md:hidden h-14${pathname === '/' ? ' bg-orange-500' : ''}`} />
         </>
     );
 }

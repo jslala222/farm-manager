@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, getCropIcon } from "@/lib/utils";
 import { toast } from "sonner";
 
 // 날짜 범위 기본값: 이번달 1일 ~ 오늘
@@ -96,6 +96,8 @@ export default function B2CSettledPage() {
     const [settleFilter, setSettleFilter] = useState<SettleFilter>('all');
     const [confirmingId, setConfirmingId] = useState<string | null>(null); // 입금확인 처리 중인 거래 ID
     const [confirmMessage, setConfirmMessage] = useState<{ id: string; text: string } | null>(null); // 입금확인 완료 메시지
+    const [cropIconMap, setCropIconMap] = useState<Record<string, string>>({});
+    const [cropCategoryMap, setCropCategoryMap] = useState<Record<string, string>>({});
 
     // 기간 프리셋 변경 시 날짜 범위 자동 계산
     useEffect(() => {
@@ -137,6 +139,22 @@ export default function B2CSettledPage() {
     useEffect(() => {
         if (initialized && farm?.id) fetchData();
     }, [fetchData, initialized, farm?.id]);
+
+    // farm_crops 아이콘 맵 로드
+    useEffect(() => {
+        if (!farm?.id) return;
+        supabase.from('farm_crops').select('crop_name, crop_icon, category').eq('farm_id', farm.id).then(({ data }) => {
+            if (!data) return;
+            const iconMap: Record<string, string> = {};
+            const catMap: Record<string, string> = {};
+            data.forEach((c: { crop_name: string; crop_icon: string | null; category: string }) => {
+                if (c.crop_icon) iconMap[c.crop_name] = c.crop_icon;
+                catMap[c.crop_name] = c.category;
+            });
+            setCropIconMap(iconMap);
+            setCropCategoryMap(catMap);
+        });
+    }, [farm?.id]);
 
     // ────── 입금확인 (미정산 → 정산완료) ──────
     // B2B와 동일하게 settled_at (입금일) 기준으로 수익 집계
@@ -222,6 +240,22 @@ export default function B2CSettledPage() {
     );
     const settledCount = records.filter(r => r.is_settled).length;
     const pendingCount = records.filter(r => !r.is_settled).length;
+
+    // 품목별 쳙 수량 집계
+    const cropTotals = useMemo(() => {
+        const cropMap = new Map<string, { qty: number; unit: string }>();
+        records.forEach(r => {
+            const key = r.crop_name || '미분류';
+            const u = r.sale_unit || '박스';
+            if (!cropMap.has(key)) cropMap.set(key, { qty: 0, unit: u });
+            cropMap.get(key)!.qty += r.quantity || 0;
+        });
+        const result: { cropName: string; qty: number; unit: string; isProcessed: boolean }[] = [];
+        cropMap.forEach((v, cropName) => {
+            result.push({ cropName, qty: v.qty, unit: v.unit, isProcessed: cropCategoryMap[cropName] === 'processed' });
+        });
+        return result;
+    }, [records, cropCategoryMap]);
 
     const formatDate = (dateStr: string) => {
         const d = new Date(dateStr);
@@ -375,6 +409,31 @@ export default function B2CSettledPage() {
                     </div>
                 )}
             </section>
+
+            {/* 수확 품목별 수량 그리드 */}
+            {cropTotals.length > 0 && (
+                <div className="bg-emerald-50 rounded-2xl border border-emerald-100 shadow-sm px-4 py-3">
+                    <p className="text-[9px] font-black text-emerald-600 uppercase mb-2.5">주문 품목 수량</p>
+                    <div className="grid grid-cols-3 gap-2">
+                        {cropTotals.map(({ cropName, qty, unit, isProcessed }) => (
+                            <div key={cropName} className="bg-white border border-emerald-100 rounded-2xl p-2.5 text-center shadow-sm flex flex-col items-center gap-1">
+                                <span className="text-xl leading-none">
+                                    {cropIconMap[cropName] || getCropIcon(cropName)}
+                                </span>
+                                <p className="text-[9px] font-black text-slate-600 leading-tight truncate w-full text-center">{cropName}</p>
+                                <p className="text-sm font-black text-emerald-700 leading-none">
+                                    {qty.toLocaleString()}{isProcessed ? '개' : ''}
+                                </p>
+                                <p className="text-[9px] font-bold text-emerald-400 leading-none">{unit}</p>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="mt-2 pt-2 border-t border-emerald-100 flex items-center justify-between">
+                        <p className="text-[9px] font-black text-emerald-600 uppercase">정산 총액 (실입금)</p>
+                        <p className="text-sm font-black text-emerald-700">{formatCurrency(settledTotal)}</p>
+                    </div>
+                </div>
+            )}
 
             {/* 정산 상태 필터 */}
             <div className="flex bg-gray-100 p-1 rounded-2xl gap-1">
