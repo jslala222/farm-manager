@@ -930,21 +930,23 @@ export default function FinancePage() {
                         <span className="text-[10px] font-black text-amber-600 bg-amber-100 px-2.5 py-1 rounded-full">{unsettledRecords.reduce((acc: number, p: any) => acc + p.dailyGroups.length, 0)}건 대기</span>
                     </div>
                     <div className="p-5 space-y-5">
-                        <div className="flex items-end justify-between gap-3">
-                            <div className="min-w-0">
-                                <p className="text-xs font-bold text-gray-700 mb-1">입금 대기 중인 금액</p>
-                                <h4 className="text-xl font-black text-gray-900 break-all">{formatCurrency(unsettledB2B)}</h4>
+                        <div className="space-y-2">
+                            <div className="flex items-end justify-between gap-3">
+                                <div>
+                                    <p className="text-xs font-bold text-gray-700 mb-1">입금 대기 중인 금액</p>
+                                    <h4 className="text-xl font-black text-gray-900 whitespace-nowrap">{formatCurrency(unsettledB2B)}</h4>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-xs font-bold text-green-600 mb-1">확정/입금된 금액</p>
+                                    <p className="text-base font-black text-gray-700 whitespace-nowrap">{formatCurrency(b2bRevenue - unsettledB2B)}</p>
+                                </div>
                             </div>
                             {unpricedB2bCount > 0 && (
-                                <div className="text-center shrink-0">
-                                    <p className="text-[10px] font-black text-red-500 mb-0.5">단가 미입력</p>
-                                    <p className="text-lg font-black text-red-600">{unpricedB2bGroupCount}건 · {unpricedB2bCount}개</p>
+                                <div className="flex items-center gap-2 bg-red-50 rounded-xl px-3 py-2">
+                                    <span className="text-[10px] font-black text-red-500">⚠️ 단가 미입력</span>
+                                    <span className="text-sm font-black text-red-600">{unpricedB2bGroupCount}건 · {unpricedB2bCount}개</span>
                                 </div>
                             )}
-                            <div className="text-right shrink-0">
-                                <p className="text-xs font-bold text-green-600 mb-1">확정/입금된 금액</p>
-                                <p className="text-base font-black text-gray-700">{formatCurrency(b2bRevenue - unsettledB2B)}</p>
-                            </div>
                         </div>
 
                         <div className="bg-gray-50 rounded-2xl p-4 flex items-center justify-between">
@@ -973,15 +975,15 @@ export default function FinancePage() {
                     </div>
                     <div className="p-5 space-y-5">
                         <div className="flex items-end justify-between gap-3">
-                            <div className="min-w-0">
+                            <div>
                                 <p className="text-xs font-bold text-gray-700 mb-1">미입금 총액</p>
-                                <h4 className="text-xl font-black text-gray-900 break-all">
+                                <h4 className="text-xl font-black text-gray-900 whitespace-nowrap">
                                     {formatCurrency(unsettledB2cRecords.reduce((s: number, r: any) => s + (r.price || 0), 0))}
                                 </h4>
                             </div>
-                            <div className="text-right shrink-0">
+                            <div className="text-right">
                                 <p className="text-xs font-bold text-green-600 mb-1">입금 완료된 금액</p>
-                                <p className="text-base font-black text-gray-700">{formatCurrency(b2cRevenue)}</p>
+                                <p className="text-base font-black text-gray-700 whitespace-nowrap">{formatCurrency(b2cRevenue)}</p>
                             </div>
                         </div>
                     </div>
