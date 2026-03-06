@@ -678,7 +678,7 @@ export default function SettingsPage() {
                                     <div className="absolute top-2 right-2 z-10">
                                         <Menu as="div" className="relative inline-block text-left">
                                             <Menu.Button className="p-1.5 rounded-full bg-gray-100 hover:bg-gray-200">
-                                                <DotsHorizontal className="w-5 h-5 text-gray-600" />
+                                                <MoreHorizontal className="w-5 h-5 text-gray-600" />
                                             </Menu.Button>
                                             <Menu.Items className="absolute right-0 mt-2 w-28 origin-top-right bg-white border border-gray-200 rounded-xl shadow-lg focus:outline-none">
                                                 <div className="py-1">
@@ -807,7 +807,7 @@ export default function SettingsPage() {
                                     <div className="absolute top-2 right-2 z-10">
                                         <Menu as="div" className="relative inline-block text-left">
                                             <Menu.Button className="p-1.5 rounded-full bg-gray-100 hover:bg-gray-200">
-                                                <DotsHorizontal className="w-5 h-5 text-gray-600" />
+                                                <MoreHorizontal className="w-5 h-5 text-gray-600" />
                                             </Menu.Button>
                                             <Menu.Items className="absolute right-0 mt-2 w-28 origin-top-right bg-white border border-gray-200 rounded-xl shadow-lg focus:outline-none">
                                                 <div className="py-1">
