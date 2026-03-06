@@ -439,31 +439,32 @@ export default function WorkersPage() {
             <div key={worker.id}
                 className={`bg-white rounded-xl border p-3 space-y-2 shadow-sm transition-all hover:shadow-lg hover:border-gray-200
                     ${worker.is_active ? 'border-gray-100 bg-white' : 'bg-gray-50 border-gray-200 opacity-60'}`}>
-                {/* 헤더: 아이콘 + 이름 + 배지 + 버튼 */}
-                <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center border shrink-0 ${info.bg} ${info.border}`}>
-                            <info.icon className={`w-5 h-5 ${info.color}`} />
-                        </div>
-                        <div className="min-w-0 flex items-center gap-2">
-                            <span className="font-bold text-base text-gray-900 truncate">{worker.name}</span>
-                            {/* 성별 배지 */}
-                            <span className={`text-sm font-bold px-2.5 py-1 rounded-md shrink-0 ${
-                                worker.gender === 'female' 
-                                    ? 'bg-pink-100 text-pink-600 border border-pink-200' 
-                                    : 'bg-blue-100 text-blue-600 border border-blue-200'
-                            }`}>
-                                {worker.gender === 'female' ? '♀' : '♂'}
-                            </span>
-                            {/* 상태 배지 */}
-                            <button onClick={() => toggleWorkerStatus(worker.id, worker.is_active)} className={`text-sm font-bold px-3 py-1 rounded-md transition-all active:scale-95 cursor-pointer shrink-0 ${worker.is_active ? 'bg-green-600 text-white shadow-sm hover:bg-green-700' : 'bg-amber-600 text-white shadow-sm hover:bg-amber-700'}`}>
-                                {worker.is_active ? '근무중' : '휴직중'}
-                            </button>
-                            {/* 전화번호 */}
-                            {worker.phone && <span className="text-sm font-bold text-gray-700 shrink-0 flex items-center gap-1"><Phone className="w-4 h-4" />{worker.phone}</span>}
-                        </div>
+                {/* 1줄: 아이콘 + 이름 + 성별 + 상태 */}
+                <div className="flex items-center gap-2 min-w-0">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center border shrink-0 ${info.bg} ${info.border}`}>
+                        <info.icon className={`w-5 h-5 ${info.color}`} />
                     </div>
-                    <div className="flex items-center gap-0.5 shrink-0">
+                    <div className="min-w-0 flex-1 flex items-center gap-2">
+                        <span className="font-bold text-base text-gray-900 truncate">{worker.name}</span>
+                        <span className={`text-sm font-bold px-2.5 py-1 rounded-md shrink-0 ${
+                            worker.gender === 'female'
+                                ? 'bg-pink-100 text-pink-600 border border-pink-200'
+                                : 'bg-blue-100 text-blue-600 border border-blue-200'
+                        }`}>
+                            {worker.gender === 'female' ? '♀' : '♂'}
+                        </span>
+                        <button onClick={() => toggleWorkerStatus(worker.id, worker.is_active)} className={`text-sm font-bold px-3 py-1 rounded-md transition-all active:scale-95 cursor-pointer shrink-0 ${worker.is_active ? 'bg-green-600 text-white shadow-sm hover:bg-green-700' : 'bg-amber-600 text-white shadow-sm hover:bg-amber-700'}`}>
+                            {worker.is_active ? '근무중' : '휴직중'}
+                        </button>
+                    </div>
+                </div>
+                {/* 2줄: 전화번호 + 편집/삭제 */}
+                <div className="flex items-center justify-between pl-12">
+                    {worker.phone
+                        ? <span className="text-sm font-bold text-gray-600 flex items-center gap-1"><Phone className="w-4 h-4" />{worker.phone}</span>
+                        : <span />
+                    }
+                    <div className="flex items-center gap-0.5">
                         <button onClick={() => startEdit(worker)} className="p-1.5 text-gray-500 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all active:scale-90">
                             <Edit2 className="w-4 h-4" />
                         </button>
