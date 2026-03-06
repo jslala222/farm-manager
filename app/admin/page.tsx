@@ -39,18 +39,31 @@ export default function AdminPage() {
     const fetchFarms = useCallback(async () => {
         setLoading(true);
         try {
-            // farms + profiles 조인
-            const { data, error } = await supabase
+            // 1. farms 조회
+            const { data: farmsData, error: farmsError } = await supabase
                 .from("farms")
-                .select("*, profiles!owner_id(full_name, role)")
+                .select("*")
                 .order("created_at", { ascending: false });
+            if (farmsError) throw farmsError;
 
-            if (error) throw error;
+            // 2. profiles 조회 (소유자 이름)
+            const ownerIds = (farmsData ?? []).map((f: any) => f.owner_id).filter(Boolean);
+            let profileMap: Record<string, { full_name: string | null; role: string | null }> = {};
+            if (ownerIds.length > 0) {
+                const { data: profilesData } = await supabase
+                    .from("profiles")
+                    .select("id, full_name, role")
+                    .in("id", ownerIds);
+                (profilesData ?? []).forEach((p: any) => {
+                    profileMap[p.id] = { full_name: p.full_name, role: p.role };
+                });
+            }
 
-            const mapped: AdminFarm[] = (data ?? []).map((f: any) => ({
+            // 3. 병합
+            const mapped: AdminFarm[] = (farmsData ?? []).map((f: any) => ({
                 ...f,
-                owner_full_name: f.profiles?.full_name || null,
-                owner_role: f.profiles?.role || null,
+                owner_full_name: profileMap[f.owner_id]?.full_name || null,
+                owner_role: profileMap[f.owner_id]?.role || null,
             }));
             setFarms(mapped);
         } catch (e: any) {
