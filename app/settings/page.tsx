@@ -12,7 +12,7 @@ import CropImagePicker from "@/components/CropImagePicker";
 import { toast } from "sonner";
 
 export default function SettingsPage() {
-    const { user, farm: storeFarm, profile, initialize, initialized } = useAuthStore();
+    const { user, farm: storeFarm, profile, initialize, initialized, refreshCropIconMap } = useAuthStore();
     const [farm, setFarm] = useState<Partial<Farm>>({});
     const [houses, setHouses] = useState<FarmHouse[]>([]);
     const [newHouseNum, setNewHouseNum] = useState("");
@@ -92,6 +92,7 @@ export default function SettingsPage() {
                 .update({ crop_name: name.trim(), crop_icon: icon })
                 .eq('id', id);
             if (error) throw error;
+            await refreshCropIconMap();
 
             // 2. 이름 변경 시 관련 레코드 CASCADE 업데이트
             if (nameChanged && oldName) {
@@ -706,7 +707,7 @@ export default function SettingsPage() {
                                         })}
                                         className={`absolute top-2 left-2 p-1.5 z-10 rounded-lg ${crop.crop_image_url ? 'bg-green-500 hover:bg-green-600' : 'bg-white/80 hover:bg-green-50'}`}
                                         title="사진 선택">
-                                        <Camera className={`w-12 h-12 ${crop.crop_image_url ? 'text-white' : 'text-green-600'}`} />
+                                        <Camera className={`w-8 h-8 ${crop.crop_image_url ? 'text-white' : 'text-green-600'}`} />
                                     </button>
                                     {/* 항상 이모지 표시 */}
                                     <button onClick={() => openEditCrop(crop)} className="text-3xl mb-1 hover:scale-110 transition-transform active:scale-95" title="클릭하여 수정">
@@ -835,7 +836,7 @@ export default function SettingsPage() {
                                         })}
                                         className={`absolute top-2 left-2 p-1.5 z-10 rounded-lg ${crop.crop_image_url ? 'bg-amber-500 hover:bg-amber-600' : 'bg-white/80 hover:bg-amber-50'}`}
                                         title="사진 선택">
-                                        <Camera className={`w-12 h-12 ${crop.crop_image_url ? 'text-white' : 'text-amber-600'}`} />
+                                        <Camera className={`w-8 h-8 ${crop.crop_image_url ? 'text-white' : 'text-amber-600'}`} />
                                     </button>
                                     {/* 항상 이모지 표시 */}
                                     <button onClick={() => openEditCrop(crop)} className="text-3xl mb-1 hover:scale-110 transition-transform active:scale-95 mt-3" title="클릭하여 수정">

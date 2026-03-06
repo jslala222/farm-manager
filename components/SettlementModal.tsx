@@ -5,6 +5,7 @@ import React, { useState, useMemo } from 'react';
 import { X, Save, ShoppingCart } from 'lucide-react';
 import { getCropIcon } from '@/lib/utils';
 import { toast } from "sonner";
+import { useAuthStore } from '@/store/authStore';
 
 export interface ModalCropEntry {
     recordId?: string | null;
@@ -15,6 +16,7 @@ export interface ModalCropEntry {
     isProcessed: boolean;
     unitPrice?: number;   // initial unit price (0 or undefined = unknown)
     isCompoundGrade?: boolean; // true if this entry came from a compound grade record
+    cropIcon?: string;
 }
 
 export interface SettlementSaveData {
@@ -61,6 +63,14 @@ interface SettlementModalProps {
 const PAYMENT_METHODS = ['카드', '현금', '계좌이체'];
 const DEDUCTION_REASONS = ['조합공제', '운임공제', '품질하락', '시세조정', '선불차감', '기타'];
 
+// 단위 파싱: ml/L 용량단위면 수량은 "개", 용량은 주석으로
+function parseUnit(unit: string): { countUnit: string; sizeNote: string } {
+    if (/^\d+(ml|L|cc|mL)$/i.test(unit)) {
+        return { countUnit: '개', sizeNote: '(' + unit + ')' };
+    }
+    return { countUnit: unit, sizeNote: '' };
+}
+
 export default function SettlementModal({
     mode,
     companyName,
@@ -78,6 +88,7 @@ export default function SettlementModal({
     onClose,
     saving,
 }: SettlementModalProps) {
+    const { cropIconMap } = useAuthStore();
     // Bulk-edit: date & payment status
     const [date, setDate] = useState(initialDate || deliveryDate);
     const [paymentStatus, setPaymentStatus] = useState<'pending' | 'completed'>(initialPaymentStatus);
@@ -131,13 +142,17 @@ export default function SettlementModal({
         ? actualAmountNum - expectedTotal
         : null;
 
-    // Group entries by cropName
+    // Group entries by cropName, sort grades: 특/상 > 중 > 하 > 미지정
+    const GRADE_ORDER: Record<string, number> = { '특/상': 0, '특': 0, '상': 1, '중': 2, '하': 3, '미지정': 4, '-': 5 };
+    const gradeRank = (g: string) => GRADE_ORDER[g] ?? 3;
     const groupedEntries = useMemo(() => {
         const groups = new Map<string, ModalCropEntry[]>();
         cropEntries.forEach(e => {
             if (!groups.has(e.cropName)) groups.set(e.cropName, []);
             groups.get(e.cropName)!.push(e);
         });
+        // Sort each crop's entries by grade order
+        groups.forEach(entries => entries.sort((a, b) => gradeRank(a.grade) - gradeRank(b.grade)));
         return Array.from(groups.entries());
     }, [cropEntries]);
 
@@ -252,7 +267,7 @@ export default function SettlementModal({
                         {groupedEntries.map(([cropName, entries]) => (
                             <div key={cropName} className="space-y-1.5">
                                 <div className="flex items-center gap-2 px-1">
-                                    <span className="text-lg">{getCropIcon(cropName)}</span>
+                                    <span className="text-lg">{cropIconMap[cropName] || entries[0].cropIcon || getCropIcon(cropName)}</span>
                                     <p className="text-xs font-black text-slate-700">{cropName}</p>
                                     {entries[0].isProcessed && (
                                         <span className="text-[8px] font-bold text-violet-500 bg-violet-50 px-1.5 py-0.5 rounded-full">가공품</span>
@@ -278,31 +293,37 @@ export default function SettlementModal({
                                                 )}
                                             </div>
                                             {/* 수량 행 */}
-                                            <div className="flex items-center gap-3 px-4 py-3 bg-white">
-                                                <span className="text-[10px] font-black text-slate-400 w-8 shrink-0">수량</span>
-                                                {isEditableQty ? (
-                                                    <input type="text" inputMode="numeric"
-                                                        value={quantities[key] ?? ''}
-                                                        onChange={e => setQuantities(prev => ({ ...prev, [key]: e.target.value.replace(/[^0-9]/g, '') }))}
-                                                        className="flex-1 bg-transparent text-center text-xl font-black text-slate-800 outline-none"
-                                                        placeholder="0" />
-                                                ) : (
-                                                    <span className="flex-1 text-center text-xl font-black text-slate-800">{entry.quantity}</span>
-                                                )}
-                                                <span className="text-sm font-bold text-slate-500 shrink-0 whitespace-nowrap">{entry.unit}</span>
+                                            <div className="flex items-center justify-between px-4 py-3 bg-white">
+                                                <span className="text-[10px] font-black text-slate-400 shrink-0">수량</span>
+                                                <div className="flex items-baseline gap-1.5">
+                                                    {isEditableQty ? (
+                                                        <input type="text" inputMode="numeric"
+                                                            value={quantities[key] ?? ''}
+                                                            onChange={e => setQuantities(prev => ({ ...prev, [key]: e.target.value.replace(/[^0-9]/g, '') }))}
+                                                            className="bg-transparent text-right text-2xl font-black text-slate-800 outline-none w-24"
+                                                            placeholder="0" />
+                                                    ) : (
+                                                        <span className="text-2xl font-black text-slate-800 text-right">{entry.quantity}</span>
+                                                    )}
+                                                    <span className="text-sm font-bold text-slate-500 whitespace-nowrap">{parseUnit(entry.unit).countUnit}</span>
+                                                    {parseUnit(entry.unit).sizeNote && (
+                                                        <span className="text-xs font-bold text-slate-400 whitespace-nowrap">{parseUnit(entry.unit).sizeNote}</span>
+                                                    )}
+                                                </div>
                                             </div>
                                             {/* 단가 행 */}
                                             {showUnitPrices && qty > 0 && (
-                                                <div className={`flex items-center gap-3 px-4 py-3 border-t transition-colors ${unitPriceNum > 0 ? 'bg-emerald-100 border-emerald-200' : 'bg-orange-50 border-orange-100'}`}>
-                                                    <span className={`text-[10px] font-black w-8 shrink-0 ${unitPriceNum > 0 ? 'text-emerald-700' : 'text-orange-500'}`}>단가</span>
-                                                    <input type="text" inputMode="numeric"
-                                                        value={unitPrices[key] ?? ''}
-                                                        onChange={e => setUnitPrices(prev => ({ ...prev, [key]: e.target.value.replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',') }))}
-                                                        className={`flex-1 bg-transparent text-center text-lg font-black outline-none ${unitPriceNum > 0 ? 'text-emerald-800' : 'text-orange-600'}`}
-                                                        placeholder="미입력" />
-                                                    <div className="text-right shrink-0">
-                                                        <p className={`text-xs font-black leading-tight ${unitPriceNum > 0 ? 'text-emerald-600' : 'text-orange-400'}`}>원</p>
-                                                        <p className={`text-[9px] font-bold leading-tight whitespace-nowrap ${unitPriceNum > 0 ? 'text-emerald-500' : 'text-orange-300'}`}>/{entry.unit}</p>
+                                                <div className={`flex items-center justify-between px-4 py-3 border-t transition-colors ${unitPriceNum > 0 ? 'bg-emerald-100 border-emerald-200' : 'bg-orange-50 border-orange-100'}`}>
+                                                    <span className={`text-[10px] font-black shrink-0 ${unitPriceNum > 0 ? 'text-emerald-700' : 'text-orange-500'}`}>단가</span>
+                                                    <div className="flex items-baseline gap-1.5">
+                                                        <input type="text" inputMode="numeric"
+                                                            value={unitPrices[key] ?? ''}
+                                                            onChange={e => setUnitPrices(prev => ({ ...prev, [key]: e.target.value.replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',') }))}
+                                                            className={`bg-transparent text-right text-xl font-black outline-none w-28 ${unitPriceNum > 0 ? 'text-emerald-800' : 'text-orange-600'}`}
+                                                            placeholder="미입력" />
+                                                        <span className={`text-xs font-black whitespace-nowrap ${unitPriceNum > 0 ? 'text-emerald-600' : 'text-orange-400'}`}>
+                                                            원/{parseUnit(entry.unit).countUnit}{parseUnit(entry.unit).sizeNote && ' ' + parseUnit(entry.unit).sizeNote}
+                                                        </span>
                                                     </div>
                                                 </div>
                                             )}
@@ -314,7 +335,7 @@ export default function SettlementModal({
                                     const subtotal = entries.reduce((s, e) => s + Number(quantities[`${e.cropName}:${e.grade}`] || 0), 0);
                                     return subtotal > 0 ? (
                                         <div className="text-right text-[10px] font-bold text-slate-400 pr-1">
-                                            소계: {subtotal.toLocaleString()} {entries[0].unit}
+                                            소계: {subtotal.toLocaleString()} {parseUnit(entries[0].unit).countUnit}{parseUnit(entries[0].unit).sizeNote ? ' ' + parseUnit(entries[0].unit).sizeNote : ''}
                                         </div>
                                     ) : null;
                                 })()}
@@ -332,7 +353,7 @@ export default function SettlementModal({
                                 <div className="flex items-center justify-between bg-indigo-50/50 rounded-2xl border border-indigo-100 px-4 py-3">
                                     <span className="text-xs font-black text-indigo-600">전체 합계</span>
                                     <span className="text-sm font-black text-indigo-700">
-                                        {Object.entries(unitTotals).map(([u, q]) => `${q.toLocaleString()} ${u}`).join('  ·  ')}
+                                        {Object.entries(unitTotals).map(([u, q]) => { const { countUnit, sizeNote } = parseUnit(u); return q.toLocaleString() + ' ' + countUnit + (sizeNote ? ' ' + sizeNote : ''); }).join('  ·  ')}
                                     </span>
                                 </div>
                             );

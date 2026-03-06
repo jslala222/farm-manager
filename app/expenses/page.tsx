@@ -407,8 +407,10 @@ export default function ExpensesPage() {
                                     <label className="block text-[11px] font-black text-gray-700 mb-2 ml-1 uppercase tracking-widest">지출 금액</label>
                                     <div className="relative">
                                         <CreditCard className="absolute left-4 top-3.5 w-4 h-4 text-gray-700 pointer-events-none" />
-                                        <input type="text" value={amount ? formatCurrency(amount) : ""}
+                                        <input type="text" inputMode="numeric" pattern="[0-9]*"
+                                            value={amount ? formatCurrency(amount) : ""}
                                             onChange={(e) => setAmount(stripNonDigits(e.target.value))}
+                                            onFocus={(e) => e.target.select()}
                                             placeholder="0원"
                                             className="w-full p-3.5 pl-11 border-2 border-gray-100 bg-gray-50 rounded-2xl focus:border-red-500 focus:bg-white outline-none font-bold transition-all text-sm" />
                                     </div>
@@ -881,9 +883,10 @@ export default function ExpensesPage() {
                                 <label className="text-[10px] font-black text-gray-700 uppercase block mb-2 ml-1">금액</label>
                                 <div className="relative">
                                     <CreditCard className="absolute left-3 top-3.5 w-4 h-4 text-gray-600" />
-                                    <input type="text"
-                                        value={editModal.amount ? formatCurrency(editModal.amount) : ''}
+                                    <input type="text" inputMode="numeric" pattern="[0-9]*"
+                                        value={editModal.amount ? formatCurrency(editModal.amount) : ""}
                                         onChange={e => setEditModal(prev => prev ? { ...prev, amount: stripNonDigits(e.target.value) } : null)}
+                                        onFocus={(e) => e.target.select()}
                                         className="w-full pl-9 pr-3 py-3 border-2 border-gray-100 bg-gray-50 rounded-2xl text-sm font-black focus:border-red-400 outline-none" />
                                 </div>
                             </div>

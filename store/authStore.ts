@@ -12,6 +12,7 @@ interface AuthState {
     signOut: () => Promise<void>;
     initialize: (force?: boolean) => Promise<void>;
     cropIconMap: Record<string, string>;
+    refreshCropIconMap: () => Promise<void>;
     setFarm: (farm: Farm) => void;
 }
 
@@ -22,6 +23,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     loading: false,
     initialized: false,
     cropIconMap: {},
+
+    refreshCropIconMap: async () => {
+        const farm = get().farm;
+        if (!farm) return;
+        const { data } = await supabase.from('farm_crops').select('crop_name, crop_icon').eq('farm_id', farm.id);
+        if (data) {
+            const map: Record<string, string> = {};
+            data.forEach((c: { crop_name: string; crop_icon: string | null }) => {
+                if (c.crop_icon) map[c.crop_name] = c.crop_icon;
+            });
+            set({ cropIconMap: map });
+        }
+    },
 
     setFarm: (farm: Farm) => {
         if (typeof window !== 'undefined') {

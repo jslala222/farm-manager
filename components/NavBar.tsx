@@ -260,10 +260,17 @@ export default function NavBar() {
                 </div>
             )}
 
-            {/* 모바일 하단 탭바 */}
+
+            {/* 모바일 하단 탭바 - 요청한 메뉴로 정확히 수정 */}
             <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-40 flex">
-                {/* 주요 4개 탭 */}
-                {[navItems[0], navItems[2], navItems[3], navItems[1]].map(({ href, label, icon: Icon }) => {
+                {/* 대시보드, 수확관리, 납품, 택배, 지출관리 */}
+                {[
+                    { href: "/", label: "대시보드", icon: LayoutDashboard },
+                    { href: "/harvest", label: "수확관리", icon: Sprout },
+                    { href: "/bulk", label: "납품", icon: Building2 },
+                    { href: "/courier", label: "택배", icon: Truck },
+                    { href: "/expenses", label: "지출관리", icon: Receipt },
+                ].map(({ href, label, icon: Icon }) => {
                     const isActive = pathname === href;
                     return (
                         <Link key={href} href={href}
@@ -275,15 +282,6 @@ export default function NavBar() {
                         </Link>
                     );
                 })}
-                {/* 더보기 버튼 */}
-                <button
-                    onClick={() => setMobileOpen(true)}
-                    className={`flex-1 flex flex-col items-center pt-2 pb-3 gap-0.5 transition-colors ${mobileOpen ? 'text-green-600' : 'text-gray-400'}`}>
-                    <div className={`p-1.5 rounded-xl transition-all ${mobileOpen ? 'bg-green-50' : ''}`}>
-                        <Menu className="w-5 h-5" />
-                    </div>
-                    <span className={`text-[10px] font-bold ${mobileOpen ? 'text-green-600' : 'text-gray-400'}`}>더보기</span>
-                </button>
             </nav>
 
             <div className="md:hidden h-14" />

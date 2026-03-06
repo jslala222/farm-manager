@@ -51,7 +51,7 @@ export default function CourierSalesPage() {
     const [cropName, setCropName] = useState('딸기');
     const [saleUnit, setSaleUnit] = useState('박스');
     const [paymentStatus, setPaymentStatus] = useState<'pending' | 'completed'>('completed');
-    const [paymentMethod, setPaymentMethod] = useState('카드');
+    const [paymentMethod, setPaymentMethod] = useState('계좌');
 
     // 가공품이면 규격(specs), 아니면 단위(units)
     const getEffectiveUnits = (crop: any) => {
@@ -142,7 +142,7 @@ export default function CourierSalesPage() {
         setCourierItems([]); setShippingCost("");
         setDeliveryNote(""); setIsSameAsOrderer(true);
         setShippingFeeType('선불');
-        setPaymentStatus('completed'); setPaymentMethod('카드');
+        setPaymentStatus('completed'); setPaymentMethod('계좌');
     };
 
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -153,6 +153,10 @@ export default function CourierSalesPage() {
         const validItems = courierItems.filter(i => Number(i.quantity) > 0);
         if (validItems.length === 0) { toast.error("품목을 추가하고 수량을 입력해주세요."); return; }
         const finalShipping = Number(stripNonDigits(shippingCost)) || 0;
+        if (shippingFeeType === '선불' && finalShipping === 0) {
+            toast.error('택배비를 입력해주세요!!!');
+            return;
+        }
         setSaving(true);
         try {
             const groupId = editingGroupId || crypto.randomUUID();
@@ -210,7 +214,7 @@ export default function CourierSalesPage() {
         setSaleUnit(first.sale_unit || '박스');
         setSelectedDate(first.recorded_at.split('T')[0]);
         setPaymentStatus(first.payment_status as 'pending' | 'completed');
-        setPaymentMethod(first.payment_method || '카드');
+        setPaymentMethod(first.payment_method || '계좌');
         setCourierItems(group.map((r: any) => ({
             id: r.id,
             cropName: r.crop_name || '딸기',
@@ -432,7 +436,7 @@ export default function CourierSalesPage() {
                                                         disabled={shippingFeeType === '착불'}
                                                         onChange={(e) => setShippingCost(stripNonDigits(e.target.value))}
                                                         className="w-full bg-transparent text-xl font-black text-center text-rose-600 outline-none"
-                                                        placeholder="4,000원" />
+                                                        placeholder="" />
                                                 </div>
                                             </div>
                                         </div>
@@ -528,7 +532,7 @@ export default function CourierSalesPage() {
                                 return (
                                     <button key={first.id}
                                         onClick={() => setDetailModal(group)}
-                                        className={`w-full text-left bg-white p-3 rounded-2xl border transition-all shadow-sm active:scale-[0.98] flex flex-col gap-1.5 ${first.is_settled ? 'border-slate-100 hover:border-rose-200' : 'border-red-700 hover:border-red-800'}`}>
+                                        className={`w-full text-left p-3 rounded-2xl border transition-all shadow-sm active:scale-[0.98] flex flex-col gap-1.5 ${first.is_settled ? 'bg-white border-slate-100 hover:border-rose-200' : 'bg-green-200 border-red-700 hover:border-red-800'}`}>
                                         {/* 상단: 아이콘 + 정산상태 */}
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-0.5">
@@ -554,9 +558,20 @@ export default function CourierSalesPage() {
                                                 {first.crop_name} {qtySummary}
                                             </p>
                                         </div>
-                                        {/* 하단: 금액 + 날짜 */}
+                                        {/* 하단: 금액 + 택배비배지 + 날짜 */}
                                         <div className="flex items-center justify-between pt-1 border-t border-slate-50">
-                                            <span className="text-[13px] font-black text-rose-600">{formatCurrency(totalPrice)}</span>
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="text-[13px] font-black text-rose-600">{formatCurrency(totalPrice)}</span>
+                                                {first.shipping_fee_type === '선불' ? (
+                                                    <span className="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-500">
+                                                        선불 {first.shipping_cost > 0 ? formatCurrency(first.shipping_cost) : ''}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-400">
+                                                        착불
+                                                    </span>
+                                                )}
+                                            </div>
                                             <span className="text-[10px] font-bold text-slate-300">
                                                 {new Date(first.recorded_at).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })}
                                             </span>

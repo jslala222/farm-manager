@@ -322,6 +322,7 @@ export default function BulkSalesPage() {
                     unit: cg.unit,
                     isProcessed: true,
                     unitPrice: Number(modalPrices[`${cg.cropName}:-`] || '0'),
+                    cropIcon: cropIconMap[cg.cropName] || undefined,
                 });
             } else {
                 cg.records.forEach((rec: any) => {
@@ -333,12 +334,13 @@ export default function BulkSalesPage() {
                         unit: cg.unit,
                         isProcessed: false,
                         unitPrice: Number(modalPrices[`${cg.cropName}:${rec.grade}`] || '0'),
+                        cropIcon: cropIconMap[cg.cropName] || undefined,
                     });
                 });
             }
         });
         return entries;
-    }, [editModal.open, editModal.cropGroups, modalQties, modalPrices]);
+    }, [editModal.open, editModal.cropGroups, modalQties, modalPrices, cropIconMap]);
 
     const handleBulkSave = async (data: SettlementSaveData) => {
         if (!editModal.cropGroups.length || modalSaving || !farm?.id) return;
