@@ -74,8 +74,8 @@ export async function proxy(request: NextRequest) {
         return NextResponse.redirect(new URL('/', request.url));
     }
 
-    // 비밀번호 변경 강제 (임시PW 발급된 경우)
-    if (profile?.must_change_password && pathname !== '/change-password') {
+    // 비밀번호 변경 강제 (임시PW 발급된 경우) - API 경로는 리다이렉트 제외
+    if (profile?.must_change_password && pathname !== '/change-password' && !pathname.startsWith('/api/')) {
         return NextResponse.redirect(new URL('/change-password', request.url));
     }
 
