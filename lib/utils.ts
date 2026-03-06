@@ -163,71 +163,20 @@ export const formatKSTLocale = (
 };
 
 /**
- * 이미지 파일을 목표 크기(KB) 이하로 자동 압축합니다.
- * Canvas API를 사용하여 품질을 낮추거나 해상도를 줄입니다.
+ * 이미지 파일을 목표 크기(KB) 이하로 자동 압습합니다.
+ * browser-image-compression 라이브러리 사용 (Web Worker, 모바일 최적화)
  * @param file 원본 이미지 파일
  * @param targetKB 목표 파일 크기 (기본: 150KB)
- * @returns 압축된 File 객체
+ * @returns 압습된 File 객체
  */
-export const compressImage = (file: File, targetKB: number = 150): Promise<File> => {
-    return new Promise((resolve, reject) => {
-        const targetBytes = targetKB * 1024;
-
-        // 이미 목표 크기 이하면 그대로 반환
-        if (file.size <= targetBytes) {
-            resolve(file);
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                let { width, height } = img;
-
-                // 최대 해상도 제한 (1200px)
-                const MAX_DIM = 1200;
-                if (width > MAX_DIM || height > MAX_DIM) {
-                    const ratio = Math.min(MAX_DIM / width, MAX_DIM / height);
-                    width = Math.round(width * ratio);
-                    height = Math.round(height * ratio);
-                }
-
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d')!;
-                ctx.drawImage(img, 0, 0, width, height);
-
-                // 품질을 낮춰가며 목표 크기 달성
-                let quality = 0.85;
-                const tryCompress = () => {
-                    canvas.toBlob((blob) => {
-                        if (!blob) { reject(new Error('압축 실패')); return; }
-
-                        if (blob.size <= targetBytes || quality <= 0.1) {
-                            // 목표 달성 or 최저 품질 도달
-                            const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-                            const compressedFile = new File(
-                                [blob],
-                                file.name.replace(/\.[^.]+$/, `.jpg`),
-                                { type: 'image/jpeg' }
-                            );
-                            resolve(compressedFile);
-                        } else {
-                            // 품질 낮추고 재시도
-                            quality = Math.max(0.1, quality - 0.1);
-                            tryCompress();
-                        }
-                    }, 'image/jpeg', quality);
-                };
-
-                tryCompress();
-            };
-            img.onerror = () => reject(new Error('이미지 로드 실패'));
-            img.src = e.target?.result as string;
-        };
-        reader.onerror = () => reject(new Error('파일 읽기 실패'));
-        reader.readAsDataURL(file);
+export const compressImage = async (file: File, targetKB: number = 150): Promise<File> => {
+    const imageCompression = (await import('browser-image-compression')).default;
+    const compressed = await imageCompression(file, {
+        maxSizeMB: targetKB / 1024,
+        maxWidthOrHeight: 1200,
+        useWebWorker: true,
+        fileType: 'image/jpeg',
     });
+    return new File([compressed], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' });
 };
+
