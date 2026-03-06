@@ -1,6 +1,5 @@
 "use client";
 import { useState } from "react";
-import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { Eye, EyeOff, Lock, ShieldCheck } from "lucide-react";
 
@@ -15,15 +14,20 @@ export default function ChangePasswordPage() {
         if (password.length < 6) { toast.error("비밀번호는 6자 이상이어야 합니다."); return; }
         if (password !== confirm) { toast.error("비밀번호가 일치하지 않습니다."); return; }
         setLoading(true);
-        const { error } = await supabase.auth.updateUser({ password });
-        if (error) { toast.error("변경 실패: " + error.message); setLoading(false); return; }
-        const { data: { user: currentUser } } = await supabase.auth.getUser();
-        if (currentUser) {
-            await supabase.from("profiles").update({ must_change_password: false }).eq("id", currentUser.id);
+        try {
+            const res = await fetch("/api/user/change-password", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ password }),
+            });
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.error);
+            toast.success("✅ 비밀번호가 변경되었습니다!");
+            setTimeout(() => { window.location.href = "/"; }, 800);
+        } catch (e: any) {
+            toast.error("변경 실패: " + e.message);
+            setLoading(false);
         }
-        toast.success("✅ 비밀번호가 변경되었습니다!");
-        setLoading(false);
-        setTimeout(() => { window.location.href = "/"; }, 800);
     };
 
     return (
