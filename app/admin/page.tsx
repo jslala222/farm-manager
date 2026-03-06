@@ -327,32 +327,11 @@ export default function AdminPage() {
                                             : "bg-emerald-500 text-white shadow-lg shadow-emerald-100 hover:bg-emerald-600"}`}>
                                     {farm.is_active ? "승인취소" : "즉시승인"}
                                 </button>
-                                {tempPwId === farm.id ? (
-                                    <div className="flex items-center gap-1">
-                                        <input
-                                            type="text"
-                                            value={tempPwInput}
-                                            onChange={e => setTempPwInput(e.target.value)}
-                                            placeholder="임시 PW"
-                                            className="w-full text-xs border border-orange-300 rounded-lg px-2 py-1 outline-none focus:border-orange-500"
-                                            onKeyDown={e => e.key === "Enter" && issueTempPassword(farm)}
-                                        />
-                                        <button onClick={() => issueTempPassword(farm)} disabled={savingId === farm.id}
-                                            className="p-1 rounded-lg bg-orange-500 text-white shrink-0">
-                                            <Save className="w-3 h-3" />
-                                        </button>
-                                        <button onClick={() => { setTempPwId(null); setTempPwInput(""); }}
-                                            className="p-1 rounded-lg bg-gray-200 text-gray-600 shrink-0">
-                                            <X className="w-3 h-3" />
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <button
+                                <button
                                         onClick={() => { setTempPwId(farm.id); setTempPwInput(""); }}
                                         className="text-[10px] font-black px-3 py-1.5 rounded-xl bg-orange-50 text-orange-600 border border-orange-100 hover:bg-orange-100 transition-all active:scale-95">
                                         임시 PW
                                     </button>
-                                )}
                             </div>
                         </div>
                     ))
@@ -368,6 +347,58 @@ export default function AdminPage() {
                     실제 인증 이메일 확인이 필요하면 Supabase 대시보드 → Authentication 빔에서 확인하세요.
                 </p>
             </div>
+
+            {/* 임시 PW 모달 */}
+            {tempPwId && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => { setTempPwId(null); setTempPwInput(""); }}>
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+                    <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="font-black text-gray-900 text-base">임시 비밀번호 발급</p>
+                                <p className="text-xs text-gray-400 mt-0.5">
+                                    {farms.find(f => f.id === tempPwId)?.farm_name}
+                                </p>
+                            </div>
+                            <button onClick={() => { setTempPwId(null); setTempPwInput(""); }}
+                                className="p-2 rounded-xl bg-gray-100 text-gray-500 hover:bg-gray-200">
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-widest">새 비밀번호</label>
+                            <input
+                                type="text"
+                                value={tempPwInput}
+                                onChange={e => setTempPwInput(e.target.value)}
+                                placeholder="예: farm1234"
+                                autoFocus
+                                className="w-full text-base border-2 border-orange-200 rounded-xl px-4 py-3 outline-none focus:border-orange-500 font-mono tracking-wider"
+                                onKeyDown={e => {
+                                    const farm = farms.find(f => f.id === tempPwId);
+                                    if (e.key === "Enter" && farm) issueTempPassword(farm);
+                                }}
+                            />
+                            <p className="text-[10px] text-gray-400 mt-1.5">Auth 비밀번호와 테스트 PW 컨럼에 동시 저장됩니다</p>
+                        </div>
+                        <div className="flex gap-2">
+                            <button onClick={() => { setTempPwId(null); setTempPwInput(""); }}
+                                className="flex-1 py-3 rounded-xl bg-gray-100 text-gray-600 font-bold text-sm hover:bg-gray-200 transition-all">
+                                취소
+                            </button>
+                            <button
+                                onClick={() => {
+                                    const farm = farms.find(f => f.id === tempPwId);
+                                    if (farm) issueTempPassword(farm);
+                                }}
+                                disabled={!tempPwInput.trim() || !!savingId}
+                                className="flex-2 flex-grow py-3 rounded-xl bg-orange-500 text-white font-bold text-sm hover:bg-orange-600 transition-all disabled:opacity-40 shadow-lg shadow-orange-100">
+                                {savingId ? "발급 중..." : "임시 PW 발급"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
