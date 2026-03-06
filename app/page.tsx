@@ -566,8 +566,8 @@ export default function Home() {
                         </div>
                     )}
 
-                    {/* 주간 날짜 선택 */}
-                    <div className="bg-white rounded-2xl shadow-sm mb-5">
+                    {/* 주간 날짜 선택 숨김 처리 */}
+                    {/* <div className="bg-white rounded-2xl shadow-sm mb-5">
                         <div className="flex items-center justify-between px-4 pt-3 pb-1">
                             <span className="text-sm font-black" style={{ color: '#14311e' }}>날짜 선택</span>
                             <div className="flex gap-1.5">
@@ -601,7 +601,7 @@ export default function Home() {
                                 );
                             })}
                         </div>
-                    </div>
+                    </div> */}
 
                     {/* 바로가기 */}
                     <div className="mb-5">

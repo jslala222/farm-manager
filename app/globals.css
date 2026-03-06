@@ -10,3 +10,11 @@ body {
   color: rgb(var(--foreground-rgb));
   background: #F8FAF9;
 }
+
+@keyframes slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.animate-slide-up {
+  animation: slide-up 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+}

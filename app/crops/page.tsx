@@ -266,23 +266,26 @@ export default function CropsPage() {
                                 </span>
                             </div>
 
-                            {/* 콘텐츠 */}
-                            <div className="absolute bottom-0 left-0 right-0 p-3">
-                                {!crop.crop_image_url && (
-                                    <span className="text-4xl block mb-2">
-                                        {crop.crop_icon || getCropIcon(crop.crop_name)}
-                                    </span>
-                                )}
-                                <div className="inline-block px-2 py-0.5 rounded-full text-[9px] font-black mb-1.5"
-                                    style={{ background: 'rgba(255,255,255,0.2)', color: '#fff' }}>
-                                    재배중
+                            {/* 콘텐츠 - 반투명 어두운 배경 추가 */}
+                            <div className="absolute bottom-0 left-0 right-0">
+                                <div className="w-full h-full absolute bottom-0 left-0 right-0" style={{ background: 'rgba(0,0,0,0.55)', borderBottomLeftRadius: '1rem', borderBottomRightRadius: '1rem' }}></div>
+                                <div className="relative p-3">
+                                    {!crop.crop_image_url && (
+                                        <span className="text-4xl block mb-2">
+                                            {crop.crop_icon || getCropIcon(crop.crop_name)}
+                                        </span>
+                                    )}
+                                    <div className="inline-block px-2 py-0.5 rounded-full text-[9px] font-black mb-1.5"
+                                        style={{ background: 'rgba(255,255,255,0.2)', color: '#fff' }}>
+                                        재배중
+                                    </div>
+                                    <p className="text-white font-black text-sm leading-tight">
+                                        {crop.crop_name}
+                                    </p>
+                                    <p className="text-white/60 text-[10px] font-bold mt-0.5">
+                                        단위: {crop.default_unit}
+                                    </p>
                                 </div>
-                                <p className="text-white font-black text-sm leading-tight">
-                                    {crop.crop_name}
-                                </p>
-                                <p className="text-white/60 text-[10px] font-bold mt-0.5">
-                                    단위: {crop.default_unit}
-                                </p>
                             </div>
                         </button>
                     ))}
