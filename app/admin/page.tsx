@@ -106,8 +106,9 @@ export default function AdminPage() {
             });
             const json = await res.json();
             if (!res.ok) throw new Error(json.error);
-            // 2. test_password 컨럼에도 저장
+            // 2. test_password 컨럼 + must_change_password 설정
             await supabase.from("farms").update({ test_password: tempPwInput }).eq("id", farm.id);
+            await supabase.from("profiles").update({ must_change_password: true }).eq("id", farm.owner_id);
             toast.success("✅ 임시 비밀번호 발급 완료");
             setTempPwId(null);
             setTempPwInput("");
@@ -379,7 +380,12 @@ export default function AdminPage() {
                                     if (e.key === "Enter" && farm) issueTempPassword(farm);
                                 }}
                             />
-                            <p className="text-[10px] text-gray-400 mt-1.5">Auth 비밀번호와 테스트 PW 컨럼에 동시 저장됩니다</p>
+                            {tempPwInput.length > 0 && tempPwInput.length < 6 && (
+                                <p className="text-red-500 text-xs mt-1 font-bold">최소 6자 이상 입력하세요 ({tempPwInput.length}/6)</p>
+                            )}
+                            {tempPwInput.length >= 6 && (
+                                <p className="text-emerald-500 text-xs mt-1 font-bold">✅ 로그인 후 비밀번호 변경 화면으로 자동 이동됩니다</p>
+                            )}
                         </div>
                         <div className="flex gap-2">
                             <button onClick={() => { setTempPwId(null); setTempPwInput(""); }}
@@ -391,7 +397,7 @@ export default function AdminPage() {
                                     const farm = farms.find(f => f.id === tempPwId);
                                     if (farm) issueTempPassword(farm);
                                 }}
-                                disabled={!tempPwInput.trim() || !!savingId}
+                                disabled={tempPwInput.length < 6 || !!savingId}
                                 className="flex-2 flex-grow py-3 rounded-xl bg-orange-500 text-white font-bold text-sm hover:bg-orange-600 transition-all disabled:opacity-40 shadow-lg shadow-orange-100">
                                 {savingId ? "발급 중..." : "임시 PW 발급"}
                             </button>

@@ -81,6 +81,7 @@ export interface Profile {
     id: string;
     role: UserRole;
     full_name: string | null;
+    must_change_password: boolean;
     created_at: string;
 }
 

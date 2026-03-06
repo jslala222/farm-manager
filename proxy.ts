@@ -23,11 +23,11 @@ export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
     // 공개 경로 및 접근 허용 경로
-    const publicPaths = ['/login', '/register', '/pending', '/forgot-password', '/reset-password'];
+    const publicPaths = ['/login', '/register', '/pending', '/forgot-password', '/reset-password', '/change-password'];
 
     if (publicPaths.includes(pathname)) {
-        // reset-password는 로그인 상태여도 항상 허용 (비밀번호 재설정 흐름)
-        if (pathname === '/reset-password') return response;
+        // reset-password, change-password는 로그인 상태여도 항상 허용
+        if (pathname === '/reset-password' || pathname === '/change-password') return response;
         // 이미 로그인된 유저가 로그인/회원가입 페이지에 접근하면 상황에 따라 리다이렉트
         if (user && pathname !== '/pending') {
             return NextResponse.redirect(new URL('/', request.url));
@@ -69,9 +69,14 @@ export async function proxy(request: NextRequest) {
         }
     }
 
-    // 관리자 전용 경로 체크 (이미 위에서 admin 여부는 확인했으나 경로 보호)
+    // 관리자 전용 경로 체크
     if (pathname.startsWith('/admin') && profile?.role !== 'admin') {
         return NextResponse.redirect(new URL('/', request.url));
+    }
+
+    // 비밀번호 변경 강제 (임시PW 발급된 경우)
+    if (profile?.must_change_password && pathname !== '/change-password') {
+        return NextResponse.redirect(new URL('/change-password', request.url));
     }
 
     return response;
