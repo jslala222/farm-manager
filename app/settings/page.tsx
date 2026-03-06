@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Save, Plus, Trash2, Home, LayoutGrid, AlertCircle, Building2, CheckCircle2, Sprout, GripVertical, Factory, Camera } from "lucide-react";
+import { Menu } from "@headlessui/react";
+import { Save, Plus, Trash2, Home, LayoutGrid, AlertCircle, Building2, CheckCircle2, Sprout, GripVertical, Factory, Camera, MoreHorizontal } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { supabase, Farm, FarmHouse, FarmCrop } from "@/lib/supabase";
 import { formatPhone, formatBusinessNumber, getCropIcon } from "@/lib/utils";
@@ -673,11 +674,29 @@ export default function SettingsPage() {
                             cropItems.map((crop) => (
                                 <div key={crop.id}
                                     className="group flex flex-col items-center justify-center p-5 rounded-[1.5rem] border-2 bg-white border-green-50 shadow-sm hover:shadow-green-100/50 hover:border-green-200 transition-all relative overflow-hidden">
-                                    <button onClick={() => deleteCrop(crop.id, crop.crop_name)}
-                                        className="absolute top-2 right-2 text-gray-600 hover:text-red-500 transition-all p-1.5 opacity-0 group-hover:opacity-100 scale-75 hover:scale-100 z-10">
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                    {/* 사진 버튼 */}
+                                    {/* 더보기 메뉴 */}
+                                    <div className="absolute top-2 right-2 z-10">
+                                        <Menu as="div" className="relative inline-block text-left">
+                                            <Menu.Button className="p-1.5 rounded-full bg-gray-100 hover:bg-gray-200">
+                                                <DotsHorizontal className="w-5 h-5 text-gray-600" />
+                                            </Menu.Button>
+                                            <Menu.Items className="absolute right-0 mt-2 w-28 origin-top-right bg-white border border-gray-200 rounded-xl shadow-lg focus:outline-none">
+                                                <div className="py-1">
+                                                    <Menu.Item>
+                                                        {({ active }) => (
+                                                            <button
+                                                                onClick={() => deleteCrop(crop.id, crop.crop_name)}
+                                                                className={`w-full text-left px-4 py-2 text-sm font-bold text-red-600 ${active ? 'bg-red-50' : ''}`}
+                                                            >
+                                                                삭제
+                                                            </button>
+                                                        )}
+                                                    </Menu.Item>
+                                                </div>
+                                            </Menu.Items>
+                                        </Menu>
+                                    </div>
+                                    {/* 사진 버튼 - 항상 크게 표시 */}
                                     <button
                                         onClick={() => setImagePickerTarget({
                                             cropId: crop.id,
@@ -685,9 +704,9 @@ export default function SettingsPage() {
                                             currentImageUrl: crop.crop_image_url,
                                             currentSource: crop.image_source,
                                         })}
-                                        className={`absolute top-2 left-2 p-1.5 opacity-0 group-hover:opacity-100 transition-all z-10 rounded-lg ${crop.crop_image_url ? 'bg-green-500 hover:bg-green-600' : 'bg-white/80 hover:bg-green-50'}`}
+                                        className={`absolute top-2 left-2 p-1.5 z-10 rounded-lg ${crop.crop_image_url ? 'bg-green-500 hover:bg-green-600' : 'bg-white/80 hover:bg-green-50'}`}
                                         title="사진 선택">
-                                        <Camera className={`w-4 h-4 ${crop.crop_image_url ? 'text-white' : 'text-green-600'}`} />
+                                        <Camera className={`w-12 h-12 ${crop.crop_image_url ? 'text-white' : 'text-green-600'}`} />
                                     </button>
                                     {/* 항상 이모지 표시 */}
                                     <button onClick={() => openEditCrop(crop)} className="text-3xl mb-1 hover:scale-110 transition-transform active:scale-95" title="클릭하여 수정">
@@ -784,11 +803,29 @@ export default function SettingsPage() {
                             processedItems.map((crop) => (
                                 <div key={crop.id}
                                     className="group flex flex-col items-center p-4 rounded-[1.5rem] border-2 bg-white border-amber-50 shadow-sm hover:shadow-amber-100/50 hover:border-amber-200 transition-all relative">
-                                    <button onClick={() => deleteCrop(crop.id, crop.crop_name, true)}
-                                        className="absolute top-2 right-2 text-gray-600 hover:text-red-500 transition-all p-1.5 opacity-0 group-hover:opacity-100 scale-75 hover:scale-100 z-10">
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                    {/* 사진 버튼 */}
+                                    {/* 더보기 메뉴 */}
+                                    <div className="absolute top-2 right-2 z-10">
+                                        <Menu as="div" className="relative inline-block text-left">
+                                            <Menu.Button className="p-1.5 rounded-full bg-gray-100 hover:bg-gray-200">
+                                                <DotsHorizontal className="w-5 h-5 text-gray-600" />
+                                            </Menu.Button>
+                                            <Menu.Items className="absolute right-0 mt-2 w-28 origin-top-right bg-white border border-gray-200 rounded-xl shadow-lg focus:outline-none">
+                                                <div className="py-1">
+                                                    <Menu.Item>
+                                                        {({ active }) => (
+                                                            <button
+                                                                onClick={() => deleteCrop(crop.id, crop.crop_name, true)}
+                                                                className={`w-full text-left px-4 py-2 text-sm font-bold text-red-600 ${active ? 'bg-red-50' : ''}`}
+                                                            >
+                                                                삭제
+                                                            </button>
+                                                        )}
+                                                    </Menu.Item>
+                                                </div>
+                                            </Menu.Items>
+                                        </Menu>
+                                    </div>
+                                    {/* 사진 버튼 - 항상 크게 표시 */}
                                     <button
                                         onClick={() => setImagePickerTarget({
                                             cropId: crop.id,
@@ -796,9 +833,9 @@ export default function SettingsPage() {
                                             currentImageUrl: crop.crop_image_url,
                                             currentSource: crop.image_source,
                                         })}
-                                        className={`absolute top-2 left-2 p-1.5 opacity-0 group-hover:opacity-100 transition-all z-10 rounded-lg ${crop.crop_image_url ? 'bg-amber-500 hover:bg-amber-600' : 'bg-white/80 hover:bg-amber-50'}`}
+                                        className={`absolute top-2 left-2 p-1.5 z-10 rounded-lg ${crop.crop_image_url ? 'bg-amber-500 hover:bg-amber-600' : 'bg-white/80 hover:bg-amber-50'}`}
                                         title="사진 선택">
-                                        <Camera className={`w-4 h-4 ${crop.crop_image_url ? 'text-white' : 'text-amber-600'}`} />
+                                        <Camera className={`w-12 h-12 ${crop.crop_image_url ? 'text-white' : 'text-amber-600'}`} />
                                     </button>
                                     {/* 항상 이모지 표시 */}
                                     <button onClick={() => openEditCrop(crop)} className="text-3xl mb-1 hover:scale-110 transition-transform active:scale-95 mt-3" title="클릭하여 수정">
