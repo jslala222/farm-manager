@@ -11,6 +11,7 @@ interface AuthState {
     signIn: (email: string, password: string) => Promise<{ error: string | null }>;
     signOut: () => Promise<void>;
     initialize: (force?: boolean) => Promise<void>;
+    cropIconMap: Record<string, string>;
     setFarm: (farm: Farm) => void;
 }
 
@@ -20,6 +21,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     farm: null,
     loading: false,
     initialized: false,
+    cropIconMap: {},
 
     setFarm: (farm: Farm) => {
         if (typeof window !== 'undefined') {
@@ -155,4 +157,19 @@ async function loadUserData(user: User, set: any) {
     }
 
     set({ user, profile, farm });
+
+    // 아이콘 맵 로드
+    if (farm) {
+        const { data: cropData } = await supabase
+            .from('farm_crops')
+            .select('crop_name, crop_icon')
+            .eq('farm_id', farm.id);
+        if (cropData) {
+            const cropIconMap: Record<string, string> = {};
+            cropData.forEach((c: { crop_name: string; crop_icon: string | null }) => {
+                if (c.crop_icon) cropIconMap[c.crop_name] = c.crop_icon;
+            });
+            set({ cropIconMap });
+        }
+    }
 }
