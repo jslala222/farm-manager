@@ -23,7 +23,7 @@ export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
     // 공개 경로 및 접근 허용 경로
-    const publicPaths = ['/login', '/register', '/pending'];
+    const publicPaths = ['/login', '/register', '/pending', '/forgot-password', '/reset-password'];
 
     if (publicPaths.includes(pathname)) {
         // 이미 로그인된 유저가 로그인/회원가입 페이지에 접근하면 상황에 따라 리다이렉트
