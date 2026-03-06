@@ -43,7 +43,7 @@ export async function proxy(request: NextRequest) {
     // [강력한 보안 체크] 유저 프로필 및 농장 활성 상태 확인
     const { data: profile } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role, must_change_password')
         .eq('id', user.id)
         .single();
 
