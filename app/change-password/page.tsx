@@ -1,12 +1,10 @@
 "use client";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { useAuthStore } from "@/store/authStore";
 import { toast } from "sonner";
 import { Eye, EyeOff, Lock, ShieldCheck } from "lucide-react";
 
 export default function ChangePasswordPage() {
-    const { user } = useAuthStore();
     const [password, setPassword] = useState("");
     const [confirm, setConfirm] = useState("");
     const [showPw, setShowPw] = useState(false);
@@ -19,8 +17,9 @@ export default function ChangePasswordPage() {
         setLoading(true);
         const { error } = await supabase.auth.updateUser({ password });
         if (error) { toast.error("변경 실패: " + error.message); setLoading(false); return; }
-        if (user) {
-            await supabase.from("profiles").update({ must_change_password: false }).eq("id", user.id);
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (currentUser) {
+            await supabase.from("profiles").update({ must_change_password: false }).eq("id", currentUser.id);
         }
         toast.success("✅ 비밀번호가 변경되었습니다!");
         setLoading(false);
@@ -32,7 +31,8 @@ export default function ChangePasswordPage() {
             <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/bg-farm.jpg')" }} />
             <div className="relative z-10 w-full max-w-sm">
                 <div className="text-center mb-8">
-                    <h1 className="text-xl font-bold text-white drop-shadow-lg">농장 관리 시스템</h1>
+                    <h1 className="text-[1.625rem] font-bold text-white drop-shadow-lg">농장 관리 시스템</h1>
+                    <p className="text-gray-400 text-sm mt-1">(Farm-manager System)</p>
                     <div className="w-12 h-0.5 bg-red-600 mx-auto mt-2 rounded-full" />
                 </div>
                 <div className="bg-gray-900/85 backdrop-blur-md border border-gray-700/60 rounded-2xl p-6 shadow-2xl space-y-5">
