@@ -405,12 +405,20 @@ export default function CourierSalesPage() {
                                                     <label className="text-[8px] font-black text-slate-400 px-1">수량</label>
                                                     <input type="text" value={item.quantity}
                                                         onChange={(e) => updateCourierItem(item.id, 'quantity', e.target.value.replace(/[^0-9]/g, ''))}
+                                                        inputMode="numeric"
+                                                        pattern="[0-9]*"
+                                                        onFocus={(e) => e.currentTarget.select()}
+                                                        onClick={(e) => e.currentTarget.select()}
                                                         className="w-full p-2.5 bg-slate-50 border border-slate-100 rounded-xl text-center text-lg font-black outline-none focus:border-rose-300" placeholder="0" />
                                                 </div>
                                                 <div className="space-y-0.5">
                                                     <label className="text-[8px] font-black text-slate-400 px-1">단가 (원)</label>
                                                     <input type="text" value={item.unitPrice ? formatCurrency(item.unitPrice) : ""}
                                                         onChange={(e) => updateCourierItem(item.id, 'unitPrice', stripNonDigits(e.target.value))}
+                                                        inputMode="numeric"
+                                                        pattern="[0-9]*"
+                                                        onFocus={(e) => e.currentTarget.select()}
+                                                        onClick={(e) => e.currentTarget.select()}
                                                         className="w-full p-2.5 bg-slate-50 border border-slate-100 rounded-xl text-center text-lg font-black outline-none focus:border-rose-300" placeholder="0원" />
                                                 </div>
                                             </div>
@@ -451,6 +459,10 @@ export default function CourierSalesPage() {
                                                     <input type="text"
                                                         value={shippingCost ? formatCurrency(shippingCost) : ""}
                                                         disabled={shippingFeeType === '착불'}
+                                                        inputMode="numeric"
+                                                        pattern="[0-9]*"
+                                                        onFocus={(e) => e.currentTarget.select()}
+                                                        onClick={(e) => e.currentTarget.select()}
                                                         onChange={(e) => setShippingCost(stripNonDigits(e.target.value))}
                                                         className="w-full bg-transparent text-xl font-black text-center text-rose-600 outline-none"
                                                         placeholder="" />
