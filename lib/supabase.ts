@@ -139,6 +139,22 @@ export interface CropCatalogGroup {
     photos: CropCatalog[];  // 해당 작물의 사진 목록
 }
 
+// 가공 처리 이력 (원물 → 가공품 전환 완전 추적)
+export interface ProcessingRecord {
+    id: string;
+    farm_id: string;
+    processed_date: string;          // DATE (YYYY-MM-DD)
+    output_crop_id?: string | null;  // FK: farm_crops.id (데이터 무결성)
+    output_crop_name: string;        // 산출 가공품명 (참고용)
+    output_quantity: number;         // 산출량
+    output_unit: string;             // 산출 단위
+    inputs: { crop_name: string; quantity: number; unit: string }[];  // 투입 원물 배열
+    memo?: string | null;
+    is_cancelled: boolean;
+    cancelled_at?: string | null;
+    created_at: string;
+}
+
 // [bkit 엔터프라이즈] 농장별 재배 작물 관리 (하이브리드 다품종 시스템)
 export interface FarmCrop {
     id: string;
