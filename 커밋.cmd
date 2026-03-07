@@ -47,7 +47,8 @@ if "%MSG%"=="" (
 )
 
 git commit -m "%MSG%"
-if errorlevel 1 (
+set "GIT_COMMIT_RC=%ERRORLEVEL%"
+if not "%GIT_COMMIT_RC%"=="0" (
   echo INFO: 커밋이 생성되지 않았습니다.
   echo - 변경사항이 없거나(no changes)
   echo - 혹은 커밋 훅/설정 문제일 수 있습니다.
