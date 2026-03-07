@@ -2,14 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Sprout, ShoppingCart, Truck, Calculator, CreditCard } from "lucide-react";
+import { Home, Sprout, ShoppingCart, Truck, CreditCard, CheckCircle2 } from "lucide-react";
 
 export default function BottomNav() {
     const pathname = usePathname();
 
     const navItems = [
         { href: "/", label: "대시보드", icon: Home },
-        { href: "/harvest", label: "수확관리", icon: Sprout },
+        { href: "/harvest", label: "수확입력", icon: Sprout },
+        { href: "/inspection", label: "선별검수", icon: CheckCircle2 },
         { href: "/sales", label: "납품", icon: ShoppingCart },
         { href: "/courier", label: "택배", icon: Truck },
         { href: "/expenses", label: "지출관리", icon: CreditCard },

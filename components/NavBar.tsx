@@ -20,6 +20,7 @@ import {
     AlignLeft,
     Truck,
     CheckCircle,
+    CheckCircle2,
     Package2,
     ClipboardList,
     Wallet,
@@ -34,6 +35,7 @@ const navItems = [
     { href: "/", label: "대시보드", icon: LayoutDashboard },
     { href: "/finance", label: "통합 결산", icon: Calculator },
     { href: "/harvest", label: "수확 관리", icon: Sprout },
+    { href: "/inspection", label: "선별검수", icon: CheckCircle2 },
     { href: "/bulk", label: "납품", icon: Building2 },
     { href: "/courier", label: "택배", icon: Truck },
     { href: "/expenses", label: "지출 관리", icon: Receipt },
@@ -95,8 +97,9 @@ export default function NavBar() {
         navItems[0], // 대시보드
         navItems[1], // 통합 결산
         navItems[2], // 수확 관리
+        navItems[3], // 선별검수
         ...inventoryItem,
-        ...navItems.slice(3), // 납품 ~ 설정
+        ...navItems.slice(4), // 납품 ~ 설정
     ];
 
     const allNavItems = profile?.role === 'admin'

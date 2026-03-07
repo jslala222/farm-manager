@@ -155,6 +155,58 @@ export interface ProcessingRecord {
     created_at: string;
 }
 
+// ============================================
+// 수확 관리 시스템 (Harvest Management)
+// ============================================
+
+export interface Harvest {
+    id: string;
+    farm_id: string;
+    crop_name: string;
+    harvest_date: string;
+    quantity: number;
+    unit: string;
+    memo?: string | null;
+    created_by: string;
+    created_at: string;
+    updated_at?: string;
+}
+
+export type HarvestGrade = 'normal' | 'downgrade' | 'processing' | 'discard';
+export type ProcessingType = 'direct_storage' | 'downgrade_storage' | 'mark_for_processing' | 'mark_for_discard';
+
+export interface HarvestInspection {
+    id: string;
+    harvest_id: string;
+    farm_id: string;
+    
+    // 선별 결과
+    grade: HarvestGrade;
+    quantity: number;
+    unit: string;
+    
+    // 처리 정보
+    processing_type: ProcessingType;
+    warehouse_location?: string | null;
+    
+    // 추적
+    inspector_id?: string | null;
+    inspection_memo?: string | null;
+    created_at: string;
+    updated_at?: string;
+}
+
+export interface HarvestInspectionSummary {
+    total_quantity: number;
+    normal_quantity: number;
+    downgrade_quantity: number;
+    processing_quantity: number;
+    discard_quantity: number;
+    inspected_quantity: number;
+    pending_quantity: number;
+    completion_pct: number;
+}
+
 // [bkit 엔터프라이즈] 농장별 재배 작물 관리 (하이브리드 다품종 시스템)
 export interface FarmCrop {
     id: string;

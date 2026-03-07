@@ -66,7 +66,7 @@ export default function HarvestPage() {
 
     // Analysis State
     const [statsPeriod, setStatsPeriod] = useState<'today' | 'week' | 'month' | 'custom'>('today');
-    const [statsDate, setStatsDate] = useState(new Date().toISOString().split('T')[0]); // 지정일 통계용 날짜
+    const [statsDate, setStatsDate] = useState(getLocalISOString(new Date())); // 지정일 통계용 날짜 (KST)
     const [statsWeekStart, setStatsWeekStart] = useState<string>(""); // 주간 통계 시작일
     const [statsMonth, setStatsMonth] = useState<{ year: number, month: number }>({
         year: new Date().getFullYear(),
@@ -88,10 +88,10 @@ export default function HarvestPage() {
     }, [storeActiveTab]);
 
     useEffect(() => {
-        if (activeTab === 'analysis') {
+        if (activeTab === 'analysis' && initialized && farm?.id) {
             fetchStats();
         }
-    }, [statsPeriod, statsDate, statsWeekStart, statsMonth, activeTab]);
+    }, [statsPeriod, statsDate, statsWeekStart, statsMonth, activeTab, farm?.id, initialized]);
 
     useEffect(() => {
         if (initialized && farm?.id) {
@@ -195,7 +195,7 @@ export default function HarvestPage() {
 
         const dateMap: Record<string, number[]> = {};
         data.forEach(item => {
-            const date = item.recorded_at.split('T')[0];
+            const date = getLocalISOString(new Date(item.recorded_at));
             if (!dateMap[date]) dateMap[date] = [];
             if (!dateMap[date].includes(item.house_number)) {
                 dateMap[date].push(item.house_number);
@@ -1071,10 +1071,10 @@ export default function HarvestPage() {
                                         return new Date(now.setDate(diff));
                                     })());
                                     d.setDate(d.getDate() + i);
-                                    const dateStr = d.toISOString().split('T')[0];
+                                    const dateStr = getLocalISOString(d);
                                     const hasHarvest = (harvestedDates[dateStr] || []).length > 0;
                                     const hList = harvestedDates[dateStr] || [];
-                                    const isToday = dateStr === new Date().toISOString().split('T')[0];
+                                    const isToday = dateStr === getLocalISOString(new Date());
 
                                     return (
                                         <div key={i} className={`flex flex-col items-center gap-2 p-3 rounded-2xl border-2 min-w-[56px] ${isToday ? 'border-red-400 bg-orange-50/30' : 'border-gray-50 bg-white'}`}>

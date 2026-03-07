@@ -4,6 +4,17 @@ export interface StockMap {
     [cropName: string]: number; // 현재 재고 수량
 }
 
+// 원물 등급별 재고 현황 (상/중/하)
+export interface GradeStock {
+    sang: number; // 상
+    jung: number; // 중
+    ha: number;   // 하
+}
+
+export interface GradeStockMap {
+    [cropName: string]: GradeStock;
+}
+
 export interface ShortageRow {
     cropName: string;
     unit?: string;
@@ -110,4 +121,60 @@ export async function checkStockBeforeSale(
         // 차단 모드: ok=false
         return { ok: false, warning: false, message, rows };
     }
+}
+
+/**
+ * 원물 등급별(상/중/하) 재고를 계산한다.
+ * = harvest_records(grade별 수확)
+ * + inventory_adjustments(grade있는 초기재고/조정)
+ * - sales_records(grade있는 판매만 — B2B 거래처 납품)
+ *
+ * 택배/무등급 판매는 등급에서 차감하지 않음 (총재고 stockMap에서만 차감).
+ * 따라서 sang+jung+ha 합계와 stockMap 총합이 다를 수 있음 — 정상동작.
+ */
+export async function fetchGradeStockMap(farmId: string): Promise<GradeStockMap> {
+    const [harvestRes, salesRes, adjRes] = await Promise.all([
+        supabase.from("harvest_records").select("crop_name, quantity, grade").eq("farm_id", farmId),
+        supabase.from("sales_records").select("crop_name, quantity, grade").eq("farm_id", farmId).not("grade", "is", null),
+        supabase.from("inventory_adjustments").select("crop_name, quantity, grade").eq("farm_id", farmId).not("grade", "is", null),
+    ]);
+
+    // 등급 정규화: 'sang'|'상' → sang, 'jung'|'중' → jung, 'ha'|'하' → ha
+    const normGrade = (g: string): "sang" | "jung" | "ha" | null => {
+        switch (g) {
+            case "sang": case "상": return "sang";
+            case "jung": case "중": return "jung";
+            case "ha": case "하": return "ha";
+            default: return null;
+        }
+    };
+
+    const map: GradeStockMap = {};
+    const ensure = (crop: string) => { if (!map[crop]) map[crop] = { sang: 0, jung: 0, ha: 0 }; };
+
+    // 1. 수확 합산 (harvest_records는 항상 sang/jung/ha 등급 보유)
+    for (const r of harvestRes.data ?? []) {
+        if (!r.crop_name || !r.grade) continue;
+        const g = normGrade(r.grade); if (!g) continue;
+        ensure(r.crop_name);
+        map[r.crop_name][g] += Number(r.quantity ?? 0);
+    }
+
+    // 2. 등급 지정 판매 차감 (B2B 거래처 납품 등 grade가 있는 판매만)
+    for (const r of salesRes.data ?? []) {
+        if (!r.crop_name || !r.grade) continue;
+        const g = normGrade(r.grade); if (!g) continue;
+        ensure(r.crop_name);
+        map[r.crop_name][g] -= Number(r.quantity ?? 0);
+    }
+
+    // 3. 재고 조정 반영 (초기재고 입력, 폐기 등 grade있는 항목)
+    for (const r of adjRes.data ?? []) {
+        if (!r.crop_name || !r.grade) continue;
+        const g = normGrade(r.grade); if (!g) continue;
+        ensure(r.crop_name);
+        map[r.crop_name][g] += Number(r.quantity ?? 0);
+    }
+
+    return map;
 }
