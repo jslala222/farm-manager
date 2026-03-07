@@ -46,9 +46,14 @@ if "%MSG%"=="" (
   endlocal & exit /b 0
 )
 
+REM git commit의 ERRORLEVEL은 쉘/환경에 따라 비정상적으로 잡히는 경우가 있어
+REM HEAD 변경 여부로 커밋 성공을 판정합니다.
+for /f "delims=" %%H in ('git rev-parse HEAD 2^>nul') do set "HEAD_BEFORE=%%H"
+
 git commit -m "%MSG%"
-set "GIT_COMMIT_RC=%ERRORLEVEL%"
-if not "%GIT_COMMIT_RC%"=="0" (
+
+for /f "delims=" %%H in ('git rev-parse HEAD 2^>nul') do set "HEAD_AFTER=%%H"
+if "%HEAD_BEFORE%"=="%HEAD_AFTER%" (
   echo INFO: 커밋이 생성되지 않았습니다.
   echo - 변경사항이 없거나(no changes)
   echo - 혹은 커밋 훅/설정 문제일 수 있습니다.
