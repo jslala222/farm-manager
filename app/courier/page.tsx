@@ -3,29 +3,34 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Truck, Search, History, RefreshCcw, Save, Phone, User, ArrowRight, UserCheck, AlignLeft, Edit2, Trash2, Calendar as CalendarIcon, X, CheckCircle, Clock } from 'lucide-react';
 import { useAuthStore } from "@/store/authStore";
-import { supabase, SalesRecord, Customer } from "@/lib/supabase";
+import { supabase, SalesRecord, Customer, FarmCrop } from "@/lib/supabase";
 import { formatCurrency, formatPhone, stripNonDigits, getCropIcon } from "@/lib/utils";
 import AddressSearch from "@/components/AddressSearch";
 import CalendarComponent from "@/components/Calendar";
 import { toast } from "sonner";
-import { checkStockBeforeSale } from "@/hooks/useInventory";
+import { checkStockBeforeSale, ShortageRow } from "@/hooks/useInventory";
 import InventoryShortageDialog from "@/components/InventoryShortageDialog";
 
 const toLocalDateStr = (d: Date = new Date()) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
+type CourierHistoryRecord = SalesRecord & {
+    phone?: string | null;
+    customer?: Customer | null;
+};
+
 export default function CourierSalesPage() {
     const { farm, initialized, cropIconMap } = useAuthStore();
     const [customers, setCustomers] = useState<Customer[]>([]);
-    const [history, setHistory] = useState<SalesRecord[]>([]);
+    const [history, setHistory] = useState<CourierHistoryRecord[]>([]);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [selectedDate, setSelectedDate] = useState(toLocalDateStr());
     const [showCalendar, setShowCalendar] = useState(false);
     const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
-    const [farmCrops, setFarmCrops] = useState<any[]>([]);
+    const [farmCrops, setFarmCrops] = useState<FarmCrop[]>([]);
     // 상세 팝업 모달 상태 (그룹 배열)
-    const [detailModal, setDetailModal] = useState<SalesRecord[] | null>(null);
+    const [detailModal, setDetailModal] = useState<CourierHistoryRecord[] | null>(null);
 
     // B2C State
     const [searchTerm, setSearchTerm] = useState("");
@@ -48,21 +53,17 @@ export default function CourierSalesPage() {
     const [shippingFeeType, setShippingFeeType] = useState('선불');
     const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
     const [deliveryNote, setDeliveryNote] = useState("");
-
-    // Common State
-    const [cropName, setCropName] = useState('딸기');
-    const [saleUnit, setSaleUnit] = useState('박스');
     const [paymentStatus, setPaymentStatus] = useState<'pending' | 'completed'>('completed');
     const [paymentMethod, setPaymentMethod] = useState('계좌');
 
     // 가공품이면 규격(specs), 아니면 단위(units)
-    const getEffectiveUnits = (crop: any) => {
+    const getEffectiveUnits = (crop: FarmCrop) => {
         if (crop?.category === 'processed' && crop?.available_specs?.length > 0) return crop.available_specs;
         return crop?.available_units || ['박스'];
     };
 
     // 장바구니에 품목 즉시 추가 (탭 → 추가)
-    const addToCart = (crop: any) => {
+    const addToCart = (crop: FarmCrop) => {
         setCourierItems(prev => [...prev, {
             id: Date.now().toString() + Math.random().toString(36).slice(2, 7),
             cropName: crop.crop_name,
@@ -83,27 +84,12 @@ export default function CourierSalesPage() {
             const { data } = await supabase.from('farm_crops').select('*').eq('farm_id', farm.id).is('is_active', true).order('sort_order');
             if (data) {
                 setFarmCrops(data);
-                if (data.length > 0) {
-                    const strawberry = data.find((c: any) => c.crop_name === '딸기');
-                    if (strawberry) { setCropName('딸기'); setSaleUnit(strawberry.available_units?.[0] || '박스'); }
-                    else { setCropName(data[0].crop_name); setSaleUnit(data[0].available_units?.[0] || '박스'); }
-                }
             }
         };
         fetchFarmCrops();
     }, [farm?.id]);
 
-    const fetchInitialData = useCallback(async () => {
-        if (!farm?.id) return;
-        setLoading(true);
-        try {
-            const res = await supabase.from('customers').select('*').eq('farm_id', farm.id).order('name');
-            if (res.data) setCustomers(res.data as any);
-            await fetchHistory();
-        } finally { setLoading(false); }
-    }, [farm?.id]);
-
-    const fetchHistory = async () => {
+    const fetchHistory = useCallback(async () => {
         if (!farm?.id) return;
         const { data } = await supabase
             .from('sales_records')
@@ -112,8 +98,18 @@ export default function CourierSalesPage() {
             .eq('delivery_method', 'courier')
             .order('recorded_at', { ascending: false })
             .limit(30);
-        if (data) setHistory(data as any);
-    };
+        if (data) setHistory(data as CourierHistoryRecord[]);
+    }, [farm?.id]);
+
+    const fetchInitialData = useCallback(async () => {
+        if (!farm?.id) return;
+        setLoading(true);
+        try {
+            const res = await supabase.from('customers').select('*').eq('farm_id', farm.id).order('name');
+            if (res.data) setCustomers(res.data as Customer[]);
+            await fetchHistory();
+        } finally { setLoading(false); }
+    }, [farm?.id, fetchHistory]);
 
     useEffect(() => { if (initialized && farm?.id) fetchInitialData(); }, [initialized, farm?.id, fetchInitialData]);
 
@@ -135,8 +131,6 @@ export default function CourierSalesPage() {
         if (isSameAsOrderer) { setRecipientName(ordererName); setRecipientPhone(ordererPhone); }
     }, [isSameAsOrderer, ordererName, ordererPhone]);
 
-
-
     const handleResetAllStates = () => {
         setEditingRecordId(null); setEditingGroupId(null); setSelectedCustomerId(null); setSearchTerm("");
         setOrdererName(""); setOrdererPhone(""); setRecipientName(""); setRecipientPhone("");
@@ -147,11 +141,9 @@ export default function CourierSalesPage() {
         setPaymentStatus('completed'); setPaymentMethod('계좌');
     };
 
-    const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
     const [shortageOpen, setShortageOpen] = useState(false);
     const [shortageMode, setShortageMode] = useState<"block" | "warn">("block");
-    const [shortageRows, setShortageRows] = useState<any[]>([]);
+    const [shortageRows, setShortageRows] = useState<ShortageRow[]>([]);
     const [pendingSaveAfterWarning, setPendingSaveAfterWarning] = useState(false);
 
     const closeShortageDialog = () => {
@@ -159,7 +151,7 @@ export default function CourierSalesPage() {
         setPendingSaveAfterWarning(false);
     };
 
-    const openShortageDialog = (mode: "block" | "warn", rows: any[]) => {
+    const openShortageDialog = (mode: "block" | "warn", rows: ShortageRow[]) => {
         setShortageMode(mode);
         setShortageRows(rows);
         setShortageOpen(true);
@@ -233,11 +225,9 @@ export default function CourierSalesPage() {
             setDetailModal(null);
             setTimeout(() => fetchHistory(), 200);
             toast.success("✅ 기록이 성공적으로 저장되었습니다!");
-            setErrorMsg(null);
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("저장 중 오류 상세:", JSON.stringify(error, null, 2));
-            const msg = error.message || "알 수 없는 오류";
-            setErrorMsg(msg);
+            const msg = error instanceof Error ? error.message : "알 수 없는 오류";
             toast.error("저장 실패: " + msg);
         } finally {
             setSaving(false);
@@ -248,19 +238,16 @@ export default function CourierSalesPage() {
         await doSave(false);
     };
 
-    // [FIX] 택배 아이콘 수정 - DB crop_icon 우선 적용
-    const handleEdit = (group: SalesRecord[]) => {
-        const first = group[0] as any;
+    const handleEdit = (group: CourierHistoryRecord[]) => {
+        const first = group[0];
         const gid = first.harvest_note?.startsWith('GRP:') ? first.harvest_note.slice(4) : null;
         setEditingGroupId(gid);
         setEditingRecordId(gid ? null : first.id);
         setIsEditMode(true);
-        setCropName(first.crop_name || '딸기');
-        setSaleUnit(first.sale_unit || '박스');
         setSelectedDate(first.recorded_at.split('T')[0]);
         setPaymentStatus(first.payment_status as 'pending' | 'completed');
         setPaymentMethod(first.payment_method || '계좌');
-        setCourierItems(group.map((r: any) => ({
+        setCourierItems(group.map((r) => ({
             id: r.id,
             cropName: r.crop_name || '딸기',
             cropIcon: cropIconMap[r.crop_name || ''] || getCropIcon(r.crop_name || ''),
@@ -283,9 +270,9 @@ export default function CourierSalesPage() {
         }
     };
 
-    const handleDelete = async (group: SalesRecord[]) => {
+    const handleDelete = async (group: CourierHistoryRecord[]) => {
         if (!confirm("삭제하시겠습니까?")) return;
-        const first = group[0] as any;
+        const first = group[0];
         const gid = first.harvest_note?.startsWith('GRP:') ? first.harvest_note.slice(4) : null;
         if (gid) {
             await supabase.from('sales_records').delete().eq('farm_id', farm?.id).eq('harvest_note', 'GRP:' + gid);
@@ -295,9 +282,8 @@ export default function CourierSalesPage() {
         fetchHistory();
     };
 
-    // 내역 그룹핑 (harvest_note GRP: 기준)
     const groupedHistory = useMemo(() => {
-        const groups: Map<string, SalesRecord[]> = new Map();
+        const groups: Map<string, CourierHistoryRecord[]> = new Map();
         for (const item of history) {
             const hn = item.harvest_note;
             const gid = typeof hn === 'string' && hn.startsWith('GRP:') ? hn.slice(4) : item.id;
@@ -317,7 +303,7 @@ export default function CourierSalesPage() {
                 <InventoryShortageDialog
                     open={shortageOpen}
                     mode={shortageMode}
-                    rows={shortageRows as any}
+                    rows={shortageRows}
                     onClose={closeShortageDialog}
                     onContinue={
                         shortageMode === "warn" && pendingSaveAfterWarning
@@ -698,7 +684,7 @@ export default function CourierSalesPage() {
                                         <div className="flex p-1 bg-gray-100 rounded-2xl gap-1">
                                             <button
                                                 onClick={async () => {
-                                                    const gid = (dm as any).harvest_note?.startsWith('GRP:') ? (dm as any).harvest_note.slice(4) : null;
+                                                    const gid = dm.harvest_note?.startsWith('GRP:') ? dm.harvest_note.slice(4) : null;
                                                     const updateData = { is_settled: true, payment_status: 'completed' };
                                                     if (gid) {
                                                         await supabase.from('sales_records').update(updateData).eq('farm_id', farm?.id).eq('harvest_note', 'GRP:' + gid);
@@ -713,7 +699,7 @@ export default function CourierSalesPage() {
                                             </button>
                                             <button
                                                 onClick={async () => {
-                                                    const gid = (dm as any).harvest_note?.startsWith('GRP:') ? (dm as any).harvest_note.slice(4) : null;
+                                                    const gid = dm.harvest_note?.startsWith('GRP:') ? dm.harvest_note.slice(4) : null;
                                                     const updateData = { is_settled: false, payment_status: 'pending' };
                                                     if (gid) {
                                                         await supabase.from('sales_records').update(updateData).eq('farm_id', farm?.id).eq('harvest_note', 'GRP:' + gid);

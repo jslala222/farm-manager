@@ -1,7 +1,7 @@
 import { createBrowserClient } from '@supabase/ssr';
 
 // [bkit 하이퍼-커넥트] 싱글톤 클라이언트 관리 (Hot Reload 시 중복 생성 방지)
-let supabaseInstance: any;
+let supabaseInstance: ReturnType<typeof createBrowserClient> | undefined;
 
 const getSupabaseClient = () => {
     if (supabaseInstance) return supabaseInstance;
@@ -56,7 +56,7 @@ const getSupabaseClient = () => {
                             throw new Error(`Server Error: ${response.status}`);
                         }
                         return response;
-                    } catch (err: any) {
+                    } catch (err: unknown) {
                         retries++;
                         if (retries >= maxRetries) throw err;
                         console.warn(`⚠️ [bkit] 연결 불안정... 재시도 중 (${retries}/${maxRetries})`);
@@ -151,6 +151,7 @@ export interface FarmCrop {
     available_units: string[];
     sort_order: number;
     is_active: boolean;
+    is_temporary?: boolean;
     category: 'crop' | 'processed'; // 'crop' = 원물, 'processed' = 가공품
     available_specs: string[]; // 가공품 규격 목록 (['350g', '1kg'] 등)
     created_at: string;

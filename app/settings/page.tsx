@@ -1,18 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Menu } from "@headlessui/react";
-import { Save, Plus, Trash2, Home, LayoutGrid, AlertCircle, Building2, CheckCircle2, Sprout, GripVertical, Factory, Camera, MoreHorizontal, PackageCheck } from "lucide-react";
+import { Save, Plus, Trash2, Home, LayoutGrid, AlertCircle, Building2, CheckCircle2, Sprout, Factory, Camera, MoreHorizontal, PackageCheck } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { supabase, Farm, FarmHouse, FarmCrop } from "@/lib/supabase";
 import { formatPhone, formatBusinessNumber, getCropIcon } from "@/lib/utils";
 import AddressSearch from "@/components/AddressSearch";
-import { Search } from "lucide-react";
 import CropImagePicker from "@/components/CropImagePicker";
 import { toast } from "sonner";
 
 export default function SettingsPage() {
-    const { user, farm: storeFarm, profile, initialize, initialized, refreshCropIconMap } = useAuthStore();
+    const { user, farm: storeFarm, initialize, initialized, refreshCropIconMap } = useAuthStore();
     const [farm, setFarm] = useState<Partial<Farm>>({});
     const [houses, setHouses] = useState<FarmHouse[]>([]);
     const [newHouseNum, setNewHouseNum] = useState("");
@@ -31,6 +30,7 @@ export default function SettingsPage() {
     const [newProcessedIcon, setNewProcessedIcon] = useState('🍯');
     const [editingSpecId, setEditingSpecId] = useState<string | null>(null);
     const [newSpecInput, setNewSpecInput] = useState('');
+    const [showTemporaryOnly, setShowTemporaryOnly] = useState(false);
 
     // 품목 수정 모달 상태
     const [editCropModal, setEditCropModal] = useState<{
@@ -52,7 +52,7 @@ export default function SettingsPage() {
 
     const ALL_ICONS = ['🍓','🍠','🥔','🧅','🧄','🍅','🌶️','🍇','🍎','🍐','🍑','🍈','🥒','🥬','🥕','🥗','🥦','🌽','🌾','🍄','🍯','🧊','🧣','🥤','🍩','🍪','🍫','🍮','🍦','🍧','🍰','🤧','🍵','🍷','🥭','🥃','🥛','🦴','🦵','🌿','📦','🏷️'];
 
-    const openEditCrop = (crop: any) => {
+    const openEditCrop = (crop: FarmCrop) => {
         setEditCropModal({
             open: true,
             id: crop.id,
@@ -81,7 +81,7 @@ export default function SettingsPage() {
     const saveEditCrop = async () => {
         if (!editCropModal || !storeFarm?.id) return;
         setEditSaving(true);
-        const { id, name, icon, category } = editCropModal;
+        const { id, name, icon } = editCropModal;
         const original = farmCrops.find(c => c.id === id);
         const oldName = original?.crop_name || '';
         const nameChanged = oldName !== name.trim();
@@ -109,8 +109,8 @@ export default function SettingsPage() {
             }
             setEditCropModal(null);
             fetchCrops();
-        } catch (e: any) {
-            toast.error('저장 실패: ' + e.message);
+        } catch (e) {
+            toast.error('저장 실패: ' + ((e as Error).message || '알 수 없는 오류'));
         } finally {
             setEditSaving(false);
         }
@@ -121,22 +121,9 @@ export default function SettingsPage() {
         if (!initialized) {
             initialize();
         }
-    }, []);
+    }, [initialize, initialized]);
 
-    // 스토어의 농장 정보가 변경되면 로컬 상태 동기화
-    useEffect(() => {
-        if (storeFarm) {
-            setFarm(storeFarm);
-            fetchHouses();
-            fetchCrops();
-        } else {
-            setFarm({});
-            setHouses([]);
-            setFarmCrops([]);
-        }
-    }, [storeFarm]);
-
-    const fetchHouses = async () => {
+    const fetchHouses = useCallback(async () => {
         if (!storeFarm?.id) return;
         setLoadingHouses(true);
         const { data, error } = await supabase.from('farm_houses').select('*')
@@ -145,7 +132,7 @@ export default function SettingsPage() {
         if (error) console.error("하우스 로딩 실패:", error);
         setHouses(data ?? []);
         setLoadingHouses(false);
-    };
+    }, [storeFarm?.id]);
 
     const handleSaveFarm = async () => {
 
@@ -225,9 +212,9 @@ export default function SettingsPage() {
                 toast.success("✅ 농장 등록 및 하우스 세팅이 완료되었습니다!");
                 await initialize();
             }
-        } catch (error: any) {
+        } catch (error) {
             console.error("데이터 저장 실패 상세 에러:", error);
-            toast.error(`저장 중 오류가 발생했습니다: ${error.message || '알 수 없는 오류'}`);
+            toast.error(`저장 중 오류가 발생했습니다: ${(error as Error).message || '알 수 없는 오류'}`);
         } finally {
             setSaving(false);
         }
@@ -248,8 +235,8 @@ export default function SettingsPage() {
             }
             toast.success("재고관리 설정이 저장되었습니다. 잠시 후 메뉴가 업데이트됩니다.");
             await initialize(true);
-        } catch (e: any) {
-            toast.error("저장 실패: " + e.message);
+        } catch (e) {
+            toast.error("저장 실패: " + ((e as Error).message || '알 수 없는 오류'));
         } finally {
             setSaving(false);
         }
@@ -334,7 +321,7 @@ export default function SettingsPage() {
     // ========================
     // [bkit 엔터프라이즈] 작물 관리 CRUD
     // ========================
-    const fetchCrops = async () => {
+    const fetchCrops = useCallback(async () => {
         if (!storeFarm?.id) return;
         setLoadingCrops(true);
         const { data, error } = await supabase
@@ -345,7 +332,20 @@ export default function SettingsPage() {
         if (error) console.error('작물 목록 로딩 실패:', error);
         setFarmCrops(data ?? []);
         setLoadingCrops(false);
-    };
+    }, [storeFarm?.id]);
+
+    // 스토어의 농장 정보가 변경되면 로컬 상태 동기화
+    useEffect(() => {
+        if (storeFarm) {
+            setFarm(storeFarm);
+            fetchHouses();
+            fetchCrops();
+        } else {
+            setFarm({});
+            setHouses([]);
+            setFarmCrops([]);
+        }
+    }, [storeFarm, fetchHouses, fetchCrops]);
 
     // 이름 기반 아이콘 자동 추천
     const ICON_MAP: Record<string, string> = {
@@ -392,6 +392,17 @@ export default function SettingsPage() {
         const label = isProcessed ? '가공품' : '작물';
         if (!confirm(`"${name}" ${label}을 삭제하시겠습니까? (기존 판매/수확 데이터는 유지됩니다)`)) return;
         await supabase.from('farm_crops').delete().eq('id', id);
+        fetchCrops();
+    };
+
+    const promoteTemporaryCrop = async (id: string, name: string) => {
+        if (!confirm(`"${name}" 품목을 정식 품목으로 전환하시겠습니까?`)) return;
+        const { error } = await supabase.from('farm_crops').update({ is_temporary: false }).eq('id', id);
+        if (error) {
+            toast.error('정식 전환 실패: ' + error.message);
+            return;
+        }
+        toast.success('정식 품목으로 전환되었습니다.');
         fetchCrops();
     };
 
@@ -484,6 +495,8 @@ export default function SettingsPage() {
     // 작물 필터링 (원물 / 가공품)
     const cropItems = farmCrops.filter(c => (c.category || 'crop') === 'crop');
     const processedItems = farmCrops.filter(c => c.category === 'processed');
+    const temporaryProcessedCount = processedItems.filter(c => c.is_temporary).length;
+    const visibleProcessedItems = showTemporaryOnly ? processedItems.filter(c => c.is_temporary) : processedItems;
 
 
     const field = (label: string, key: keyof Farm, type = "text", placeholder = "") => (
@@ -759,9 +772,16 @@ export default function SettingsPage() {
                             <span className="w-2 h-7 bg-amber-400 rounded-full"></span>
                             가공품 관리
                         </h2>
-                        <span className="px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-xs font-bold">
-                            {processedItems.length}개 등록
-                        </span>
+                        <div className="flex items-center gap-2 flex-wrap justify-end">
+                            {temporaryProcessedCount > 0 && (
+                                <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-bold">
+                                    임시 {temporaryProcessedCount}개
+                                </span>
+                            )}
+                            <span className="px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-xs font-bold">
+                                {processedItems.length}개 등록
+                            </span>
+                        </div>
                     </div>
 
                     <p className="text-xs text-gray-500 font-medium leading-relaxed bg-amber-50/50 p-3 rounded-xl border border-amber-100">
@@ -813,17 +833,30 @@ export default function SettingsPage() {
                         </div>
                     </div>
 
+                    <div className="flex items-center justify-between gap-3 bg-amber-50/50 border border-amber-100 rounded-2xl px-4 py-3">
+                        <div>
+                            <p className="text-xs font-black text-amber-800">임시 품목 정리</p>
+                            <p className="text-[10px] text-amber-700 font-bold">임시만 따로 보고 정식 전환할 수 있습니다.</p>
+                        </div>
+                        <button
+                            onClick={() => setShowTemporaryOnly(prev => !prev)}
+                            className={`px-3 py-2 rounded-xl text-[11px] font-black transition-all border ${showTemporaryOnly ? 'bg-amber-500 border-amber-600 text-white' : 'bg-white border-amber-200 text-amber-700'}`}
+                        >
+                            {showTemporaryOnly ? '전체 보기' : '임시만 보기'}
+                        </button>
+                    </div>
+
                     {/* 등록된 가공품 목록 */}
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                        {processedItems.length === 0 ? (
+                        {visibleProcessedItems.length === 0 ? (
                             <div className="col-span-full text-center py-16 bg-amber-50/30 rounded-[2rem] border-2 border-dashed border-amber-100">
                                 <Factory className="w-12 h-12 text-amber-200 mx-auto mb-4" />
-                                <p className="text-gray-700 font-medium">등록된 가공품이 없습니다.<br />
-                                    <span className="text-xs text-gray-600">위의 프리셋을 누르거나 직접 입력해 주세요!</span>
+                                <p className="text-gray-700 font-medium">{showTemporaryOnly ? '임시 가공품이 없습니다.' : '등록된 가공품이 없습니다.'}<br />
+                                    <span className="text-xs text-gray-600">{showTemporaryOnly ? '현재는 정리할 임시 품목이 없습니다.' : '위의 프리셋을 누르거나 직접 입력해 주세요!'}</span>
                                 </p>
                             </div>
                         ) : (
-                            processedItems.map((crop) => (
+                            visibleProcessedItems.map((crop) => (
                                 <div key={crop.id}
                                     className="group flex flex-col items-center p-4 rounded-[1.5rem] border-2 bg-white border-amber-50 shadow-sm hover:shadow-amber-100/50 hover:border-amber-200 transition-all relative">
                                     {/* 더보기 메뉴 */}
@@ -865,6 +898,11 @@ export default function SettingsPage() {
                                         {crop.crop_icon || getCropIcon(crop.crop_name)}
                                     </button>
                                     <span className="text-sm font-black text-gray-800">{crop.crop_name}</span>
+                                    {crop.is_temporary && (
+                                        <span className="text-[9px] font-black mt-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                                            임시
+                                        </span>
+                                    )}
                                     <span className="text-[9px] text-gray-700 font-bold mt-0.5">
                                         {crop.available_units?.join(' · ') || crop.default_unit}
                                     </span>
@@ -872,6 +910,14 @@ export default function SettingsPage() {
                                         <span className="text-[8px] font-black mt-1 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-600">
                                             📷 사진등록됨
                                         </span>
+                                    )}
+                                    {crop.is_temporary && (
+                                        <button
+                                            onClick={() => promoteTemporaryCrop(crop.id, crop.crop_name)}
+                                            className="mt-2 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-black hover:bg-emerald-100 transition-all"
+                                        >
+                                            정식 전환
+                                        </button>
                                     )}
 
                                     {/* 규격 태그 관리 */}

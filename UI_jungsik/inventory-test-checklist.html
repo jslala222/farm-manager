@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>재고관리 테스트 체크리스트</title>
+<style>
+  :root {
+    --bg: #f7f8fc;
+    --card: #ffffff;
+    --text: #172033;
+    --muted: #6b7280;
+    --line: #e5e7eb;
+    --blue: #2563eb;
+    --green: #059669;
+    --amber: #d97706;
+    --red: #dc2626;
+    --soft-blue: #eff6ff;
+    --soft-green: #ecfdf5;
+    --soft-amber: #fffbeb;
+    --soft-red: #fff1f2;
+    --shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Malgun Gothic', '맑은 고딕', Arial, sans-serif;
+    background: linear-gradient(180deg, #fff8f9 0%, var(--bg) 22%);
+    color: var(--text);
+  }
+  .wrap { max-width: 1380px; margin: 0 auto; padding: 36px 20px 80px; }
+  .hero, .section {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 28px;
+    padding: 24px;
+    box-shadow: var(--shadow);
+  }
+  .section { margin-top: 22px; }
+  .badge {
+    display: inline-block;
+    padding: 7px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    background: var(--soft-blue);
+    color: var(--blue);
+  }
+  h1 { margin: 14px 0 10px; font-size: 34px; }
+  h2 { margin: 0 0 12px; font-size: 24px; }
+  p { color: var(--muted); line-height: 1.75; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 14px;
+    font-size: 13px;
+  }
+  th, td {
+    border: 1px solid var(--line);
+    padding: 11px 12px;
+    text-align: left;
+    vertical-align: top;
+    line-height: 1.65;
+  }
+  th { background: #f8fafc; }
+  .pill {
+    display: inline-block;
+    padding: 4px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+  }
+  .green { background: var(--soft-green); color: var(--green); }
+  .blue { background: var(--soft-blue); color: var(--blue); }
+  .amber { background: var(--soft-amber); color: var(--amber); }
+  .red { background: var(--soft-red); color: var(--red); }
+  .note {
+    margin-top: 16px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    color: #166534;
+    line-height: 1.7;
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <span class="badge">2안+ 테스트 체크리스트</span>
+      <h1>재고관리 검증 문서</h1>
+      <p>이 문서는 <b>현재재고 + 직접조정 + 조정이력 + 판매 자동 차감</b> 구조를 실제 운영에서 검증하기 위한 체크리스트입니다. 택배, 납품, 모바일, PC 기준으로 나누어 점검할 수 있게 구성했습니다.</p>
+    </section>
+
+    <section class="section">
+      <h2>1. 공통 기본 검증</h2>
+      <table>
+        <tr>
+          <th>항목</th>
+          <th>검증 내용</th>
+          <th>결과</th>
+        </tr>
+        <tr><td>재고 ON/OFF</td><td>설정에서 ON/OFF 변경 시 화면/검사 동작이 의도대로 바뀌는가</td><td></td></tr>
+        <tr><td>현재재고 표시</td><td>실데이터 기준 현재재고가 누락 없이 표시되는가</td><td></td></tr>
+        <tr><td>단위 표시</td><td>kg / 박스 / 병 / 개 등 단위가 올바르게 보이는가</td><td></td></tr>
+        <tr><td>부족 경고</td><td>음수 또는 부족 상태가 명확히 보이는가</td><td></td></tr>
+        <tr><td>조정 후 반영</td><td>직접조정 저장 후 현재재고가 즉시 갱신되는가</td><td></td></tr>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>2. 직접조정 검증</h2>
+      <table>
+        <tr>
+          <th>조정 유형</th>
+          <th>검증 내용</th>
+          <th>결과</th>
+        </tr>
+        <tr><td>폐기</td><td>폐기 수량 입력 시 현재재고가 정확히 감소하는가</td><td></td></tr>
+        <tr><td>부분폐기</td><td>일부 수량만 폐기했을 때 남은 수량이 정확한가</td><td></td></tr>
+        <tr><td>전부폐기</td><td>전체 수량 폐기 시 0으로 반영되는가</td><td></td></tr>
+        <tr><td>가공전환</td><td>원물 가공전환 시 원물 재고가 정확히 차감되는가</td><td></td></tr>
+        <tr><td>수동보정(+)</td><td>플러스 보정이 재고에 반영되는가</td><td></td></tr>
+        <tr><td>수동보정(-)</td><td>마이너스 보정이 재고에 반영되는가</td><td></td></tr>
+        <tr><td>사유 저장</td><td>조정 사유가 이력에 정확히 남는가</td><td></td></tr>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>3. 조정이력 검증</h2>
+      <table>
+        <tr>
+          <th>항목</th>
+          <th>검증 내용</th>
+          <th>결과</th>
+        </tr>
+        <tr><td>일시</td><td>조정 시각이 정확히 기록되는가</td><td></td></tr>
+        <tr><td>품목명</td><td>어떤 품목이 변경됐는지 명확한가</td><td></td></tr>
+        <tr><td>이벤트 유형</td><td>폐기 / 가공전환 / 보정 등이 정확히 표시되는가</td><td></td></tr>
+        <tr><td>수량</td><td>변경 수량이 맞는가</td><td></td></tr>
+        <tr><td>사유</td><td>입력한 사유가 그대로 보이는가</td><td></td></tr>
+        <tr><td>작성자</td><td>입력자 정보가 필요 시 추적 가능한가</td><td></td></tr>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>4. 택배 판매 검증</h2>
+      <table>
+        <tr>
+          <th>상황</th>
+          <th>검증 내용</th>
+          <th>결과</th>
+        </tr>
+        <tr><td>정상 판매</td><td>재고가 충분할 때 저장이 정상 완료되고 재고가 차감되는가</td><td></td></tr>
+        <tr><td>부족 판매</td><td>재고 부족 시 shortage dialog가 의도대로 뜨는가</td><td></td></tr>
+        <tr><td>경고 모드</td><td>경고 후 계속 저장 시 저장은 되고 재고는 차감되는가</td><td></td></tr>
+        <tr><td>차단 모드</td><td>차단 설정 시 저장이 막히는가</td><td></td></tr>
+        <tr><td>가공품 판매</td><td>가공품 판매 시 가공품 재고만 차감되는가</td><td></td></tr>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>5. 납품 판매 검증</h2>
+      <table>
+        <tr>
+          <th>상황</th>
+          <th>검증 내용</th>
+          <th>결과</th>
+        </tr>
+        <tr><td>보류 저장</td><td>납품 보류 저장 시 재고 차감 정책이 의도대로 동작하는가</td><td></td></tr>
+        <tr><td>즉시 정산 저장</td><td>즉시 정산 시 재고가 차감되는가</td><td></td></tr>
+        <tr><td>부족 경고</td><td>부족 시 모달 내용이 품목/수량 단위와 함께 정확한가</td><td></td></tr>
+        <tr><td>계속 저장</td><td>경고 모드에서 계속 저장 흐름이 끊기지 않는가</td><td></td></tr>
+        <tr><td>수정 저장</td><td>기존 납품 내역 수정 시 재고 재계산이 맞는가</td><td></td></tr>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>6. 모바일 검증</h2>
+      <table>
+        <tr>
+          <th>항목</th>
+          <th>검증 내용</th>
+          <th>결과</th>
+        </tr>
+        <tr><td>숫자 키패드</td><td>수량/가격 입력 시 숫자 키패드가 잘 뜨는가</td><td></td></tr>
+        <tr><td>버튼 가림</td><td>모달/바텀시트 하단 버튼이 가려지지 않는가</td><td></td></tr>
+        <tr><td>스크롤</td><td>재고 목록과 모달 내부 스크롤이 자연스러운가</td><td></td></tr>
+        <tr><td>탭 전환</td><td>원물/가공품/부족 필터 전환이 편한가</td><td></td></tr>
+        <tr><td>직접조정 입력</td><td>폐기/가공전환/보정 입력이 손쉽게 가능한가</td><td></td></tr>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>7. PC 검증</h2>
+      <table>
+        <tr>
+          <th>항목</th>
+          <th>검증 내용</th>
+          <th>결과</th>
+        </tr>
+        <tr><td>한눈에 보기</td><td>재고 요약과 목록이 한 화면에서 잘 읽히는가</td><td></td></tr>
+        <tr><td>테이블 가독성</td><td>품목, 수량, 단위, 상태가 혼동되지 않는가</td><td></td></tr>
+        <tr><td>조정이력 조회</td><td>필터/정렬 없이도 기본 조회가 충분히 이해 가능한가</td><td></td></tr>
+        <tr><td>멀티 작업</td><td>재고 확인 후 판매 화면으로 이동하는 흐름이 빠른가</td><td></td></tr>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>8. 실데이터 검증 포인트</h2>
+      <table>
+        <tr>
+          <th>검증 포인트</th>
+          <th>설명</th>
+          <th>결과</th>
+        </tr>
+        <tr><td>경준싱싱농장 기준 재고</td><td>실제 입력된 원물/가공품 데이터가 문서상 가정과 크게 다르지 않은가</td><td></td></tr>
+        <tr><td>원물과 무관한 가공품</td><td>독립 가공품도 무리 없이 관리 가능한가</td><td></td></tr>
+        <tr><td>실제 직원 사용성</td><td>관리자가 아니라 사용자/직원이 입력하기에 부담이 적은가</td><td></td></tr>
+        <tr><td>조정 빈도</td><td>폐기/보정/가공전환 입력 빈도가 과도하지 않은가</td><td></td></tr>
+      </table>
+      <div class="note">
+        <b>최종 체크 기준:</b> 재고관리는 정확성도 중요하지만, <b>현장에서 계속 쓸 수 있는지</b>가 더 중요합니다. 테스트는 계산 정확성뿐 아니라 <b>입력 부담</b>, <b>모바일 사용성</b>, <b>판매 흐름 방해 여부</b>까지 함께 확인해야 합니다.
+      </div>
+    </section>
+  </div>
+</body>
+</html>

@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>재고관리 구조 표 정리</title>
+<style>
+  :root {
+    --bg: #f7f8fc;
+    --card: #ffffff;
+    --text: #172033;
+    --muted: #6b7280;
+    --line: #e5e7eb;
+    --blue: #2563eb;
+    --green: #059669;
+    --amber: #d97706;
+    --red: #dc2626;
+    --soft-blue: #eff6ff;
+    --soft-green: #ecfdf5;
+    --soft-amber: #fffbeb;
+    --soft-red: #fff1f2;
+    --shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Malgun Gothic', '맑은 고딕', Arial, sans-serif;
+    background: linear-gradient(180deg, #fff8f9 0%, var(--bg) 22%);
+    color: var(--text);
+  }
+  .wrap {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 36px 20px 80px;
+  }
+  .hero, .section {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 28px;
+    padding: 24px;
+    box-shadow: var(--shadow);
+  }
+  .section { margin-top: 22px; }
+  .badge {
+    display: inline-block;
+    padding: 7px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    background: var(--soft-blue);
+    color: var(--blue);
+  }
+  h1 { margin: 14px 0 10px; font-size: 34px; }
+  h2 { margin: 0 0 12px; font-size: 24px; }
+  p { color: var(--muted); line-height: 1.75; }
+  .summary-box {
+    margin-top: 14px;
+    display: grid;
+    gap: 10px;
+  }
+  .summary-item {
+    background: #f8fafc;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 14px 16px;
+    line-height: 1.7;
+  }
+  .summary-item b { color: var(--text); }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 14px;
+    font-size: 13px;
+  }
+  th, td {
+    border: 1px solid var(--line);
+    padding: 11px 12px;
+    text-align: left;
+    vertical-align: top;
+    line-height: 1.65;
+  }
+  th {
+    background: #f8fafc;
+    font-size: 13px;
+  }
+  .pill {
+    display: inline-block;
+    padding: 4px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+  }
+  .pill.green { background: var(--soft-green); color: var(--green); }
+  .pill.blue { background: var(--soft-blue); color: var(--blue); }
+  .pill.amber { background: var(--soft-amber); color: var(--amber); }
+  .pill.red { background: var(--soft-red); color: var(--red); }
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+  .note {
+    margin-top: 16px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    color: #92400e;
+    line-height: 1.7;
+    font-size: 13px;
+  }
+  @media (max-width: 960px) {
+    .two-col { grid-template-columns: 1fr; }
+    h1 { font-size: 28px; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <span class="badge">표 중심 정리본</span>
+      <h1>재고관리 구조 정리표</h1>
+      <p>기준 방향은 <b>2안+</b>입니다. 즉, <b>현재재고 + 조정이력 분리형</b>을 기본으로 하되, 3안의 일부인 <b>가공전환 / 부분폐기 / 등급변경</b>을 선반영 가능한 구조로 정리합니다.</p>
+      <div class="summary-box">
+        <div class="summary-item"><b>기본 원칙:</b> 원물 재고와 가공품 재고는 <b>기본 분리</b>가 맞습니다.</div>
+        <div class="summary-item"><b>선택 연결:</b> 필요할 때만 <b>원물 → 가공전환</b>을 연결합니다.</div>
+        <div class="summary-item"><b>운영 관점:</b> 사용자는 <b>한눈에 보고 직접 수정</b>할 수 있어야 하고, 출하/판매는 그 재고를 기준으로 자동 차감됩니다.</div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>1. 원물 재고와 가공품 재고의 관계</h2>
+      <table>
+        <tr>
+          <th>항목</th>
+          <th>원물 재고</th>
+          <th>가공품 재고</th>
+          <th>설계 판단</th>
+        </tr>
+        <tr>
+          <td>재고 성격</td>
+          <td>수확으로 유입되는 농산물</td>
+          <td>판매용 완제품 또는 가공 상품</td>
+          <td><span class="pill blue">기본 분리</span></td>
+        </tr>
+        <tr>
+          <td>입고 방식</td>
+          <td>수확 입력</td>
+          <td>직접 생산등록 또는 수동 입고</td>
+          <td><span class="pill blue">기본 분리</span></td>
+        </tr>
+        <tr>
+          <td>출고 방식</td>
+          <td>납품/택배/폐기/가공전환</td>
+          <td>납품/택배/폐기</td>
+          <td><span class="pill blue">기본 분리</span></td>
+        </tr>
+        <tr>
+          <td>원물 연결 여부</td>
+          <td>자체 재고</td>
+          <td>연결될 수도 있고 아닐 수도 있음</td>
+          <td><span class="pill green">선택 연결</span></td>
+        </tr>
+        <tr>
+          <td>예시</td>
+          <td>딸기, 고구마, 샤인머스켓</td>
+          <td>딸기잼, 즙, 외부원료 가공품, 선물세트</td>
+          <td><span class="pill amber">유연 설계 필요</span></td>
+        </tr>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>2. 언제 분리하고 언제 연결하는가</h2>
+      <table>
+        <tr>
+          <th>상황</th>
+          <th>권장 처리</th>
+          <th>이유</th>
+        </tr>
+        <tr>
+          <td>사용자가 원물과 무관한 가공품을 판매함</td>
+          <td>가공품 재고를 독립 관리</td>
+          <td>원물 재고와 억지로 연결하면 운영과 안 맞음</td>
+        </tr>
+        <tr>
+          <td>사용자가 자기 원물 일부를 가공용으로 돌림</td>
+          <td>원물 → 가공전환 기록</td>
+          <td>원물 차감의 근거가 생기고 이력도 남음</td>
+        </tr>
+        <tr>
+          <td>가공품은 있지만 원물 소모량까지 아직 추적 안 함</td>
+          <td>가공품 독립 재고만 운영</td>
+          <td>처음부터 레시피/환산 추적을 안 해도 됨</td>
+        </tr>
+        <tr>
+          <td>장기적으로 원물-가공품 흐름 분석 필요</td>
+          <td>나중에 선택 연결 확장</td>
+          <td>2안 기반을 유지하면서 3안 일부만 확대 가능</td>
+        </tr>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>3. 2안+ 화면 구조</h2>
+      <table>
+        <tr>
+          <th>화면</th>
+          <th>핵심 내용</th>
+          <th>사용자 행동</th>
+        </tr>
+        <tr>
+          <td>현재재고 화면</td>
+          <td>원물/가공품 현재 수량, 등급별 수량, 주의 품목, 부족 상태</td>
+          <td>한눈에 확인</td>
+        </tr>
+        <tr>
+          <td>직접조정 화면</td>
+          <td>폐기, 가공전환, 등급변경, 수동보정</td>
+          <td>수량과 이유 입력 후 재고 수정</td>
+        </tr>
+        <tr>
+          <td>조정이력 화면</td>
+          <td>언제, 누가, 무엇을, 얼마나, 왜 바꿨는지</td>
+          <td>추적 / 검토</td>
+        </tr>
+        <tr>
+          <td>납품/택배 화면</td>
+          <td>현재 재고 기준 자동 차감, 부족 시 경고 모달</td>
+          <td>출하 / 판매 저장</td>
+        </tr>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>4. 조정 이벤트 표준안</h2>
+      <table>
+        <tr>
+          <th>이벤트</th>
+          <th>의미</th>
+          <th>예시</th>
+          <th>즉시 도입 여부</th>
+        </tr>
+        <tr>
+          <td>`manual_adjust`</td>
+          <td>수량을 직접 맞춤</td>
+          <td>실물 재고와 맞추기 위해 +5 / -3</td>
+          <td><span class="pill green">즉시</span></td>
+        </tr>
+        <tr>
+          <td>`waste_out`</td>
+          <td>폐기 차감</td>
+          <td>특/상 2박스 폐기, 하 5kg 폐기</td>
+          <td><span class="pill green">즉시</span></td>
+        </tr>
+        <tr>
+          <td>`process_out`</td>
+          <td>가공용 전환</td>
+          <td>딸기 원물 10kg → 가공용 차감</td>
+          <td><span class="pill green">즉시</span></td>
+        </tr>
+        <tr>
+          <td>`grade_change`</td>
+          <td>등급 상태 이동</td>
+          <td>특/상 6박스 → 중 6박스</td>
+          <td><span class="pill amber">선반영</span></td>
+        </tr>
+        <tr>
+          <td>`sale_out`</td>
+          <td>판매/출하 차감</td>
+          <td>택배 4박스, 납품 10kg</td>
+          <td><span class="pill green">이미 연결 중</span></td>
+        </tr>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>5. 즉시 구현 / 보류 / 실험안</h2>
+      <div class="two-col">
+        <div>
+          <table>
+            <tr>
+              <th>구분</th>
+              <th>항목</th>
+            </tr>
+            <tr>
+              <td>즉시 구현</td>
+              <td>현재재고 화면, 직접조정, 조정이력, 폐기, 가공전환, 수동보정, 판매 자동 차감</td>
+            </tr>
+            <tr>
+              <td>보류</td>
+              <td>레시피 자동 환산, 원물-가공품 완전 자동 연동, 정밀 생산관리</td>
+            </tr>
+            <tr>
+              <td>실험안</td>
+              <td>등급변경 이력, 가공품 원물 연결 옵션, 요약 리포트</td>
+            </tr>
+          </table>
+        </div>
+        <div>
+          <table>
+            <tr>
+              <th>판단</th>
+              <th>설명</th>
+            </tr>
+            <tr>
+              <td>왜 2안+인가</td>
+              <td>운영은 가볍게 가되, 데이터는 3안 일부를 담을 수 있기 때문</td>
+            </tr>
+            <tr>
+              <td>왜 기본 분리인가</td>
+              <td>모든 사용자가 원물 기반 가공품만 파는 것이 아니기 때문</td>
+            </tr>
+            <tr>
+              <td>왜 선택 연결인가</td>
+              <td>필요한 농가만 원물 → 가공전환을 쓰면 되기 때문</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      <div class="note">
+        <b>결론:</b> 원물 재고와 가공품 재고는 <b>기본 분리</b>가 맞고, 필요 시에만 <b>선택 연결</b>합니다. 구현은 <b>2안+</b>로 시작해 현재재고/직접조정/조정이력/자동차감을 먼저 안정화하는 순서가 가장 안전합니다.
+      </div>
+    </section>
+  </div>
+</body>
+</html>

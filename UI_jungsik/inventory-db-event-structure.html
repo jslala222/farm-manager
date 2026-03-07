@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>재고관리 DB / 이벤트 구조안</title>
+<style>
+  :root {
+    --bg: #f7f8fc;
+    --card: #ffffff;
+    --text: #172033;
+    --muted: #6b7280;
+    --line: #e5e7eb;
+    --blue: #2563eb;
+    --green: #059669;
+    --amber: #d97706;
+    --red: #dc2626;
+    --soft-blue: #eff6ff;
+    --soft-green: #ecfdf5;
+    --soft-amber: #fffbeb;
+    --soft-red: #fff1f2;
+    --shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Malgun Gothic', '맑은 고딕', Arial, sans-serif;
+    background: linear-gradient(180deg, #fff8f9 0%, var(--bg) 22%);
+    color: var(--text);
+  }
+  .wrap {
+    max-width: 1360px;
+    margin: 0 auto;
+    padding: 36px 20px 80px;
+  }
+  .hero, .section {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 28px;
+    padding: 24px;
+    box-shadow: var(--shadow);
+  }
+  .section { margin-top: 22px; }
+  .badge {
+    display: inline-block;
+    padding: 7px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    background: var(--soft-blue);
+    color: var(--blue);
+  }
+  h1 { margin: 14px 0 10px; font-size: 34px; }
+  h2 { margin: 0 0 12px; font-size: 24px; }
+  p { color: var(--muted); line-height: 1.75; }
+  .summary {
+    display: grid;
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .summary div {
+    background: #f8fafc;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 14px 16px;
+    line-height: 1.7;
+  }
+  .summary b { color: var(--text); }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 14px;
+    font-size: 13px;
+  }
+  th, td {
+    border: 1px solid var(--line);
+    padding: 11px 12px;
+    text-align: left;
+    vertical-align: top;
+    line-height: 1.65;
+  }
+  th { background: #f8fafc; }
+  .pill {
+    display: inline-block;
+    padding: 4px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+  }
+  .green { background: var(--soft-green); color: var(--green); }
+  .blue { background: var(--soft-blue); color: var(--blue); }
+  .amber { background: var(--soft-amber); color: var(--amber); }
+  .red { background: var(--soft-red); color: var(--red); }
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+  .note {
+    margin-top: 16px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    color: #92400e;
+    line-height: 1.7;
+    font-size: 13px;
+  }
+  @media (max-width: 980px) {
+    .grid { grid-template-columns: 1fr; }
+    h1 { font-size: 28px; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <span class="badge">2안+ DB / 이벤트 구조안</span>
+      <h1>재고관리 데이터 구조 문서</h1>
+      <p>이 문서는 <b>현재재고 + 조정이력 분리형</b>을 실제 구현 가능한 수준으로 내린 초안입니다. 목표는 처음부터 거대한 ERP를 만드는 것이 아니라, <b>현재 재고를 안정적으로 보여주고 직접 조정할 수 있게 하는 구조</b>를 잡는 것입니다.</p>
+      <div class="summary">
+        <div><b>핵심 구조:</b> 원물 재고와 가공품 재고는 <b>기본 분리</b></div>
+        <div><b>핵심 로직:</b> 현재재고는 조회용 집계 관점, 조정이력은 원인 기록 관점</div>
+        <div><b>확장 포인트:</b> 필요 시에만 원물 → 가공전환을 연결</div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>1. 전체 구조 요약</h2>
+      <table>
+        <tr>
+          <th>구성 요소</th>
+          <th>역할</th>
+          <th>비고</th>
+        </tr>
+        <tr>
+          <td>원물 재고 데이터</td>
+          <td>현재 원물 수량 / 등급별 수량 관리</td>
+          <td><span class="pill green">핵심</span></td>
+        </tr>
+        <tr>
+          <td>가공품 재고 데이터</td>
+          <td>현재 가공품 수량 관리</td>
+          <td><span class="pill green">핵심</span></td>
+        </tr>
+        <tr>
+          <td>조정이력 데이터</td>
+          <td>왜 재고가 바뀌었는지 저장</td>
+          <td><span class="pill green">핵심</span></td>
+        </tr>
+        <tr>
+          <td>판매 데이터</td>
+          <td>택배 / 납품 저장 시 재고 차감 근거</td>
+          <td><span class="pill blue">기존 연동</span></td>
+        </tr>
+        <tr>
+          <td>가공 연결 데이터</td>
+          <td>원물 → 가공전환 연결 정보</td>
+          <td><span class="pill amber">선택 기능</span></td>
+        </tr>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>2. 최소 테이블 관점</h2>
+      <table>
+        <tr>
+          <th>테이블 / 개념</th>
+          <th>목적</th>
+          <th>초기 도입 여부</th>
+        </tr>
+        <tr>
+          <td>`harvest_records`</td>
+          <td>수확 입력 원본</td>
+          <td><span class="pill blue">기존 사용</span></td>
+        </tr>
+        <tr>
+          <td>`sales_records`</td>
+          <td>택배 / 납품 판매 원본</td>
+          <td><span class="pill blue">기존 사용</span></td>
+        </tr>
+        <tr>
+          <td>`inventory_adjustments`</td>
+          <td>폐기 / 가공전환 / 보정 / 등급변경 이력 저장</td>
+          <td><span class="pill green">즉시 확장</span></td>
+        </tr>
+        <tr>
+          <td>`inventory_current_view` 또는 집계 로직</td>
+          <td>현재 재고 계산 결과</td>
+          <td><span class="pill green">즉시 필요</span></td>
+        </tr>
+        <tr>
+          <td>`processed_goods` 개념 또는 상품구분 필드</td>
+          <td>가공품 품목 구분</td>
+          <td><span class="pill amber">선반영 가능</span></td>
+        </tr>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>3. 현재재고 계산 기준</h2>
+      <table>
+        <tr>
+          <th>재고 종류</th>
+          <th>증가 요인</th>
+          <th>감소 요인</th>
+          <th>비고</th>
+        </tr>
+        <tr>
+          <td>원물 재고</td>
+          <td>수확 입력, 수동보정(+)</td>
+          <td>판매, 폐기, 가공전환, 수동보정(-)</td>
+          <td>등급별 재고 가능</td>
+        </tr>
+        <tr>
+          <td>가공품 재고</td>
+          <td>직접 입고, 생산등록, 수동보정(+)</td>
+          <td>판매, 폐기, 수동보정(-)</td>
+          <td>원물과 독립 가능</td>
+        </tr>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>4. 조정이력 이벤트 표준안</h2>
+      <table>
+        <tr>
+          <th>event_type</th>
+          <th>의미</th>
+          <th>필수 필드</th>
+          <th>예시</th>
+        </tr>
+        <tr>
+          <td>`manual_adjust`</td>
+          <td>재고 수량 직접 보정</td>
+          <td>품목, 수량, 증감, 사유</td>
+          <td>실물 수량 확인 후 -2</td>
+        </tr>
+        <tr>
+          <td>`waste_out`</td>
+          <td>폐기 차감</td>
+          <td>품목, 수량, 사유, 등급(선택)</td>
+          <td>중 3박스 폐기</td>
+        </tr>
+        <tr>
+          <td>`process_out`</td>
+          <td>가공용 전환 차감</td>
+          <td>품목, 수량, 사유</td>
+          <td>딸기 10kg 가공용 전환</td>
+        </tr>
+        <tr>
+          <td>`grade_change`</td>
+          <td>등급 이동</td>
+          <td>품목, from_grade, to_grade, 수량, 사유</td>
+          <td>특/상 5박스 → 중 5박스</td>
+        </tr>
+        <tr>
+          <td>`stock_in`</td>
+          <td>직접 입고 또는 가공품 입고</td>
+          <td>품목, 수량, 사유</td>
+          <td>딸기잼 20병 생산등록</td>
+        </tr>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>5. 조정이력 필드 초안</h2>
+      <table>
+        <tr>
+          <th>필드</th>
+          <th>설명</th>
+          <th>필수 여부</th>
+        </tr>
+        <tr>
+          <td>`farm_id`</td>
+          <td>농장 구분</td>
+          <td>필수</td>
+        </tr>
+        <tr>
+          <td>`crop_name` / `item_name`</td>
+          <td>품목명</td>
+          <td>필수</td>
+        </tr>
+        <tr>
+          <td>`item_type`</td>
+          <td>원물 / 가공품</td>
+          <td>필수</td>
+        </tr>
+        <tr>
+          <td>`event_type`</td>
+          <td>폐기 / 가공전환 / 보정 / 등급변경</td>
+          <td>필수</td>
+        </tr>
+        <tr>
+          <td>`quantity`</td>
+          <td>변경 수량</td>
+          <td>필수</td>
+        </tr>
+        <tr>
+          <td>`unit`</td>
+          <td>kg / 박스 / 병 / 개</td>
+          <td>필수</td>
+        </tr>
+        <tr>
+          <td>`from_grade`</td>
+          <td>변경 전 등급</td>
+          <td>선택</td>
+        </tr>
+        <tr>
+          <td>`to_grade`</td>
+          <td>변경 후 등급</td>
+          <td>선택</td>
+        </tr>
+        <tr>
+          <td>`reason`</td>
+          <td>사유</td>
+          <td>권장</td>
+        </tr>
+        <tr>
+          <td>`created_by`</td>
+          <td>입력자</td>
+          <td>권장</td>
+        </tr>
+        <tr>
+          <td>`created_at`</td>
+          <td>입력 시각</td>
+          <td>필수</td>
+        </tr>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>6. 원물 / 가공품 분리 방식</h2>
+      <div class="grid">
+        <div>
+          <table>
+            <tr>
+              <th>원물 재고</th>
+              <th>설명</th>
+            </tr>
+            <tr>
+              <td>입고 기준</td>
+              <td>수확</td>
+            </tr>
+            <tr>
+              <td>감소 기준</td>
+              <td>판매 / 폐기 / 가공전환 / 보정</td>
+            </tr>
+            <tr>
+              <td>등급 관리</td>
+              <td>가능</td>
+            </tr>
+            <tr>
+              <td>현재재고 화면</td>
+              <td>등급별 수량 표시 가능</td>
+            </tr>
+          </table>
+        </div>
+        <div>
+          <table>
+            <tr>
+              <th>가공품 재고</th>
+              <th>설명</th>
+            </tr>
+            <tr>
+              <td>입고 기준</td>
+              <td>직접입고 / 생산등록 / 보정</td>
+            </tr>
+            <tr>
+              <td>감소 기준</td>
+              <td>판매 / 폐기 / 보정</td>
+            </tr>
+            <tr>
+              <td>원물 연결</td>
+              <td>필수 아님, 선택 사항</td>
+            </tr>
+            <tr>
+              <td>현재재고 화면</td>
+              <td>독립 품목으로 표시</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>7. 선택 연결 구조</h2>
+      <table>
+        <tr>
+          <th>상황</th>
+          <th>처리 방식</th>
+          <th>데이터 반영</th>
+        </tr>
+        <tr>
+          <td>원물과 무관한 가공품</td>
+          <td>독립 가공품으로만 관리</td>
+          <td>가공품 재고만 증감</td>
+        </tr>
+        <tr>
+          <td>원물을 가공용으로 사용</td>
+          <td>`process_out` 기록</td>
+          <td>원물 재고 차감</td>
+        </tr>
+        <tr>
+          <td>가공품 생산 결과도 기록하고 싶음</td>
+          <td>`stock_in` 기록</td>
+          <td>가공품 재고 증가</td>
+        </tr>
+        <tr>
+          <td>레시피 환산까지 필요</td>
+          <td>후속 확장</td>
+          <td>초기 범위에서는 제외</td>
+        </tr>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>8. 즉시 구현 / 후속 확장</h2>
+      <table>
+        <tr>
+          <th>구분</th>
+          <th>내용</th>
+        </tr>
+        <tr>
+          <td>즉시 구현</td>
+          <td>현재재고 계산, 조정이력 저장, 폐기, 가공전환, 수동보정, 판매 자동 차감</td>
+        </tr>
+        <tr>
+          <td>선반영 가능</td>
+          <td>등급변경, 가공품 독립 재고, 입력자 추적</td>
+        </tr>
+        <tr>
+          <td>후속 확장</td>
+          <td>원물-가공품 자동 연결, 레시피 기반 환산, 고급 리포트</td>
+        </tr>
+      </table>
+      <div class="note">
+        <b>결론:</b> 2안+의 DB 구조는 복잡한 자동 추적보다, <b>현재재고를 안정적으로 보여주는 계산 구조</b>와 <b>조정이력 이벤트 저장 구조</b>를 먼저 확보하는 데 집중해야 합니다. 이렇게 하면 원물/가공품 기본 분리와 선택 연결을 모두 수용할 수 있습니다.
+      </div>
+    </section>
+  </div>
+</body>
+</html>

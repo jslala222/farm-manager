@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>재고관리 화면 구조안</title>
+<style>
+  :root {
+    --bg: #f7f8fc;
+    --card: #ffffff;
+    --text: #172033;
+    --muted: #6b7280;
+    --line: #e5e7eb;
+    --blue: #2563eb;
+    --green: #059669;
+    --amber: #d97706;
+    --red: #dc2626;
+    --soft-blue: #eff6ff;
+    --soft-green: #ecfdf5;
+    --soft-amber: #fffbeb;
+    --soft-red: #fff1f2;
+    --shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Malgun Gothic', '맑은 고딕', Arial, sans-serif;
+    background: linear-gradient(180deg, #fff8f9 0%, var(--bg) 22%);
+    color: var(--text);
+  }
+  .wrap {
+    max-width: 1360px;
+    margin: 0 auto;
+    padding: 36px 20px 80px;
+  }
+  .hero, .section {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 28px;
+    padding: 24px;
+    box-shadow: var(--shadow);
+  }
+  .section { margin-top: 22px; }
+  .badge {
+    display: inline-block;
+    padding: 7px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    background: var(--soft-blue);
+    color: var(--blue);
+  }
+  h1 { margin: 14px 0 10px; font-size: 34px; }
+  h2 { margin: 0 0 12px; font-size: 24px; }
+  p { color: var(--muted); line-height: 1.75; }
+  .summary {
+    display: grid;
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .summary div {
+    background: #f8fafc;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 14px 16px;
+    line-height: 1.7;
+  }
+  .summary b { color: var(--text); }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 14px;
+    font-size: 13px;
+  }
+  th, td {
+    border: 1px solid var(--line);
+    padding: 11px 12px;
+    text-align: left;
+    vertical-align: top;
+    line-height: 1.65;
+  }
+  th { background: #f8fafc; }
+  .pill {
+    display: inline-block;
+    padding: 4px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+  }
+  .green { background: var(--soft-green); color: var(--green); }
+  .blue { background: var(--soft-blue); color: var(--blue); }
+  .amber { background: var(--soft-amber); color: var(--amber); }
+  .red { background: var(--soft-red); color: var(--red); }
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+  .note {
+    margin-top: 16px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    color: #166534;
+    line-height: 1.7;
+    font-size: 13px;
+  }
+  @media (max-width: 980px) {
+    .grid { grid-template-columns: 1fr; }
+    h1 { font-size: 28px; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <span class="badge">2안+ 실제 화면 구조안</span>
+      <h1>재고관리 화면 구성 문서</h1>
+      <p>기준은 <b>현재재고 + 조정이력 분리형</b>입니다. 사용자는 <b>한눈에 보고</b>, 필요한 순간에만 <b>직접 조정</b>하고, 납품/택배는 그 재고를 기준으로 자동 차감되는 흐름을 목표로 합니다.</p>
+      <div class="summary">
+        <div><b>핵심 목표:</b> 복잡한 관리자용 시스템이 아니라, 사용자/직원이 바로 쓸 수 있는 재고 화면</div>
+        <div><b>화면 원칙:</b> 메인은 현재재고 중심, 조정은 최소 단계, 이력은 뒤에서 추적</div>
+        <div><b>구조 원칙:</b> 원물과 가공품은 기본 분리, 필요 시 선택 연결</div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>1. 전체 화면 맵</h2>
+      <table>
+        <tr>
+          <th>화면</th>
+          <th>목적</th>
+          <th>누가 주로 쓰는가</th>
+          <th>우선순위</th>
+        </tr>
+        <tr>
+          <td>현재재고 메인</td>
+          <td>현재 남은 재고를 한눈에 확인</td>
+          <td>사용자 / 직원</td>
+          <td><span class="pill green">최우선</span></td>
+        </tr>
+        <tr>
+          <td>직접조정</td>
+          <td>폐기, 가공전환, 보정, 등급변경</td>
+          <td>사용자 / 직원</td>
+          <td><span class="pill green">최우선</span></td>
+        </tr>
+        <tr>
+          <td>조정이력</td>
+          <td>왜 재고가 바뀌었는지 추적</td>
+          <td>사용자 / 관리자</td>
+          <td><span class="pill green">높음</span></td>
+        </tr>
+        <tr>
+          <td>가공품 재고</td>
+          <td>독립 가공품 재고 조회 및 수정</td>
+          <td>사용자 / 직원</td>
+          <td><span class="pill blue">높음</span></td>
+        </tr>
+        <tr>
+          <td>요약 리포트</td>
+          <td>폐기, 가공전환, 판매 추이 확인</td>
+          <td>관리자 / 검토자</td>
+          <td><span class="pill amber">후순위</span></td>
+        </tr>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>2. 현재재고 메인 화면</h2>
+      <table>
+        <tr>
+          <th>영역</th>
+          <th>들어갈 항목</th>
+          <th>설명</th>
+        </tr>
+        <tr>
+          <td>상단 요약 카드</td>
+          <td>총 품목 수, 부족 품목, 오늘 폐기, 오늘 가공전환</td>
+          <td>상태를 한눈에 파악</td>
+        </tr>
+        <tr>
+          <td>탭 / 필터</td>
+          <td>전체, 원물, 가공품, 부족만 보기</td>
+          <td>빠른 탐색</td>
+        </tr>
+        <tr>
+          <td>재고 목록</td>
+          <td>품목명, 단위, 현재수량, 등급별 수량, 상태</td>
+          <td>핵심 정보 집중</td>
+        </tr>
+        <tr>
+          <td>빠른 액션</td>
+          <td>폐기, 가공전환, 보정, 상세보기</td>
+          <td>목록에서 바로 조정 진입</td>
+        </tr>
+        <tr>
+          <td>경고 표시</td>
+          <td>부족, 음수, 주의</td>
+          <td>판매 전 미리 파악</td>
+        </tr>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>3. 직접조정 화면</h2>
+      <table>
+        <tr>
+          <th>입력 항목</th>
+          <th>예시</th>
+          <th>비고</th>
+        </tr>
+        <tr>
+          <td>품목 선택</td>
+          <td>딸기 / 고구마 / 딸기잼</td>
+          <td>원물/가공품 구분 표시</td>
+        </tr>
+        <tr>
+          <td>조정 유형</td>
+          <td>폐기 / 가공전환 / 등급변경 / 수동보정</td>
+          <td>2안+ 핵심</td>
+        </tr>
+        <tr>
+          <td>현재 등급</td>
+          <td>특/상 / 중 / 하</td>
+          <td>원물만 해당 가능</td>
+        </tr>
+        <tr>
+          <td>변경 등급</td>
+          <td>특/상 → 중</td>
+          <td>등급변경 시만 표시</td>
+        </tr>
+        <tr>
+          <td>수량</td>
+          <td>5 박스 / 12 kg</td>
+          <td>모바일 숫자 입력 최적화</td>
+        </tr>
+        <tr>
+          <td>사유</td>
+          <td>무름 / 가공용 사용 / 실물차이</td>
+          <td>최소 이력 확보</td>
+        </tr>
+        <tr>
+          <td>저장 후 처리</td>
+          <td>현재 재고 반영 + 조정이력 저장</td>
+          <td>핵심 동작</td>
+        </tr>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>4. 조정이력 화면</h2>
+      <table>
+        <tr>
+          <th>컬럼</th>
+          <th>예시</th>
+          <th>용도</th>
+        </tr>
+        <tr>
+          <td>일시</td>
+          <td>2026-03-07 19:30</td>
+          <td>언제 바뀌었는지</td>
+        </tr>
+        <tr>
+          <td>품목</td>
+          <td>딸기</td>
+          <td>무엇이 바뀌었는지</td>
+        </tr>
+        <tr>
+          <td>유형</td>
+          <td>폐기 / 가공전환 / 보정 / 등급변경</td>
+          <td>왜 바뀌었는지 분류</td>
+        </tr>
+        <tr>
+          <td>변경 내용</td>
+          <td>특/상 5박스 → 중 5박스</td>
+          <td>상세 확인</td>
+        </tr>
+        <tr>
+          <td>수량</td>
+          <td>5 박스</td>
+          <td>변화량</td>
+        </tr>
+        <tr>
+          <td>사유</td>
+          <td>보관 중 무름</td>
+          <td>나중 추적</td>
+        </tr>
+        <tr>
+          <td>작성자</td>
+          <td>직원A</td>
+          <td>책임 추적</td>
+        </tr>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>5. 가공품 재고 화면</h2>
+      <div class="grid">
+        <div>
+          <table>
+            <tr>
+              <th>구성</th>
+              <th>내용</th>
+            </tr>
+            <tr>
+              <td>독립 가공품 목록</td>
+              <td>원물과 무관하게 관리되는 가공품</td>
+            </tr>
+            <tr>
+              <td>현재 수량</td>
+              <td>병, 박스, 개수 등 단위별 관리</td>
+            </tr>
+            <tr>
+              <td>직접 조정</td>
+              <td>폐기 / 수동보정 / 입고추가</td>
+            </tr>
+            <tr>
+              <td>판매 차감</td>
+              <td>택배/납품 시 자동 차감</td>
+            </tr>
+          </table>
+        </div>
+        <div>
+          <table>
+            <tr>
+              <th>선택 연결 요소</th>
+              <th>설명</th>
+            </tr>
+            <tr>
+              <td>원물 → 가공전환</td>
+              <td>필요한 사용자만 사용</td>
+            </tr>
+            <tr>
+              <td>가공품 생성 이력</td>
+              <td>원물과 연결할 경우 근거 저장</td>
+            </tr>
+            <tr>
+              <td>필수 여부</td>
+              <td>아님. 기본은 독립 가공품도 허용</td>
+            </tr>
+            <tr>
+              <td>추천 시점</td>
+              <td>2차 또는 실험안</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>6. 납품 / 택배 연동 포인트</h2>
+      <table>
+        <tr>
+          <th>상황</th>
+          <th>동작</th>
+          <th>메모</th>
+        </tr>
+        <tr>
+          <td>원물 판매 저장</td>
+          <td>현재 원물 재고 자동 차감</td>
+          <td>부족 시 기존 shortage dialog 사용</td>
+        </tr>
+        <tr>
+          <td>가공품 판매 저장</td>
+          <td>현재 가공품 재고 자동 차감</td>
+          <td>원물과 독립 가능</td>
+        </tr>
+        <tr>
+          <td>재고 부족</td>
+          <td>경고 / 차단 설정에 따라 동작</td>
+          <td>현재 구현 유지 가능</td>
+        </tr>
+        <tr>
+          <td>조정 후 재판매</td>
+          <td>조정된 현재 재고 기준으로 다시 차감</td>
+          <td>2안의 핵심 가치</td>
+        </tr>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>7. 구현 우선순위 제안</h2>
+      <table>
+        <tr>
+          <th>단계</th>
+          <th>구현 내용</th>
+          <th>판단</th>
+        </tr>
+        <tr>
+          <td>1차</td>
+          <td>현재재고 메인 + 조정이력 + 직접조정 기본형</td>
+          <td><span class="pill green">즉시</span></td>
+        </tr>
+        <tr>
+          <td>2차</td>
+          <td>폐기 / 가공전환 / 수동보정 안정화</td>
+          <td><span class="pill green">즉시</span></td>
+        </tr>
+        <tr>
+          <td>3차</td>
+          <td>등급변경 UI 및 이력</td>
+          <td><span class="pill amber">실험안</span></td>
+        </tr>
+        <tr>
+          <td>4차</td>
+          <td>원물-가공품 선택 연결</td>
+          <td><span class="pill amber">실험안</span></td>
+        </tr>
+        <tr>
+          <td>5차</td>
+          <td>리포트 / 분석 / 고급 추적</td>
+          <td><span class="pill blue">후속</span></td>
+        </tr>
+      </table>
+      <div class="note">
+        <b>추천:</b> 먼저 <b>현재재고 화면</b>과 <b>직접조정</b>을 고정하고, 그 다음에 <b>조정이력</b>을 붙이는 순서가 가장 안전합니다. 원물-가공품 선택 연결은 구조만 열어두고, 실제 도입은 후순위로 두는 것이 좋습니다.
+      </div>
+    </section>
+  </div>
+</body>
+</html>

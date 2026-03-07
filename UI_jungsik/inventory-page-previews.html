@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>재고관리 페이지 미리보기 3안</title>
+<style>
+  :root {
+    --bg: #f6f7fb;
+    --card: #ffffff;
+    --text: #14213d;
+    --muted: #7b8794;
+    --line: #e8ebf2;
+    --red: #ef4444;
+    --green: #10b981;
+    --amber: #f59e0b;
+    --navy: #1f2a44;
+    --pink: #fff1f2;
+    --green-soft: #ecfdf5;
+    --blue-soft: #eff6ff;
+    --shadow: 0 16px 40px rgba(20, 33, 61, 0.08);
+    --radius: 24px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Malgun Gothic', '맑은 고딕', Arial, sans-serif;
+    background: linear-gradient(180deg, #fff7f8 0%, var(--bg) 18%);
+    color: var(--text);
+  }
+  .wrap {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 40px 20px 80px;
+  }
+  .hero {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+  .hero h1 {
+    margin: 0;
+    font-size: 36px;
+    line-height: 1.2;
+  }
+  .hero p {
+    margin: 12px auto 0;
+    max-width: 860px;
+    color: var(--muted);
+    font-size: 16px;
+    line-height: 1.7;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 22px;
+    align-items: start;
+  }
+  .proposal {
+    background: rgba(255,255,255,0.68);
+    border: 1px solid rgba(255,255,255,0.72);
+    backdrop-filter: blur(16px);
+    border-radius: 32px;
+    padding: 22px;
+    box-shadow: var(--shadow);
+  }
+  .proposal-header {
+    margin-bottom: 16px;
+  }
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+  .eyebrow.green { background: var(--green-soft); color: #047857; }
+  .eyebrow.blue { background: var(--blue-soft); color: #1d4ed8; }
+  .eyebrow.amber { background: #fffbeb; color: #b45309; }
+  .proposal h2 {
+    margin: 0 0 8px;
+    font-size: 22px;
+  }
+  .proposal p.desc {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.6;
+    font-size: 14px;
+  }
+  .phone {
+    margin-top: 18px;
+    background: #101828;
+    border-radius: 36px;
+    padding: 10px;
+    box-shadow: 0 24px 48px rgba(16, 24, 40, 0.18);
+  }
+  .screen {
+    background: var(--bg);
+    min-height: 820px;
+    border-radius: 28px;
+    overflow: hidden;
+    position: relative;
+  }
+  .status {
+    height: 26px;
+    background: linear-gradient(90deg, #ffd5dd, #ffecec);
+  }
+  .appbar {
+    padding: 18px 18px 14px;
+    background: white;
+    border-bottom: 1px solid var(--line);
+  }
+  .appbar .tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 800;
+    color: #e11d48;
+    background: #fff1f2;
+    padding: 4px 9px;
+    border-radius: 999px;
+  }
+  .appbar h3 {
+    margin: 10px 0 6px;
+    font-size: 22px;
+  }
+  .appbar small {
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .screen-body {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .summary {
+    background: linear-gradient(180deg, #fff 0%, #fff7f8 100%);
+    border: 1px solid #ffd8de;
+    border-radius: 22px;
+    padding: 16px;
+  }
+  .summary-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    gap: 10px;
+  }
+  .summary-head strong {
+    font-size: 18px;
+  }
+  .summary-head span {
+    font-size: 12px;
+    color: var(--muted);
+    display: block;
+    margin-top: 4px;
+  }
+  .pill {
+    padding: 7px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+  .pill.red { background: #ffe4e6; color: #e11d48; }
+  .pill.green { background: #d1fae5; color: #047857; }
+  .pill.blue { background: #dbeafe; color: #1d4ed8; }
+  .kpis {
+    margin-top: 14px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .kpi {
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 12px;
+  }
+  .kpi label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .kpi strong {
+    font-size: 18px;
+  }
+  .toolbar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .chip {
+    padding: 10px 13px;
+    border-radius: 999px;
+    background: white;
+    border: 1px solid var(--line);
+    font-size: 12px;
+    font-weight: 700;
+    color: #475467;
+  }
+  .panel {
+    background: white;
+    border-radius: 24px;
+    border: 1px solid var(--line);
+    overflow: hidden;
+  }
+  .panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 16px 10px;
+  }
+  .panel-header h4 {
+    margin: 0;
+    font-size: 17px;
+  }
+  .panel-header span {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .list { padding: 0 12px 12px; display: grid; gap: 10px; }
+  .item {
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 14px;
+    background: #fff;
+  }
+  .item-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: start;
+  }
+  .item h5 {
+    margin: 0;
+    font-size: 16px;
+  }
+  .meta {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .stats {
+    margin-top: 12px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .stat {
+    border-radius: 16px;
+    padding: 11px 10px;
+    background: #f8fafc;
+  }
+  .stat label {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    font-weight: 700;
+  }
+  .stat strong {
+    font-size: 17px;
+  }
+  .stat.red { background: #fff1f2; }
+  .stat.green { background: #ecfdf5; }
+  .split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .mini-card {
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 14px;
+  }
+  .mini-card h5 {
+    margin: 0 0 6px;
+    font-size: 15px;
+  }
+  .rows { display: grid; gap: 8px; }
+  .row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 13px;
+    color: #344054;
+  }
+  .row strong { font-size: 14px; }
+  .footer-nav {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255,255,255,0.95);
+    border-top: 1px solid var(--line);
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    text-align: center;
+    padding: 10px 8px 12px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .footer-nav b { display: block; font-size: 12px; color: var(--text); margin-bottom: 4px; }
+  .legend {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px dashed #d8dce5;
+    display: grid;
+    gap: 10px;
+  }
+  .legend div {
+    font-size: 13px;
+    line-height: 1.6;
+    color: #475467;
+  }
+  .legend b { color: var(--text); }
+  @media (max-width: 1280px) {
+    .grid { grid-template-columns: 1fr; }
+    .screen { min-height: 720px; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <h1>재고관리 페이지 예상 미리보기 3안</h1>
+      <p>
+        실제 운영 고민을 반영해 <b>원물</b>, <b>가공품</b>, <b>농자재 확장 가능성</b>을 기준으로
+        재고관리 페이지를 3가지 방식으로 정리했습니다. 핵심 비교 포인트는 <b>모바일 사용성</b>,
+        <b>입력 속도</b>, <b>가공품 처리 난이도</b>입니다.
+      </p>
+    </div>
+
+    <div class="grid">
+      <section class="proposal">
+        <div class="proposal-header">
+          <div class="eyebrow green">1안 · 추천 / 원물 중심 간단형</div>
+          <h2>원물 재고 빠른 확인형</h2>
+          <p class="desc">수확-판매-폐기 흐름만 한눈에 보고, 원물 재고를 가장 빠르게 확인하는 구조입니다. 현장 사용성과 모바일 입력 속도를 최우선으로 둡니다.</p>
+        </div>
+        <div class="phone">
+          <div class="screen">
+            <div class="status"></div>
+            <div class="appbar">
+              <span class="tag">재고관리 ON</span>
+              <h3>원물 재고 현황</h3>
+              <small>경준싱싱농장 · 딸기/고구마/원물 중심</small>
+            </div>
+            <div class="screen-body">
+              <div class="summary">
+                <div class="summary-head">
+                  <div>
+                    <strong>오늘 남은 재고 빠른 확인</strong>
+                    <span>수확 - 판매 - 폐기 기준 자동 계산</span>
+                  </div>
+                  <div class="pill green">정상 4품목</div>
+                </div>
+                <div class="kpis">
+                  <div class="kpi"><label>총 원물 재고</label><strong>282 kg</strong></div>
+                  <div class="kpi"><label>오늘 판매</label><strong>91 kg</strong></div>
+                  <div class="kpi"><label>부족 경고</label><strong style="color:#e11d48;">2건</strong></div>
+                </div>
+              </div>
+              <div class="toolbar">
+                <div class="chip">전체</div>
+                <div class="chip">주의만 보기</div>
+                <div class="chip">폐기 등록</div>
+                <div class="chip">재고보정</div>
+              </div>
+              <div class="panel">
+                <div class="panel-header">
+                  <h4>원물 품목 목록</h4>
+                  <span>빠른 확인 중심</span>
+                </div>
+                <div class="list">
+                  <div class="item">
+                    <div class="item-top">
+                      <div>
+                        <h5>딸기</h5>
+                        <div class="meta">단위: 박스 · 마지막 갱신 10분 전</div>
+                      </div>
+                      <div class="pill red">부족 경고</div>
+                    </div>
+                    <div class="stats">
+                      <div class="stat"><label>현재재고</label><strong style="color:#e11d48;">-26 박스</strong></div>
+                      <div class="stat"><label>오늘판매</label><strong>12 박스</strong></div>
+                      <div class="stat red"><label>부족</label><strong style="color:#be123c;">38 박스</strong></div>
+                    </div>
+                  </div>
+                  <div class="item">
+                    <div class="item-top">
+                      <div>
+                        <h5>고구마</h5>
+                        <div class="meta">단위: kg · 원물</div>
+                      </div>
+                      <div class="pill green">충분</div>
+                    </div>
+                    <div class="stats">
+                      <div class="stat"><label>현재재고</label><strong>192 kg</strong></div>
+                      <div class="stat"><label>오늘판매</label><strong>20 kg</strong></div>
+                      <div class="stat green"><label>출고가능</label><strong style="color:#047857;">172 kg</strong></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="footer-nav">
+              <div><b>홈</b>요약</div>
+              <div><b>수확</b>입고</div>
+              <div><b>재고</b>현황</div>
+              <div><b>판매</b>출고</div>
+            </div>
+          </div>
+        </div>
+        <div class="legend">
+          <div><b>적합:</b> 원물 재고를 빠르게 확인하고 부족만 경고하려는 현재 운영 방식</div>
+          <div><b>강점:</b> 가장 단순하고 모바일 친화적이며 보고서의 1안 철학과 가장 잘 맞음</div>
+        </div>
+      </section>
+
+      <section class="proposal">
+        <div class="proposal-header">
+          <div class="eyebrow blue">2안 · 균형형 / 원물 + 가공품 분리형</div>
+          <h2>탭 분리 재고관리형</h2>
+          <p class="desc">원물과 가공품을 한 페이지 안에서 분리해 보여주는 구조입니다. 가공품을 원물과 섞지 않고, 각자 다른 기준으로 관리할 수 있게 설계합니다.</p>
+        </div>
+        <div class="phone">
+          <div class="screen">
+            <div class="status"></div>
+            <div class="appbar">
+              <span class="tag">재고관리 ON</span>
+              <h3>재고 대시보드</h3>
+              <small>원물 / 가공품 분리 확인</small>
+            </div>
+            <div class="screen-body">
+              <div class="toolbar">
+                <div class="chip" style="background:#14213d;color:white;border-color:#14213d;">원물</div>
+                <div class="chip">가공품</div>
+                <div class="chip">부족품목</div>
+                <div class="chip">보정이력</div>
+              </div>
+              <div class="split">
+                <div class="mini-card">
+                  <h5>원물 요약</h5>
+                  <div class="rows">
+                    <div class="row"><span>현재 재고</span><strong>282 kg</strong></div>
+                    <div class="row"><span>주의 품목</span><strong style="color:#e11d48;">2개</strong></div>
+                    <div class="row"><span>오늘 폐기</span><strong>8 kg</strong></div>
+                  </div>
+                </div>
+                <div class="mini-card">
+                  <h5>가공품 요약</h5>
+                  <div class="rows">
+                    <div class="row"><span>현재 재고</span><strong>51 병</strong></div>
+                    <div class="row"><span>판매 가능</span><strong>47 병</strong></div>
+                    <div class="row"><span>수동 보정</span><strong>필요</strong></div>
+                  </div>
+                </div>
+              </div>
+              <div class="panel">
+                <div class="panel-header">
+                  <h4>가공품 목록</h4>
+                  <span>원물과 별도 관리</span>
+                </div>
+                <div class="list">
+                  <div class="item">
+                    <div class="item-top">
+                      <div>
+                        <h5>딸기잼</h5>
+                        <div class="meta">단위: 병 · 가공품</div>
+                      </div>
+                      <div class="pill blue">독립재고</div>
+                    </div>
+                    <div class="stats">
+                      <div class="stat"><label>현재재고</label><strong>17 병</strong></div>
+                      <div class="stat"><label>오늘판매</label><strong>3 병</strong></div>
+                      <div class="stat green"><label>재고상태</label><strong style="color:#047857;">정상</strong></div>
+                    </div>
+                  </div>
+                  <div class="item">
+                    <div class="item-top">
+                      <div>
+                        <h5>샤인머스켓 주스</h5>
+                        <div class="meta">단위: 250ml · 가공품</div>
+                      </div>
+                      <div class="pill red">주의</div>
+                    </div>
+                    <div class="stats">
+                      <div class="stat"><label>현재재고</label><strong style="color:#e11d48;">4 병</strong></div>
+                      <div class="stat"><label>오늘판매</label><strong>6 병</strong></div>
+                      <div class="stat red"><label>추가생산 필요</label><strong style="color:#be123c;">2 병</strong></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="footer-nav">
+              <div><b>홈</b>요약</div>
+              <div><b>원물</b>입출고</div>
+              <div><b>가공품</b>독립재고</div>
+              <div><b>판매</b>출고</div>
+            </div>
+          </div>
+        </div>
+        <div class="legend">
+          <div><b>적합:</b> 원물과 가공품을 분리해서 보되, 가공품을 아직 레시피 연동까지는 안 하려는 단계</div>
+          <div><b>강점:</b> 실운영 감각에 맞고, 가공품이 복잡하다는 현재 고민을 안전하게 흡수함</div>
+        </div>
+      </section>
+
+      <section class="proposal">
+        <div class="proposal-header">
+          <div class="eyebrow amber">3안 · 확장형 / 원물 + 가공품 + 농자재</div>
+          <h2>카테고리 통합 관리형</h2>
+          <p class="desc">원물, 가공품, 농자재를 하나의 재고 페이지 안에서 카테고리별로 통합 관리하는 구조입니다. 미래 확장성은 좋지만 처음 도입 시 무거울 수 있습니다.</p>
+        </div>
+        <div class="phone">
+          <div class="screen">
+            <div class="status"></div>
+            <div class="appbar">
+              <span class="tag">통합 재고</span>
+              <h3>재고 전체 현황</h3>
+              <small>원물 / 가공품 / 농자재</small>
+            </div>
+            <div class="screen-body">
+              <div class="summary">
+                <div class="summary-head">
+                  <div>
+                    <strong>카테고리별 운영 현황</strong>
+                    <span>판매용 재고와 운영 재고를 함께 표시</span>
+                  </div>
+                  <div class="pill blue">카테고리 3종</div>
+                </div>
+                <div class="kpis">
+                  <div class="kpi"><label>원물</label><strong>282 kg</strong></div>
+                  <div class="kpi"><label>가공품</label><strong>51 병</strong></div>
+                  <div class="kpi"><label>농자재</label><strong>18 품목</strong></div>
+                </div>
+              </div>
+              <div class="panel">
+                <div class="panel-header">
+                  <h4>카테고리 섹션</h4>
+                  <span>확장성 우선</span>
+                </div>
+                <div class="list">
+                  <div class="item">
+                    <div class="item-top">
+                      <div>
+                        <h5>원물 재고</h5>
+                        <div class="meta">수확-판매-폐기 자동 계산</div>
+                      </div>
+                      <div class="pill green">자동</div>
+                    </div>
+                    <div class="rows" style="margin-top:12px;">
+                      <div class="row"><span>주의 품목</span><strong style="color:#e11d48;">2개</strong></div>
+                      <div class="row"><span>오늘 폐기</span><strong>8kg</strong></div>
+                    </div>
+                  </div>
+                  <div class="item">
+                    <div class="item-top">
+                      <div>
+                        <h5>가공품 재고</h5>
+                        <div class="meta">수동 생산등록 또는 레시피 연동 후보</div>
+                      </div>
+                      <div class="pill blue">반자동</div>
+                    </div>
+                    <div class="rows" style="margin-top:12px;">
+                      <div class="row"><span>생산 대기</span><strong>2품목</strong></div>
+                      <div class="row"><span>저재고</span><strong style="color:#e11d48;">1품목</strong></div>
+                    </div>
+                  </div>
+                  <div class="item">
+                    <div class="item-top">
+                      <div>
+                        <h5>농자재 재고</h5>
+                        <div class="meta">비료, 포장재, 소모품</div>
+                      </div>
+                      <div class="pill amber">운영재고</div>
+                    </div>
+                    <div class="rows" style="margin-top:12px;">
+                      <div class="row"><span>재주문 필요</span><strong>3품목</strong></div>
+                      <div class="row"><span>이번 달 사용</span><strong>11건</strong></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="footer-nav">
+              <div><b>홈</b>요약</div>
+              <div><b>재고</b>통합</div>
+              <div><b>조정</b>입출고</div>
+              <div><b>분석</b>리포트</div>
+            </div>
+          </div>
+        </div>
+        <div class="legend">
+          <div><b>적합:</b> 장기적으로 농자재까지 포함한 전체 운영재고를 보고 싶은 경우</div>
+          <div><b>주의:</b> 지금 바로 도입하면 무겁고, 가공품/농자재 정책이 확정되지 않으면 복잡도만 올라갈 수 있음</div>
+        </div>
+      </section>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,10 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Building2, Edit2, Trash2, History, RefreshCcw, Save, ShoppingCart, ChevronDown, Calendar as CalendarIcon, X } from 'lucide-react';
 import { useAuthStore } from "@/store/authStore";
-import { supabase, SalesRecord, Partner } from "@/lib/supabase";
-import { formatCurrency, getCropIcon } from "@/lib/utils";
+import { supabase, SalesRecord, Partner, FarmCrop } from "@/lib/supabase";
 import CalendarComponent from "@/components/Calendar";
 import SettlementModal, { ModalCropEntry, SettlementSaveData } from "@/components/SettlementModal";
 import { toast } from "sonner";
@@ -18,16 +16,15 @@ export default function BulkSalesPage() {
     const { farm, initialized, cropIconMap } = useAuthStore();
     const [partners, setPartners] = useState<Partner[]>([]);
     const [history, setHistory] = useState<SalesRecord[]>([]);
-    const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [selectedDate, setSelectedDate] = useState(toLocalDateStr());
     const [showCalendar, setShowCalendar] = useState(false);
     const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
-    const [farmCrops, setFarmCrops] = useState<any[]>([]);
+    const [farmCrops, setFarmCrops] = useState<FarmCrop[]>([]);
     const [expandedPartners, setExpandedPartners] = useState<string[]>([]);
 
     // 수정 모달 state
-    const [editModal, setEditModal] = useState<{ open: boolean; records: any[]; cropGroups: {cropName: string; isProcessed: boolean; unit: string; records: any[]}[]; companyName: string }>({ open: false, records: [], cropGroups: [], companyName: '' });
+    const [editModal, setEditModal] = useState<{ open: boolean; records: SalesRecord[]; cropGroups: {cropName: string; isProcessed: boolean; unit: string; records: SalesRecord[]}[]; compSalesRecordName: string }>({ open: false, records: [], cropGroups: [], compSalesRecordName: '' });
     const [modalDate, setModalDate] = useState('');
     const [modalQties, setModalQties] = useState<Record<string, string>>({}); // { [cropName:grade]: qty }
     const [modalPaymentMethod, setModalPaymentMethod] = useState('카드');
@@ -42,17 +39,15 @@ export default function BulkSalesPage() {
     const [bulkItems, setBulkItems] = useState<{id: string; cropName: string; cropIcon: string; unit: string; category: string; qty: string; qtySang: string; qtyJung: string; qtyHa: string;}[]>([]);
 
     // Common State
-    const [cropName, setCropName] = useState('딸기');
-    const [saleUnit, setSaleUnit] = useState('박스');
 
     // 가공품이면 규격(specs), 아니면 단위(units)
-    const getEffectiveUnits = (crop: any) => {
+    const getEffectiveUnits = (crop: FarmCrop) => {
         if (crop?.category === 'processed' && crop?.available_specs?.length > 0) return crop.available_specs;
         return crop?.available_units || ['박스'];
     };
 
     // 장바구니 헬퍼
-    const addToBulkCart = (crop: any) => {
+    const addToBulkCart = (crop: FarmCrop) => {
         setBulkItems(prev => [...prev, {
             id: Date.now().toString() + Math.random().toString(36).slice(2, 7),
             cropName: crop.crop_name, cropIcon: cropIconMap[crop.crop_name] || getCropIcon(crop.crop_name),
@@ -75,7 +70,7 @@ export default function BulkSalesPage() {
 
     const [shortageOpen, setShortageOpen] = useState(false);
     const [shortageMode, setShortageMode] = useState<"block" | "warn">("block");
-    const [shortageRows, setShortageRows] = useState<any[]>([]);
+    const [shortageRows, setShortageRows] = useState<FarmCrop[]>([]);
     const [pendingAction, setPendingAction] = useState<null | "pending" | "settled">(null);
     const skipStockCheckRef = useRef(false);
 
@@ -92,7 +87,7 @@ export default function BulkSalesPage() {
             if (data) {
                 setFarmCrops(data);
                 if (data.length > 0) {
-                    const strawberry = data.find((c: any) => c.crop_name === '딸기');
+                    const strawberry = data.find((c: SalesRecord) => c.crop_name === '딸기');
                     if (strawberry) { setCropName('딸기'); setSaleUnit(strawberry.available_units?.[0] || '박스'); }
                     else { setCropName(data[0].crop_name); setSaleUnit(data[0].available_units?.[0] || '박스'); }
                 }
@@ -105,7 +100,7 @@ export default function BulkSalesPage() {
         if (!farm?.id) return;
         setLoading(true);
         try {
-            const partnersRes = await supabase.from('partners').select('*').eq('farm_id', farm.id).order('company_name');
+            const partnersRes = await supabase.from('partners').select('*').eq('farm_id', farm.id).order('compSalesRecord_name');
             if (partnersRes.data) setPartners(partnersRes.data);
             await fetchHistory();
         } finally { setLoading(false); }
@@ -195,7 +190,7 @@ export default function BulkSalesPage() {
             handleResetAllStates();
             setTimeout(() => fetchHistory(), 200);
             toast.success("✅ 납품 기록이 저장되었습니다! (미정산)");
-        } catch (error: any) {
+        } catch (error: SalesRecord) {
             toast.error("저장 실패: " + (error.message || "알 수 없는 오류"));
         } finally { setSaving(false); }
     };
@@ -273,7 +268,7 @@ export default function BulkSalesPage() {
             handleResetAllStates();
             setTimeout(() => fetchHistory(), 200);
             toast.success("✅ 납품 기록이 저장되었습니다! (정산 완료)");
-        } catch (error: any) {
+        } catch (error: SalesRecord) {
             toast.error("저장 실패: " + (error.message || "알 수 없는 오류"));
         } finally { setSaving(false); }
     };
@@ -295,7 +290,7 @@ export default function BulkSalesPage() {
         return parsed ? result : { [gradeStr]: fallbackQty };
     };
 
-    const handleEditModal = (records: any[], companyName: string) => {
+    const handleEditModal = (records: SalesRecord[], compSalesRecordName: string) => {
         const first = records[0];
         setModalDate(first.recorded_at.split('T')[0]);
         setModalPaymentMethod(first?.payment_method || '카드');
@@ -303,7 +298,7 @@ export default function BulkSalesPage() {
 
         const srcIds = new Set<string>();
         // 품목별 그루핑
-        const cropMap = new Map<string, any[]>();
+        const cropMap = new Map<string, SalesRecord[]>();
         records.forEach(rec => {
             const cn = rec.crop_name || '미지정';
             if (!cropMap.has(cn)) cropMap.set(cn, []);
@@ -311,23 +306,23 @@ export default function BulkSalesPage() {
         });
 
         const gradeOrder = ['특/상', '중', '하'];
-        const cropGroups: {cropName: string; isProcessed: boolean; unit: string; records: any[]}[] = [];
+        const cropGroups: {cropName: string; isProcessed: boolean; unit: string; records: SalesRecord[]}[] = [];
         const qties: Record<string, string> = {};
 
         cropMap.forEach((recs, cropName) => {
-            const isProcessed = recs.every((r: any) => r.grade === '-');
+            const isProcessed = recs.every((r: SalesRecord) => r.grade === '-');
             const unit = recs[0].sale_unit || '박스';
 
             if (isProcessed) {
                 // 가공품: 단순 수량
-                const totalQty = recs.reduce((s: number, r: any) => s + (r.quantity || 0), 0);
+                const totalQty = recs.reduce((s: number, r: SalesRecord) => s + (r.quantity || 0), 0);
                 qties[`${cropName}:-`] = totalQty.toString();
                 cropGroups.push({ cropName, isProcessed: true, unit, records: recs });
             } else {
                 // 원물: 등급별 처리
                 const gradeQtyMap: Record<string, number> = {};
-                const gradeRecordMap: Record<string, any> = {};
-                recs.forEach((rec: any) => {
+                const gradeRecordMap: Record<string, SalesRecord> = {};
+                recs.forEach((rec: SalesRecord) => {
                     const gradeStr = rec.grade || '';
                     if (gradeOrder.includes(gradeStr)) {
                         gradeQtyMap[gradeStr] = (gradeQtyMap[gradeStr] || 0) + (rec.quantity || 0);
@@ -361,10 +356,10 @@ export default function BulkSalesPage() {
         cropGroups.forEach(cg => {
             if (cg.isProcessed) {
                 const p = cg.records[0]?.price;
-                const q = cg.records.reduce((s: number, r: any) => s + (r.quantity || 0), 0);
+                const q = cg.records.reduce((s: number, r: SalesRecord) => s + (r.quantity || 0), 0);
                 prices[`${cg.cropName}:-`] = p && q ? String(Math.round(p / q)) : '';
             } else {
-                cg.records.forEach((rec: any) => {
+                cg.records.forEach((rec: SalesRecord) => {
                     const p = rec.price;
                     const q = rec.quantity || 0;
                     prices[`${cg.cropName}:${rec.grade}`] = p && q ? String(Math.round(p / q)) : '';
@@ -375,7 +370,7 @@ export default function BulkSalesPage() {
         setModalQties(qties);
         setModalPrices(prices);
         setCompoundSourceIds(Array.from(srcIds));
-        setEditModal({ open: true, records, cropGroups, companyName });
+        setEditModal({ open: true, records, cropGroups, compSalesRecordName });
     };
 
     // SettlementModal용 crop entries 계산
@@ -395,7 +390,7 @@ export default function BulkSalesPage() {
                     cropIcon: cropIconMap[cg.cropName] || undefined,
                 });
             } else {
-                cg.records.forEach((rec: any) => {
+                cg.records.forEach((rec: SalesRecord) => {
                     entries.push({
                         recordId: (rec.id && !rec._isCompound) ? rec.id : null,
                         cropName: cg.cropName,
@@ -461,10 +456,10 @@ export default function BulkSalesPage() {
                 }
             }
 
-            setEditModal({ open: false, records: [], cropGroups: [], companyName: '' });
+            setEditModal({ open: false, records: [], cropGroups: [], compSalesRecordName: '' });
             setCompoundSourceIds([]);
             fetchHistory();
-        } catch (error: any) {
+        } catch (error: SalesRecord) {
             console.error('수정 모달 저장 오류:', error);
             toast.error('저장 중 오류가 발생했습니다: ' + (error.message || '알 수 없는 오류'));
         } finally {
@@ -474,30 +469,29 @@ export default function BulkSalesPage() {
 
     const handleBulkDelete = () => {
         if (!confirm("정말 삭제하시겠습니까? 삭제하시면 되돌릴 수 없으니, 자세히 확인 후 삭제하기 바랍니다.")) return;
-        const allRecs = editModal.records.filter((r: any) => r.id);
-        Promise.all(allRecs.map((rec: any) => supabase.from('sales_records').delete().eq('id', rec.id)))
+        const allRecs = editModal.records.filter((r: SalesRecord) => r.id);
+        Promise.all(allRecs.map((rec: SalesRecord) => supabase.from('sales_records').delete().eq('id', rec.id)))
             .then(() => {
-                setEditModal({ open: false, records: [], cropGroups: [], companyName: '' });
+                setEditModal({ open: false, records: [], cropGroups: [], compSalesRecordName: '' });
                 setCompoundSourceIds([]);
                 fetchHistory();
             })
-            .catch((err: any) => toast.error("삭제 중 오류가 발생했습니다: " + err.message));
+            .catch((err: SalesRecord) => toast.error("삭제 중 오류가 발생했습니다: " + err.message));
     };
 
-    const handleDelete = async (id: string) => { if (!confirm("삭제하시겠습니까?")) return; const { error } = await supabase.from('sales_records').delete().eq('id', id); if (!error) fetchHistory(); };
 
     const groupedHistory = useMemo(() => {
         // partner → date → transaction(recorded_at 기준) → records → cropGroups
         const partnerMap = new Map<string, {
-            partnerId: string | null; companyName: string; totalAmount: number;
+            partnerId: string | null; compSalesRecordName: string; totalAmount: number;
             qtyByUnit: Record<string, number>;
-            dailyMap: Map<string, Map<string, any[]>>;
+            dailyMap: Map<string, Map<string, SalesRecord[]>>;
         }>();
         history.forEach(rec => {
-            const displayName = (rec as any).partner?.company_name || rec.customer_name || '미지정';
+            const displayName = (rec as SalesRecord).partner?.compSalesRecord_name || rec.customer_name || '미지정';
             const pKey = rec.partner_id || `no-id-${displayName}`;
             if (!partnerMap.has(pKey)) {
-                partnerMap.set(pKey, { partnerId: rec.partner_id || null, companyName: displayName, totalAmount: 0, qtyByUnit: {}, dailyMap: new Map() });
+                partnerMap.set(pKey, { partnerId: rec.partner_id || null, compSalesRecordName: displayName, totalAmount: 0, qtyByUnit: {}, dailyMap: new Map() });
             }
             const pGroup = partnerMap.get(pKey)!;
             const recUnit = rec.sale_unit || '박스';
@@ -511,28 +505,28 @@ export default function BulkSalesPage() {
             dayMap.get(txKey)!.push(rec);
         });
         return Array.from(partnerMap.values()).map(p => ({
-            partnerId: p.partnerId, companyName: p.companyName, qtyByUnit: p.qtyByUnit, totalAmount: p.totalAmount,
+            partnerId: p.partnerId, compSalesRecordName: p.compSalesRecordName, qtyByUnit: p.qtyByUnit, totalAmount: p.totalAmount,
             dailyGroups: Array.from(p.dailyMap.entries())
                 .map(([date, txMap]) => ({
                     date,
                     transactions: Array.from(txMap.values()).map(records => {
                         // 품목별 하위 그룹핑
-                        const cropMap = new Map<string, any[]>();
-                        records.forEach((r: any) => {
+                        const cropMap = new Map<string, SalesRecord[]>();
+                        records.forEach((r: SalesRecord) => {
                             const cn = r.crop_name || '미지정';
                             if (!cropMap.has(cn)) cropMap.set(cn, []);
                             cropMap.get(cn)!.push(r);
                         });
                         const cropGroups = Array.from(cropMap.entries()).map(([cn, recs]) => {
-                            const isProcessed = recs.every((r: any) => r.grade === '-');
-                            const totalQty = recs.reduce((s: number, r: any) => s + (r.quantity || 0), 0);
+                            const isProcessed = recs.every((r: SalesRecord) => r.grade === '-');
+                            const totalQty = recs.reduce((s: number, r: SalesRecord) => s + (r.quantity || 0), 0);
                             const unit = recs[0].sale_unit || '박스';
                             const gradeBreakdown = isProcessed
                                 ? `${totalQty}${unit}`
-                                : recs.map((r: any) => `${r.grade}:${r.quantity}`).join(', ');
+                                : recs.map((r: SalesRecord) => `${r.grade}:${r.quantity}`).join(', ');
                             return { cropName: cn, records: recs, isProcessed, totalQty, unit, gradeBreakdown };
                         });
-                        const txQtyByUnit = records.reduce((acc: any, r: any) => {
+                        const txQtyByUnit = records.reduce((acc: SalesRecord, r: SalesRecord) => {
                             const u = r.sale_unit || '박스';
                             acc[u] = (acc[u] || 0) + (r.quantity || 0);
                             return acc;
@@ -563,7 +557,6 @@ export default function BulkSalesPage() {
             .filter(g => g.qty > 0)
             .map(g => ({...g, itemId: item.id, cropName: item.cropName, cropIcon: item.cropIcon, unit: item.unit, key: `${item.id}-${g.grade}`}));
     });
-    const sheetTotalQty = sheetGradesSummary.reduce((sum, g) => sum + g.qty, 0);
     const sheetExpected = sheetGradesSummary.reduce((sum, g) => {
         const up = sheetUnitPrices[g.key] ? Number(sheetUnitPrices[g.key]) : 0;
         return sum + up * g.qty;
@@ -577,7 +570,7 @@ export default function BulkSalesPage() {
             <InventoryShortageDialog
                 open={shortageOpen}
                 mode={shortageMode}
-                rows={shortageRows as any}
+                rows={shortageRows}
                 onClose={closeShortageDialog}
                 onContinue={
                     shortageMode === "warn" && pendingAction
@@ -756,7 +749,7 @@ export default function BulkSalesPage() {
             {editModal.open && editModal.cropGroups.length > 0 && (
                 <SettlementModal
                     mode="bulk-edit"
-                    companyName={editModal.companyName}
+                    compSalesRecordName={editModal.compSalesRecordName}
                     deliveryDate={modalDate}
                     cropEntries={bulkCropEntries}
                     initialDate={modalDate}
@@ -767,7 +760,7 @@ export default function BulkSalesPage() {
                     initialActualAmount={editModal.records[0]?.settled_amount ?? null}
                     onSave={handleBulkSave}
                     onDelete={handleBulkDelete}
-                    onClose={() => { setEditModal({ open: false, records: [], cropGroups: [], companyName: '' }); setCompoundSourceIds([]); }}
+                    onClose={() => { setEditModal({ open: false, records: [], cropGroups: [], compSalesRecordName: '' }); setCompoundSourceIds([]); }}
                     saving={modalSaving}
                 />
             )}
@@ -806,7 +799,7 @@ export default function BulkSalesPage() {
                         <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-2.5">
                             <span className="text-sm">✏️</span>
                             <span className="text-xs font-black text-amber-700">
-                                수정 중: {partners.find(p => p.id === selectedClientId)?.company_name || '거래처'}
+                                수정 중: {partners.find(p => p.id === selectedClientId)?.compSalesRecord_name || '거래처'}
                             </span>
                         </div>
                     )}
@@ -816,7 +809,7 @@ export default function BulkSalesPage() {
                             <select value={selectedClientId} onChange={(e) => setSelectedClientId(e.target.value)}
                                 className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-base font-black appearance-none outline-none focus:border-indigo-400 focus:bg-white transition-all shadow-inner">
                                 <option value="">거래처를 골라주세요</option>
-                                {partners.map(p => <option key={p.id} value={p.id}>{p.company_name}</option>)}
+                                {partners.map(p => <option key={p.id} value={p.id}>{p.compSalesRecord_name}</option>)}
                             </select>
                             <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                         </div>
@@ -927,7 +920,7 @@ export default function BulkSalesPage() {
                     ) : (
                         <div className="space-y-2">
                             {groupedHistory.map(pGroup => {
-                                const pKey = pGroup.partnerId || `no-id-${pGroup.companyName}`;
+                                const pKey = pGroup.partnerId || `no-id-${pGroup.compSalesRecordName}`;
                                 const isExpanded = expandedPartners.includes(pKey);
                                 return (
                                     <div key={pKey} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
@@ -939,7 +932,7 @@ export default function BulkSalesPage() {
                                             <div className="flex items-center gap-3 min-w-0">
                                                 <Building2 className="w-4 h-4 text-indigo-400 shrink-0" />
                                                 <div className="text-left min-w-0">
-                                                    <p className="text-sm font-black text-slate-900 truncate">{pGroup.companyName}</p>
+                                                    <p className="text-sm font-black text-slate-900 truncate">{pGroup.compSalesRecordName}</p>
                                                     <div className="flex items-center gap-1.5 text-[10px] font-bold mt-0.5">
                                                         <span className="text-slate-400">{pGroup.dailyGroups.reduce((s, d) => s + d.transactions.length, 0)}건</span>
                                                         <span className="text-slate-200">|</span>
@@ -947,9 +940,9 @@ export default function BulkSalesPage() {
                                                         <span className="text-slate-200">|</span>
                                                         <span className="text-slate-500 truncate">{(() => {
                                                             const cropTotals = new Map<string, {qty: number; unit: string}>();
-                                                            pGroup.dailyGroups.forEach((dg: any) => {
-                                                                dg.transactions.forEach((tx: any) => {
-                                                                    tx.cropGroups.forEach((cg: any) => {
+                                                            pGroup.dailyGroups.forEach((dg: SalesRecord) => {
+                                                                dg.transactions.forEach((tx: SalesRecord) => {
+                                                                    tx.cropGroups.forEach((cg: SalesRecord) => {
                                                                         const key = `${cg.cropName}|${cg.unit}`;
                                                                         const prev = cropTotals.get(key);
                                                                         cropTotals.set(key, { qty: (prev?.qty || 0) + cg.totalQty, unit: cg.unit });
@@ -995,14 +988,14 @@ export default function BulkSalesPage() {
                                                             <div className="p-3 bg-white space-y-2.5">
                                                                 {dGroup.transactions.map(tx => (
                                                                     <div key={tx.txKey}
-                                                                        onClick={() => handleEditModal(tx.records, pGroup.companyName)}
+                                                                        onClick={() => handleEditModal(tx.records, pGroup.compSalesRecordName)}
                                                                         className="bg-slate-50/70 rounded-xl border border-slate-100 cursor-pointer hover:border-indigo-200 hover:bg-indigo-50/20 transition-all group overflow-hidden">
                                                                         {/* 전표 헤더: 다중품목일 때만 아이콘 + 종류수 표시 */}
                                                                         {tx.cropGroups.length > 1 && (
                                                                             <div className="flex items-center justify-between px-3 pt-2.5 pb-1.5 bg-orange-50 border-b border-orange-200">
                                                                                 <div className="flex items-center gap-1.5">
                                                                                     <div className="flex items-center gap-0.5">
-                                                                                        {tx.cropGroups.map((cg: any, i: number) => (
+                                                                                        {tx.cropGroups.map((cg: SalesRecord, i: number) => (
                                                                                             <span key={i} className="text-lg leading-none">{cropIconMap[cg.cropName] || getCropIcon(cg.cropName)}</span>
                                                                                         ))}
                                                                                     </div>
@@ -1013,7 +1006,7 @@ export default function BulkSalesPage() {
                                                                         )}
                                                                         {/* 품목별 행 */}
                                                                         <div className={`px-3 pb-2 space-y-1 ${tx.cropGroups.length === 1 ? 'pt-2.5' : ''}`}>
-                                                                            {tx.cropGroups.map((cg: any, i: number) => (
+                                                                            {tx.cropGroups.map((cg: SalesRecord, i: number) => (
                                                                                 <div key={i} className="flex items-center gap-2 text-xs">
                                                                                     <span className="text-sm shrink-0">{cropIconMap[cg.cropName] || getCropIcon(cg.cropName)}</span>
                                                                                     <span className="font-black text-slate-700 shrink-0">{cg.cropName}</span>
@@ -1035,7 +1028,7 @@ export default function BulkSalesPage() {
                                                                         {tx.cropGroups.length > 1 && (
                                                                             <div className="mx-3 mb-2 pt-2 border-t-2 border-slate-300">
                                                                                 <p className="text-right text-[10px] font-bold text-slate-500">
-                                                                                    {tx.cropGroups.map((cg: any) => `${cg.cropName} ${cg.totalQty.toLocaleString()}${cg.unit}`).join(' · ')}
+                                                                                    {tx.cropGroups.map((cg: SalesRecord) => `${cg.cropName} ${cg.totalQty.toLocaleString()}${cg.unit}`).join(' · ')}
                                                                                 </p>
                                                                             </div>
                                                                         )}
@@ -1047,8 +1040,8 @@ export default function BulkSalesPage() {
                                                                     <div className="mt-2 pt-2 text-right text-[10px] font-bold text-slate-500 border-t-2 border-slate-300">
                                                                         {(() => {
                                                                             const cropTotals = new Map<string, {qty: number; unit: string}>();
-                                                                            dGroup.transactions.forEach((tx: any) => {
-                                                                                tx.cropGroups.forEach((cg: any) => {
+                                                                            dGroup.transactions.forEach((tx: SalesRecord) => {
+                                                                                tx.cropGroups.forEach((cg: SalesRecord) => {
                                                                                     const key = `${cg.cropName}|${cg.unit}`;
                                                                                     const prev = cropTotals.get(key);
                                                                                     cropTotals.set(key, { qty: (prev?.qty || 0) + cg.totalQty, unit: cg.unit });

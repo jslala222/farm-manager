@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>재고관리 구현 범위 분리안</title>
+<style>
+  :root {
+    --bg: #f7f8fc;
+    --card: #ffffff;
+    --text: #172033;
+    --muted: #6b7280;
+    --line: #e5e7eb;
+    --blue: #2563eb;
+    --green: #059669;
+    --amber: #d97706;
+    --red: #dc2626;
+    --soft-blue: #eff6ff;
+    --soft-green: #ecfdf5;
+    --soft-amber: #fffbeb;
+    --soft-red: #fff1f2;
+    --shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Malgun Gothic', '맑은 고딕', Arial, sans-serif;
+    background: linear-gradient(180deg, #fff8f9 0%, var(--bg) 22%);
+    color: var(--text);
+  }
+  .wrap { max-width: 1380px; margin: 0 auto; padding: 36px 20px 80px; }
+  .hero, .section {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 28px;
+    padding: 24px;
+    box-shadow: var(--shadow);
+  }
+  .section { margin-top: 22px; }
+  .badge {
+    display: inline-block;
+    padding: 7px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    background: var(--soft-blue);
+    color: var(--blue);
+  }
+  h1 { margin: 14px 0 10px; font-size: 34px; }
+  h2 { margin: 0 0 12px; font-size: 24px; }
+  p { color: var(--muted); line-height: 1.75; }
+  .summary { display: grid; gap: 10px; margin-top: 14px; }
+  .summary div {
+    background: #f8fafc;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 14px 16px;
+    line-height: 1.7;
+  }
+  .summary b { color: var(--text); }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 14px;
+    font-size: 13px;
+  }
+  th, td {
+    border: 1px solid var(--line);
+    padding: 11px 12px;
+    text-align: left;
+    vertical-align: top;
+    line-height: 1.65;
+  }
+  th { background: #f8fafc; }
+  .pill {
+    display: inline-block;
+    padding: 4px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+  }
+  .green { background: var(--soft-green); color: var(--green); }
+  .blue { background: var(--soft-blue); color: var(--blue); }
+  .amber { background: var(--soft-amber); color: var(--amber); }
+  .red { background: var(--soft-red); color: var(--red); }
+  .note {
+    margin-top: 16px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    color: #166534;
+    line-height: 1.7;
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <span class="badge">2안+ 구현 범위 분리안</span>
+      <h1>즉시 구현 / 보류 / 실험안</h1>
+      <p>이 문서는 지금까지 정리한 <b>2안+</b> 기준을 실제 개발 범위로 나눈 것입니다. 핵심은 <b>현장 사용성</b>을 살리면서, 너무 무거운 기능은 뒤로 미루고, 구조만 먼저 열어두는 것입니다.</p>
+      <div class="summary">
+        <div><b>즉시 구현:</b> 지금 바로 만들어도 운영에 도움이 되고 복잡도가 감당 가능한 항목</div>
+        <div><b>보류:</b> 언젠가 필요하지만 지금 넣으면 무거워지는 항목</div>
+        <div><b>실험안:</b> 구조는 열어두되 실제 사용 반응을 보고 확대 여부를 결정할 항목</div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>1. 즉시 구현 범위</h2>
+      <table>
+        <tr>
+          <th>기능</th>
+          <th>설명</th>
+          <th>이유</th>
+          <th>위험도</th>
+        </tr>
+        <tr>
+          <td>현재재고 메인 화면</td>
+          <td>원물/가공품 현재 수량, 부족 상태, 기본 필터</td>
+          <td>사용자가 한눈에 봐야 재고관리가 시작됨</td>
+          <td><span class="pill green">낮음</span></td>
+        </tr>
+        <tr>
+          <td>직접조정 기본형</td>
+          <td>폐기, 가공전환, 수동보정</td>
+          <td>현실 운영 변수를 가장 잘 반영함</td>
+          <td><span class="pill green">낮음</span></td>
+        </tr>
+        <tr>
+          <td>조정이력 저장</td>
+          <td>누가, 언제, 무엇을, 얼마나, 왜</td>
+          <td>현재재고만 바꾸면 나중에 원인 추적이 안 됨</td>
+          <td><span class="pill green">낮음</span></td>
+        </tr>
+        <tr>
+          <td>원물 판매 자동 차감</td>
+          <td>납품/택배 저장 시 원물 재고 차감</td>
+          <td>이미 기존 흐름과 연결 가능</td>
+          <td><span class="pill blue">중간</span></td>
+        </tr>
+        <tr>
+          <td>가공품 독립 재고</td>
+          <td>원물과 무관한 가공품도 재고 관리</td>
+          <td>전체 사용자 관점에서 필수 유연성</td>
+          <td><span class="pill blue">중간</span></td>
+        </tr>
+        <tr>
+          <td>재고부족 경고 모달 유지</td>
+          <td>기존 shortage dialog를 현재재고 기준으로 유지</td>
+          <td>지금까지 작업을 그대로 살릴 수 있음</td>
+          <td><span class="pill green">낮음</span></td>
+        </tr>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>2. 실험안</h2>
+      <table>
+        <tr>
+          <th>기능</th>
+          <th>설명</th>
+          <th>왜 실험안인가</th>
+          <th>권장 시점</th>
+        </tr>
+        <tr>
+          <td>등급변경 UI</td>
+          <td>특/상 → 중, 중 → 하 기록</td>
+          <td>현실성은 높지만 입력 부담이 생길 수 있음</td>
+          <td>2차</td>
+        </tr>
+        <tr>
+          <td>원물 → 가공전환 선택 연결</td>
+          <td>원물 차감과 가공품 증가를 느슨하게 연결</td>
+          <td>농가별 운영 차이가 커서 반응을 봐야 함</td>
+          <td>2차</td>
+        </tr>
+        <tr>
+          <td>입력자 추적 강화</td>
+          <td>직원별 조정 이력 강조</td>
+          <td>조직에 따라 필요도가 다름</td>
+          <td>2차</td>
+        </tr>
+        <tr>
+          <td>요약 리포트</td>
+          <td>폐기/가공전환/판매 현황 카드</td>
+          <td>좋지만 운영 핵심은 아님</td>
+          <td>2차~3차</td>
+        </tr>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>3. 보류 항목</h2>
+      <table>
+        <tr>
+          <th>기능</th>
+          <th>설명</th>
+          <th>보류 이유</th>
+        </tr>
+        <tr>
+          <td>레시피 자동 환산</td>
+          <td>원물 몇 kg → 잼 몇 병 자동 계산</td>
+          <td>품목마다 규칙이 달라 초기 복잡도가 너무 큼</td>
+        </tr>
+        <tr>
+          <td>원물-가공품 완전 자동 연동</td>
+          <td>원물 차감과 가공품 생산을 완전 자동 처리</td>
+          <td>현재 단계에서는 과도하게 무거움</td>
+        </tr>
+        <tr>
+          <td>정밀 생산관리</td>
+          <td>가공 생산 배치, 원료 lot 추적</td>
+          <td>ERP 성격이 강해짐</td>
+        </tr>
+        <tr>
+          <td>창고/로케이션 관리</td>
+          <td>보관 위치별 재고 구분</td>
+          <td>운영 복잡도 급증</td>
+        </tr>
+        <tr>
+          <td>고급 분석 대시보드</td>
+          <td>폐기율, 회전율, 가공 효율 상세 분석</td>
+          <td>핵심 운영 안정화 후 고려하는 것이 맞음</td>
+        </tr>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>4. 단계별 추천 로드맵</h2>
+      <table>
+        <tr>
+          <th>단계</th>
+          <th>내용</th>
+          <th>목표</th>
+        </tr>
+        <tr>
+          <td>1단계</td>
+          <td>현재재고 메인 + 직접조정 기본형 + 조정이력</td>
+          <td>재고관리의 기본 사용성 확보</td>
+        </tr>
+        <tr>
+          <td>2단계</td>
+          <td>원물/가공품 독립 재고 안정화 + 판매 자동 차감 정리</td>
+          <td>실운영 연결</td>
+        </tr>
+        <tr>
+          <td>3단계</td>
+          <td>등급변경, 선택 연결, 요약 리포트 실험 적용</td>
+          <td>현장 반응 확인</td>
+        </tr>
+        <tr>
+          <td>4단계</td>
+          <td>필요 시 원물-가공품 고급 연결 및 분석 확장</td>
+          <td>장기 확장</td>
+        </tr>
+      </table>
+      <div class="note">
+        <b>최종 판단:</b> 지금은 <b>즉시 구현 범위</b>만으로도 충분히 의미 있는 재고관리 기능을 만들 수 있습니다. 특히 <b>현재재고 + 직접조정 + 조정이력</b> 조합이 가장 먼저 안정화되어야 합니다.
+      </div>
+    </section>
+  </div>
+</body>
+</html>
