@@ -112,7 +112,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 }));
 
 async function loadUserData(user: User, set: any) {
-    console.log("[Auth] Loading user data for:", user.email);
 
     // 프로필 조회 (타임아웃 방지를 위해 각각 예외 처리)
     const { data: profile, error: profileError } = await supabase
@@ -161,9 +160,7 @@ async function loadUserData(user: User, set: any) {
     }
 
     if (!farm) {
-        console.warn("[Auth] Warning: No farm found for user", user.email);
     } else {
-        console.log("[Auth] Load complete. Farm found:", farm.farm_name);
         // 캐시 업데이트
         if (typeof window !== 'undefined') {
             localStorage.setItem('sfm_last_farm', JSON.stringify(farm));

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, CheckCircle, KeyRound } from "lucide-react";
@@ -14,6 +14,24 @@ export default function ForgotPasswordPage() {
     const [confirm, setConfirm] = useState("");
     const [showPw, setShowPw] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [countdown, setCountdown] = useState(5);
+
+    // 완료 후 5초 카운트다운 → /login 이동
+    useEffect(() => {
+        if (step !== "done") return;
+        setCountdown(5);
+        const interval = setInterval(() => {
+            setCountdown(prev => {
+                if (prev <= 1) {
+                    clearInterval(interval);
+                    window.location.href = '/login';
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+        return () => clearInterval(interval);
+    }, [step]);
 
     // 1단계: 이메일 입력 → OTP 발송
     const handleSendOtp = async (e: React.FormEvent) => {
@@ -25,10 +43,10 @@ export default function ForgotPasswordPage() {
         });
         setLoading(false);
         if (error) { toast.error("인증 코드 발송 실패: " + error.message); }
-        else { toast.success("6자리 코드가 이메일로 발송되었습니다."); setStep("otp"); }
+        else { toast.success("인증 코드가 이메일로 발송되었습니다."); setStep("otp"); }
     };
 
-    // 2단계: 6자리 코드 입력 → 인증
+    // 2단계: OTP 코드 입력 → 인증
     const handleVerifyOtp = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
@@ -44,10 +62,29 @@ export default function ForgotPasswordPage() {
         if (password !== confirm) { toast.error("비밀번호가 일치하지 않습니다."); return; }
         if (password.length < 6) { toast.error("비밀번호는 6자 이상이어야 합니다."); return; }
         setLoading(true);
-        const { error } = await supabase.auth.updateUser({ password });
-        if (error) { toast.error("비밀번호 변경 실패: " + error.message); }
-        else { await supabase.auth.signOut(); setStep("done"); }
-        setLoading(false);
+
+        // 10초 타임아웃 (LTE 불안정 대응)
+        const timeout = new Promise<{ error: Error }>(resolve =>
+            setTimeout(() => resolve({ error: new Error("timeout") }), 10000)
+        );
+        const result = await Promise.race([
+            supabase.auth.updateUser({ password }),
+            timeout
+        ]);
+
+        const error = (result as any).error;
+        if (error) {
+            setLoading(false);
+            if (error.message === "timeout") {
+                toast.error("네트워크가 느립니다. 변경된 비밀번호로 로그인해보세요.");
+                setTimeout(() => { window.location.href = '/login'; }, 2000);
+            } else {
+                toast.error("비밀번호 변경 실패: " + error.message);
+            }
+        } else {
+            setLoading(false);
+            setStep("done"); // signOut 없이 바로 완료
+        }
     };
 
     const stepNum: Record<Step, string> = { email: "1/3", otp: "2/3", password: "3/3", done: "" };
@@ -71,7 +108,7 @@ export default function ForgotPasswordPage() {
                     {/* 1단계: 이메일 */}
                     {step === "email" && (
                         <form onSubmit={handleSendOtp} className="space-y-4">
-                            <p className="text-gray-400 text-xs">가입 시 사용한 이메일로 6자리 인증 코드를 발송합니다.</p>
+                            <p className="text-gray-400 text-xs">가입 시 사용한 이메일로 인증 코드를 발송합니다.</p>
                             <div>
                                 <label className="block text-xs font-semibold text-gray-400 mb-2 uppercase tracking-widest">이메일</label>
                                 <div className="relative">
@@ -94,18 +131,18 @@ export default function ForgotPasswordPage() {
                     {/* 2단계: OTP 코드 */}
                     {step === "otp" && (
                         <form onSubmit={handleVerifyOtp} className="space-y-4">
-                            <p className="text-gray-400 text-xs"><span className="text-red-400 font-bold">{email}</span>으로 전송된 6자리 코드를 입력하세요.</p>
+                            <p className="text-gray-400 text-xs"><span className="text-red-400 font-bold">{email}</span>으로 전송된 <span className="text-white font-bold">8자리 인증 코드</span>를 입력하세요.</p>
                             <div>
                                 <label className="block text-xs font-semibold text-gray-400 mb-2 uppercase tracking-widest">인증 코드</label>
                                 <div className="relative">
                                     <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                                     <input type="text" inputMode="numeric" value={otp}
-                                        onChange={e => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                                        placeholder="6자리 숫자" maxLength={6}
-                                        className="w-full pl-10 pr-4 py-3 bg-gray-800/80 border border-gray-700 rounded-xl text-white placeholder-gray-600 text-sm outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 tracking-[0.5em] text-center font-bold text-lg" required />
+                                        onChange={e => setOtp(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                                        placeholder="8자리 입력" maxLength={8}
+                                        className="w-full pl-10 pr-4 py-3 bg-gray-800/80 border border-gray-700 rounded-xl text-white placeholder-gray-500 text-sm outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 tracking-[0.35em] text-center font-black text-2xl" required />
                                 </div>
                             </div>
-                            <button type="submit" disabled={loading || otp.length !== 6}
+                            <button type="submit" disabled={loading || otp.length !== 8}
                                 className="w-full bg-red-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-red-500 active:scale-[0.98] transition-all disabled:opacity-40 shadow-[0_0_20px_rgba(220,38,38,0.35)]">
                                 {loading ? "인증 중..." : "코드 확인"}
                             </button>
@@ -152,11 +189,20 @@ export default function ForgotPasswordPage() {
 
                     {/* 완료 */}
                     {step === "done" && (
-                        <div className="text-center space-y-4">
-                            <CheckCircle className="w-12 h-12 text-emerald-400 mx-auto" />
-                            <p className="text-white font-bold">비밀번호 변경 완료!</p>
-                            <p className="text-gray-400 text-sm">새 비밀번호로 로그인해주세요.</p>
-                            <a href="/login" className="block w-full text-center bg-red-600 text-white py-3 rounded-xl text-sm font-bold hover:bg-red-500 transition-all shadow-[0_0_20px_rgba(220,38,38,0.35)]">로그인하기</a>
+                        <div className="text-center space-y-5">
+                            <CheckCircle className="w-14 h-14 text-emerald-400 mx-auto" />
+                            <div>
+                                <p className="text-white font-black text-lg">비밀번호 변경 완료!</p>
+                                <p className="text-gray-400 text-sm mt-1">새 비밀번호로 로그인해주세요.</p>
+                            </div>
+                            <div className="bg-gray-800/60 rounded-xl px-4 py-3">
+                                <p className="text-gray-400 text-xs">로그인 화면으로 이동합니다...</p>
+                                <p className="text-white font-black text-3xl mt-1">{countdown}<span className="text-gray-500 text-sm font-normal">초</span></p>
+                            </div>
+                            <button onClick={() => { window.location.href = '/login'; }}
+                                className="block w-full text-center bg-red-600 text-white py-3 rounded-xl text-sm font-bold hover:bg-red-500 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(220,38,38,0.35)]">
+                                지금 바로 로그인하기
+                            </button>
                         </div>
                     )}
                 </div>

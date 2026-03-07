@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Farm-Manager 재고관리 구현 지시서 (AI 전달용)</title>
+<style>
+  body { font-family: 'Malgun Gothic', Arial, sans-serif; font-size: 10.5pt; line-height: 1.75; color: #1a1a1a; max-width: 820px; margin: 30px auto; padding: 0 36px; }
+  h1 { font-size: 18pt; font-weight: bold; text-align: center; color: #0f172a; border-bottom: 4px solid #dc2626; padding-bottom: 10px; margin-bottom: 6px; }
+  h2 { font-size: 13pt; font-weight: bold; color: #0f172a; background: #f1f5f9; border-left: 5px solid #dc2626; padding: 7px 14px; margin-top: 36px; }
+  h3 { font-size: 11pt; font-weight: bold; color: #1e3a5f; margin-top: 20px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 4px; }
+  .cover { text-align: center; padding: 20px 0 24px; }
+  .cover .meta { color: #64748b; font-size: 9.5pt; margin-top: 10px; }
+  .alert { background: #fef2f2; border: 1.5px solid #fca5a5; border-radius: 6px; padding: 12px 16px; margin: 12px 0; }
+  .alert-blue { background: #eff6ff; border: 1.5px solid #93c5fd; border-radius: 6px; padding: 12px 16px; margin: 12px 0; }
+  .alert-green { background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 6px; padding: 12px 16px; margin: 12px 0; }
+  pre, code { background: #0f172a; color: #e2e8f0; border-radius: 6px; padding: 14px 16px; font-family: 'Courier New', monospace; font-size: 9pt; white-space: pre-wrap; display: block; margin: 8px 0; }
+  .inline-code { background: #f1f5f9; color: #dc2626; font-family: monospace; padding: 1px 5px; border-radius: 3px; font-size: 9.5pt; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 9.5pt; }
+  th { background: #1e3a5f; color: white; padding: 7px 10px; text-align: left; }
+  td { border: 1px solid #cbd5e1; padding: 6px 10px; vertical-align: top; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  ul, ol { padding-left: 22px; margin: 6px 0; }
+  li { margin: 3px 0; }
+  .tag-red { background: #dc2626; color: white; padding: 1px 7px; border-radius: 10px; font-size: 8.5pt; font-weight: bold; }
+  .tag-green { background: #16a34a; color: white; padding: 1px 7px; border-radius: 10px; font-size: 8.5pt; font-weight: bold; }
+  .tag-blue { background: #2563eb; color: white; padding: 1px 7px; border-radius: 10px; font-size: 8.5pt; font-weight: bold; }
+  hr { border: none; border-top: 1px solid #e2e8f0; margin: 28px 0; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 10px 0; }
+  .box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px 14px; }
+  strong { color: #0f172a; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>Farm-Manager<br>재고관리 모듈 구현 지시서</h1>
+  <div class="meta">
+    프로젝트: farm-manager (Next.js 16, Tailwind CSS v4, Supabase)<br>
+    경로: <code style="background:#f1f5f9;color:#dc2626;padding:1px 5px;border-radius:3px;">c:\Users\User\Desktop\제미나이 3\연습\claude\projects_001\farm-manager</code><br>
+    작성: 비키트(BKIT) 에이전트 팀 | 2026년 3월 6일<br>
+    목적: AI에게 전달하여 즉시 구현 착수
+  </div>
+</div>
+
+<div class="alert">
+  <strong>📌 AI에게 전달 시 안내:</strong><br>
+  이 문서는 Farm-Manager 프로젝트의 재고관리 기능 구현을 위한 완전한 기술 명세서입니다.
+  이 문서를 읽은 후 추가 질문 없이 바로 구현을 시작해주세요.
+  구현 방식은 <strong>1안(단순 수확 연동형)</strong>으로 확정되었습니다.
+</div>
+
+<hr>
+
+<h2>1. 프로젝트 현재 상태 요약</h2>
+
+<h3>기술 스택</h3>
+<div class="two-col">
+  <div class="box">
+    <strong>프론트엔드</strong><br>
+    • Next.js 16 (Turbopack)<br>
+    • Tailwind CSS v4<br>
+    • Zustand (상태관리)<br>
+    • React Query<br>
+    • Lucide React (아이콘)<br>
+    • Sonner (토스트)
+  </div>
+  <div class="box">
+    <strong>백엔드/인프라</strong><br>
+    • Supabase (PostgreSQL + Auth)<br>
+    • Vercel 배포<br>
+    • 포트: 5555<br>
+    • 미들웨어: proxy.ts<br>
+    • 도메인: farm-manager1.vercel.app
+  </div>
+</div>
+
+<h3>디자인 시스템 (반드시 준수)</h3>
+<pre>배경:     bg-[#0f0f0f] 또는 배경이미지 + bg-black/60 오버레이
+카드:     bg-gray-900/85 backdrop-blur-md border border-gray-700/60
+입력창:   bg-gray-800/80 border-gray-700 focus:border-red-500 focus:ring-red-500/20
+버튼:     bg-red-600 shadow-[0_0_20px_rgba(220,38,38,0.4)]
+포인트색: red-600 (#dc2626)
+모바일:   하단 탭바 있음, 모바일 퍼스트 설계</pre>
+
+<h3>핵심 파일 구조</h3>
+<pre>app/
+  page.tsx            ← 대시보드 (홈)
+  settings/page.tsx   ← 설정 페이지 ★ 토글 추가할 곳
+  harvest/page.tsx    ← 수확 관리 ★ 폐기 버튼 추가
+  bulk/page.tsx       ← 납품(B2B) ★ 재고 확인 추가
+  courier/page.tsx    ← 택배(B2C) ★ 재고 확인 추가
+  finance/page.tsx    ← 통합결산 ★ 재고 현황 추가
+lib/supabase.ts       ← 타입 정의 + Supabase 클라이언트
+store/authStore.ts    ← 전역 상태 (user, profile, farm)
+proxy.ts              ← 미들웨어 (인증 체크)</pre>
+
+<h3>현재 완성도</h3>
+<table>
+  <tr><th>모듈</th><th>상태</th><th>완성도</th></tr>
+  <tr><td>수확/납품/택배/지출/인력/결산</td><td>완료</td><td>90~95%</td></tr>
+  <tr><td>비밀번호 찾기 (OTP 8자리)</td><td>완료</td><td>100%</td></tr>
+  <tr><td>재고관리</td><td>미구현</td><td>0% ← 지금 구현</td></tr>
+</table>
+
+<hr>
+
+<h2>2. 구현할 기능 명세 (확정)</h2>
+
+<div class="alert-blue">
+  <strong>핵심 요구사항:</strong><br>
+  설정(Settings)에서 <strong>재고관리 ON/OFF 토글</strong>을 추가한다.<br>
+  • <strong>OFF (기본값):</strong> 현재 시스템 그대로, 변화 없음<br>
+  • <strong>ON:</strong> 수확 재고가 있어야 납품/택배 등록 가능 (부족 시 경고, 강제차단 아님)
+</div>
+
+<h3>2.1 재고 계산 공식</h3>
+<pre>현재 재고(crop_name별) =
+  SUM(harvest_records.quantity WHERE farm_id = ?)     ← 수확 = 입고
+  - SUM(sales_records.quantity WHERE farm_id = ?)     ← 납품+택배 = 출고
+  - SUM(inventory_adjustments.quantity WHERE farm_id = ?) ← 폐기/보정</pre>
+
+<h3>2.2 재고 경고 정책</h3>
+<table>
+  <tr><th>상태</th><th>조건</th><th>UI</th><th>등록 가능 여부</th></tr>
+  <tr><td>충분</td><td>잔고 ≥ 입력량</td><td>초록 배지</td><td>✅ 허용</td></tr>
+  <tr><td>부족</td><td>잔고 &lt; 입력량</td><td>빨강 경고</td><td>✅ 허용 (경고만)</td></tr>
+  <tr><td>재고없음</td><td>잔고 ≤ 0</td><td>빨강 강경고</td><td>✅ 허용 (강한 경고)</td></tr>
+</table>
+<p><strong>강제 차단하지 않는다.</strong> 현장에서 급한 상황에서도 등록이 가능해야 함.</p>
+
+<hr>
+
+<h2>3. Supabase DB 변경 (먼저 실행)</h2>
+
+<div class="alert">
+  <strong>⚠️ 구현 전 Supabase SQL Editor에서 아래 쿼리 실행 필요</strong>
+</div>
+
+<h3>3.1 farms 테이블 컬럼 추가</h3>
+<pre>ALTER TABLE farms
+ADD COLUMN IF NOT EXISTS inventory_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+ADD COLUMN IF NOT EXISTS inventory_warn_only BOOLEAN NOT NULL DEFAULT TRUE;</pre>
+
+<h3>3.2 inventory_adjustments 테이블 생성</h3>
+<pre>CREATE TABLE IF NOT EXISTS inventory_adjustments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+    crop_name TEXT NOT NULL,
+    grade TEXT,
+    adjustment_type TEXT NOT NULL
+        CHECK (adjustment_type IN ('waste', 'correction', 'opening_stock')),
+    quantity NUMERIC(10,2) NOT NULL,
+    reason TEXT,
+    adjusted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- RLS 활성화
+ALTER TABLE inventory_adjustments ENABLE ROW LEVEL SECURITY;
+
+-- RLS 정책: 농장 소유자만 접근
+CREATE POLICY "farm_owner_inventory" ON inventory_adjustments
+    FOR ALL
+    USING (
+        farm_id IN (
+            SELECT id FROM farms WHERE owner_id = auth.uid()
+        )
+    );
+
+-- 관리자 전체 접근 허용
+CREATE POLICY "admin_inventory" ON inventory_adjustments
+    FOR ALL
+    USING (
+        EXISTS (
+            SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'
+        )
+    );</pre>
+
+<hr>
+
+<h2>4. 코드 구현 명세</h2>
+
+<h3>4.1 lib/supabase.ts — Farm 인터페이스 필드 추가</h3>
+<pre>// Farm 인터페이스에 추가
+export interface Farm {
+    // ... 기존 필드들 ...
+    inventory_enabled: boolean;   // ← 추가
+    inventory_warn_only: boolean; // ← 추가
+}
+
+// 새 타입 추가
+export interface InventoryAdjustment {
+    id: string;
+    farm_id: string;
+    crop_name: string;
+    grade: string | null;
+    adjustment_type: 'waste' | 'correction' | 'opening_stock';
+    quantity: number;
+    reason: string | null;
+    adjusted_at: string;
+    created_at: string;
+}</pre>
+
+<h3>4.2 hooks/useInventory.ts — 신규 파일 생성</h3>
+<pre>"use client";
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
+
+// 특정 작물의 현재 재고 반환
+export function useInventory(farmId: string | undefined, cropName: string | undefined) {
+    const [stock, setStock] = useState&lt;number | null&gt;(null);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (!farmId || !cropName) return;
+        fetchStock();
+    }, [farmId, cropName]);
+
+    const fetchStock = async () => {
+        if (!farmId || !cropName) return;
+        setLoading(true);
+
+        const [harvestRes, salesRes, adjustRes] = await Promise.all([
+            supabase.from('harvest_records')
+                .select('quantity')
+                .eq('farm_id', farmId)
+                .eq('crop_name', cropName),
+            supabase.from('sales_records')
+                .select('quantity')
+                .eq('farm_id', farmId)
+                .eq('crop_name', cropName),
+            supabase.from('inventory_adjustments')
+                .select('quantity')
+                .eq('farm_id', farmId)
+                .eq('crop_name', cropName)
+                .eq('adjustment_type', 'waste'),
+        ]);
+
+        const harvested = (harvestRes.data || []).reduce((s, r) => s + (r.quantity || 0), 0);
+        const sold = (salesRes.data || []).reduce((s, r) => s + (r.quantity || 0), 0);
+        const wasted = (adjustRes.data || []).reduce((s, r) => s + (r.quantity || 0), 0);
+
+        setStock(Math.max(0, harvested - sold - wasted));
+        setLoading(false);
+    };
+
+    return { stock, loading, refresh: fetchStock };
+}
+
+// 농장 전체 작물 재고 반환
+export function useAllInventory(farmId: string | undefined) {
+    const [stocks, setStocks] = useState&lt;Record&lt;string, number&gt;&gt;({});
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (!farmId) return;
+        fetchAllStocks();
+    }, [farmId]);
+
+    const fetchAllStocks = async () => {
+        if (!farmId) return;
+        setLoading(true);
+
+        const [harvestRes, salesRes, adjustRes] = await Promise.all([
+            supabase.from('harvest_records').select('crop_name, quantity').eq('farm_id', farmId),
+            supabase.from('sales_records').select('crop_name, quantity').eq('farm_id', farmId),
+            supabase.from('inventory_adjustments').select('crop_name, quantity').eq('farm_id', farmId).eq('adjustment_type', 'waste'),
+        ]);
+
+        const map: Record&lt;string, number&gt; = {};
+        (harvestRes.data || []).forEach(r => { map[r.crop_name] = (map[r.crop_name] || 0) + r.quantity; });
+        (salesRes.data || []).forEach(r => { map[r.crop_name] = (map[r.crop_name] || 0) - r.quantity; });
+        (adjustRes.data || []).forEach(r => { map[r.crop_name] = (map[r.crop_name] || 0) - r.quantity; });
+
+        Object.keys(map).forEach(k => { if (map[k] &lt; 0) map[k] = 0; });
+        setStocks(map);
+        setLoading(false);
+    };
+
+    return { stocks, loading, refresh: fetchAllStocks };
+}</pre>
+
+<h3>4.3 app/settings/page.tsx — 재고관리 토글 섹션 추가</h3>
+<pre>// 설정 페이지의 적절한 위치에 추가
+// 기존 farm 정보 업데이트 패턴 참고하여 구현
+
+const handleInventoryToggle = async (enabled: boolean) => {
+    const { error } = await supabase
+        .from('farms')
+        .update({ inventory_enabled: enabled })
+        .eq('id', farm.id);
+    if (!error) {
+        // authStore farm 업데이트
+        setFarm({ ...farm, inventory_enabled: enabled });
+        toast.success(enabled ? "재고관리가 활성화되었습니다." : "재고관리가 비활성화되었습니다.");
+    }
+};
+
+// UI (기존 설정 카드 스타일과 동일하게)
+&lt;div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl"&gt;
+    &lt;div&gt;
+        &lt;p className="font-bold text-sm text-gray-800"&gt;재고관리 사용&lt;/p&gt;
+        &lt;p className="text-xs text-gray-500 mt-0.5"&gt;
+            수확량을 재고로 관리합니다. ON 시 납품/택배에서 재고를 확인합니다.
+        &lt;/p&gt;
+    &lt;/div&gt;
+    &lt;button
+        onClick={() => handleInventoryToggle(!farm.inventory_enabled)}
+        className={`relative w-12 h-6 rounded-full transition-colors ${
+            farm.inventory_enabled ? 'bg-red-600' : 'bg-gray-300'
+        }`}
+    &gt;
+        &lt;span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+            farm.inventory_enabled ? 'translate-x-6' : 'translate-x-0.5'
+        }`} /&gt;
+    &lt;/button&gt;
+&lt;/div&gt;</pre>
+
+<h3>4.4 app/bulk/page.tsx — 재고 표시 추가 방식</h3>
+<pre>// 기존 납품 등록 폼 내 품목/수량 입력 근처에 추가
+// inventory_enabled가 true일 때만 표시
+
+import { useInventory } from "@/hooks/useInventory";
+// ...
+
+// 폼 내부에서
+const { stock } = useInventory(farm?.id, selectedCropName);
+
+// 수량 입력 아래에 추가
+{farm?.inventory_enabled && selectedCropName && stock !== null && (
+    &lt;div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm ${
+        stock &gt;= (inputQuantity || 0)
+            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+            : 'bg-red-50 text-red-600 border border-red-200'
+    }`}&gt;
+        &lt;Package className="w-4 h-4 shrink-0" /&gt;
+        &lt;span&gt;현재 재고: &lt;strong&gt;{stock.toLocaleString()}kg&lt;/strong&gt;&lt;/span&gt;
+        {stock &lt; (inputQuantity || 0) && (
+            &lt;span className="ml-auto font-bold text-xs"&gt;⚠ 재고 부족&lt;/span&gt;
+        )}
+    &lt;/div&gt;
+)}
+// 동일한 패턴을 courier/page.tsx에도 적용</pre>
+
+<h3>4.5 app/harvest/page.tsx — 폐기 등록 버튼 추가</h3>
+<pre>// inventory_enabled일 때만 폐기 버튼 표시
+// 기존 "+ 수확 등록" 버튼 옆에 추가
+
+const [showWasteModal, setShowWasteModal] = useState(false);
+
+// 폐기 등록 핸들러
+const handleWaste = async (cropName: string, quantity: number, reason: string) => {
+    const { error } = await supabase.from('inventory_adjustments').insert({
+        farm_id: farm.id,
+        crop_name: cropName,
+        adjustment_type: 'waste',
+        quantity: quantity,
+        reason: reason,
+    });
+    if (!error) {
+        toast.success(`${quantity}kg 폐기 처리되었습니다.`);
+        setShowWasteModal(false);
+    }
+};
+
+// 버튼 UI
+{farm?.inventory_enabled && (
+    &lt;button onClick={() => setShowWasteModal(true)}
+        className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700
+                   rounded-xl text-sm font-bold hover:bg-gray-200 transition-all"&gt;
+        &lt;Trash2 className="w-4 h-4" /&gt;
+        폐기 등록
+    &lt;/button&gt;
+)}
+
+// 폐기 모달 (기존 모달 스타일과 동일하게)
+// 입력 항목: 품목(crop_name), 수량, 사유(부패/파손/등급외/기타)</pre>
+
+<h3>4.6 app/finance/page.tsx — 재고 현황 섹션 추가</h3>
+<pre>// inventory_enabled일 때만 표시
+// 기존 결산 카드들 사이 적절한 위치에 추가
+
+import { useAllInventory } from "@/hooks/useInventory";
+// ...
+
+const { stocks } = useAllInventory(farm?.id);
+
+{farm?.inventory_enabled && (
+    &lt;section className="bg-white rounded-2xl p-5 border border-gray-100"&gt;
+        &lt;h3 className="font-black text-gray-900 mb-4"&gt;재고 현황&lt;/h3&gt;
+        {Object.entries(stocks).map(([crop, qty]) => (
+            &lt;div key={crop} className="flex justify-between items-center py-2
+                                       border-b border-gray-50 last:border-0"&gt;
+                &lt;span className="font-bold text-sm text-gray-700"&gt;{crop}&lt;/span&gt;
+                &lt;span className={`font-black text-sm ${qty &gt; 0 ? 'text-emerald-600' : 'text-red-500'}`}&gt;
+                    {qty.toLocaleString()} kg
+                &lt;/span&gt;
+            &lt;/div&gt;
+        ))}
+    &lt;/section&gt;
+)}</pre>
+
+<hr>
+
+<h2>5. 구현 순서 및 주의사항</h2>
+
+<h3>5.1 구현 순서 (이 순서대로)</h3>
+<ol>
+  <li><strong>Supabase SQL 실행</strong> — 3장의 SQL 먼저 실행 (farms 컬럼 추가 + 테이블 생성)</li>
+  <li><strong>lib/supabase.ts</strong> — Farm 인터페이스에 inventory_enabled, inventory_warn_only 추가</li>
+  <li><strong>hooks/useInventory.ts</strong> — 신규 파일 생성</li>
+  <li><strong>app/settings/page.tsx</strong> — 토글 추가</li>
+  <li><strong>app/bulk/page.tsx</strong> — 재고 표시 추가</li>
+  <li><strong>app/courier/page.tsx</strong> — 재고 표시 추가 (bulk와 동일 패턴)</li>
+  <li><strong>app/harvest/page.tsx</strong> — 폐기 버튼 + 모달 추가</li>
+  <li><strong>app/finance/page.tsx</strong> — 재고 현황 섹션 추가</li>
+  <li><strong>Vercel 배포</strong></li>
+</ol>
+
+<h3>5.2 반드시 지켜야 할 원칙</h3>
+<div class="alert-green">
+  <ul style="margin:0;">
+    <li><strong>inventory_enabled = false일 때 현재 시스템과 100% 동일하게 동작</strong>해야 함</li>
+    <li>재고 부족이어도 <strong>강제 차단하지 않음</strong> — 경고만 표시</li>
+    <li>기존 코드 최소 변경 — 재고 관련 코드만 추가</li>
+    <li>모바일 우선 — 추가 UI는 모바일에서도 깔끔해야 함</li>
+    <li>파일 수정 시 <strong>Node.js 스크립트 방식</strong> 사용 (한글 경로 인코딩 문제)</li>
+    <li>배포는 <span class="inline-code">npx vercel --prod --yes</span> 후 <span class="inline-code">vercel alias ... farm-manager1.vercel.app</span></li>
+  </ul>
+</div>
+
+<h3>5.3 파일 수정 시 경로 처리 방법</h3>
+<pre>// 한글 경로 때문에 직접 Edit 툴이 안 될 경우
+// C:/temp/fix_xxx.js 파일에 Node.js 스크립트 작성 후 실행
+const fp = 'c:/Users/User/Desktop/\uC81C\uBBF8\uB098\uC774 3/\uC5F0\uC2B5/claude/projects_001/farm-manager/...';</pre>
+
+<h3>5.4 authStore farm 객체 업데이트</h3>
+<pre>// store/authStore.ts의 setFarm 함수 사용
+const { setFarm } = useAuthStore();
+setFarm({ ...farm, inventory_enabled: true }); // 설정 변경 후 반드시 호출</pre>
+
+<hr>
+
+<div class="alert-blue">
+  <strong>🎯 최종 목표 확인:</strong><br>
+  Settings → 재고관리 토글 OFF: 지금 시스템 그대로 (93% 완성)<br>
+  Settings → 재고관리 토글 ON: 수확재고 기반으로 납품/택배 재고 확인 + 폐기 등록 가능<br><br>
+  <strong>이 문서의 명세대로 구현하면 됩니다. 추가 질문 없이 바로 구현 시작하세요.</strong>
+</div>
+
+<p style="text-align:center; color:#94a3b8; font-size:9pt; margin-top:30px;">
+  비키트(BKIT) 에이전트 팀 | Farm-Manager 재고관리 구현 지시서 | 2026.03.06
+</p>
+
+</body>
+</html>

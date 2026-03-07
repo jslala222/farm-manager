@@ -100,6 +100,8 @@ export interface Farm {
     notes: string | null;
     test_password: string | null;
     is_active: boolean;
+    inventory_enabled: boolean;   // 재고관리 ON/OFF
+    inventory_warn_only: boolean; // true=경고만, false=판매차단
     created_at: string;
     owner_email?: string; // 관리자용 필드
 }

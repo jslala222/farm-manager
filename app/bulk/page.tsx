@@ -8,6 +8,7 @@ import { formatCurrency, getCropIcon } from "@/lib/utils";
 import CalendarComponent from "@/components/Calendar";
 import SettlementModal, { ModalCropEntry, SettlementSaveData } from "@/components/SettlementModal";
 import { toast } from "sonner";
+import { checkStockBeforeSale } from "@/hooks/useInventory";
 
 const toLocalDateStr = (d: Date = new Date()) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -138,6 +139,21 @@ export default function BulkSalesPage() {
         if (!selectedClientId) { toast.error("거래처를 선택해주세요."); return; }
         const allGrades = buildAllGrades();
         if (allGrades.length === 0) { toast.error("품목을 추가하고 수량을 입력해주세요."); return; }
+
+        // 재고 체크
+        if (farm.inventory_enabled) {
+            const grouped = Object.values(
+                allGrades.reduce((acc: Record<string, { cropName: string; quantity: number }>, g) => {
+                    if (!acc[g.cropName]) acc[g.cropName] = { cropName: g.cropName, quantity: 0 };
+                    acc[g.cropName].quantity += g.qty;
+                    return acc;
+                }, {})
+            );
+            const check = await checkStockBeforeSale(farm.id, grouped, farm.inventory_warn_only ?? true);
+            if (!check.ok) { toast.error(check.message); return; }
+            if (check.warning) toast.warning(check.message + "\n\n재고 부족이지만 저장합니다.", { duration: 5000 });
+        }
+
         setSaving(true);
         try {
             const nowTs = selectedDate + 'T' + new Date().toTimeString().split(' ')[0];
@@ -164,6 +180,21 @@ export default function BulkSalesPage() {
         if (!selectedClientId) { toast.error("거래처를 선택해주세요."); setShowSettlementSheet(false); return; }
         const allGrades = buildAllGrades();
         if (allGrades.length === 0) { toast.error("품목을 추가하고 수량을 입력해주세요."); setShowSettlementSheet(false); return; }
+
+        // 재고 체크
+        if (farm.inventory_enabled) {
+            const grouped = Object.values(
+                allGrades.reduce((acc: Record<string, { cropName: string; quantity: number }>, g) => {
+                    if (!acc[g.cropName]) acc[g.cropName] = { cropName: g.cropName, quantity: 0 };
+                    acc[g.cropName].quantity += g.qty;
+                    return acc;
+                }, {})
+            );
+            const check = await checkStockBeforeSale(farm.id, grouped, farm.inventory_warn_only ?? true);
+            if (!check.ok) { toast.error(check.message); setShowSettlementSheet(false); return; }
+            if (check.warning) toast.warning(check.message + "\n\n재고 부족이지만 저장합니다.", { duration: 5000 });
+        }
+
         setSaving(true);
         try {
             const actualTotal = sheetActualAmount ? Number(sheetActualAmount) : null;

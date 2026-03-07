@@ -59,21 +59,6 @@ export default function LoginPage() {
         }
     };
 
-    const testSupabase = async () => {
-        setMsg("Supabase 연결 확인 중...");
-        try {
-            const { error } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
-            if (error) {
-                toast.error("Supabase 연결 실패 (키 확인 필요): " + error.message);
-            } else {
-                toast.success("Supabase 연결 성공!");
-            }
-        } catch (err: any) {
-            toast.error("연결 시도 중 치명적 오류: " + err.message);
-        }
-        setMsg("");
-    };
-
     return (
         <div className="relative min-h-screen flex items-center justify-center p-4">
             {/* 배경 이미지 + 오버레이 */}
@@ -93,7 +78,7 @@ export default function LoginPage() {
                     <form onSubmit={handleLogin} className="space-y-4">
                         {/* 이메일 */}
                         <div>
-                            <label className="block text-xs font-semibold text-gray-400 mb-2 uppercase tracking-widest">
+                            <label className="block text-sm font-bold text-gray-300 mb-2">
                                 이메일
                             </label>
                             <input
@@ -107,7 +92,7 @@ export default function LoginPage() {
 
                         {/* 비밀번호 */}
                         <div>
-                            <label className="block text-xs font-semibold text-gray-400 mb-2 uppercase tracking-widest">
+                            <label className="block text-sm font-bold text-gray-300 mb-2">
                                 비밀번호
                             </label>
                             <div className="relative">
@@ -146,7 +131,7 @@ export default function LoginPage() {
                     </form>
 
                     {/* 하단 링크 */}
-                    <div className="mt-5 pt-4 border-t border-gray-700/50 flex items-center justify-center gap-4 text-xs text-gray-500">
+                    <div className="mt-5 pt-4 border-t border-gray-700/50 flex items-center justify-center gap-4 text-sm font-bold text-gray-300">
                         <a href="/forgot-password" className="hover:text-red-400 transition-colors">
                             비밀번호 찾기
                         </a>
@@ -157,15 +142,6 @@ export default function LoginPage() {
                     </div>
                 </div>
 
-                {/* DB 상태 확인 */}
-                <div className="mt-4 text-center">
-                    <button
-                        onClick={testSupabase}
-                        className="text-xs text-gray-600 hover:text-gray-400 transition-colors underline underline-offset-2"
-                    >
-                        데이터베이스 연결 상태 확인
-                    </button>
-                </div>
             </div>
         </div>
     );

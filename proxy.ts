@@ -23,11 +23,11 @@ export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
     // 공개 경로 및 접근 허용 경로
-    const publicPaths = ['/login', '/register', '/pending', '/forgot-password', '/reset-password', '/change-password'];
+    const publicPaths = ['/login', '/register', '/pending', '/forgot-password', '/reset-password', '/change-password', '/auth/callback'];
 
     if (publicPaths.includes(pathname)) {
         // reset-password, change-password는 로그인 상태여도 항상 허용
-        if (pathname === '/reset-password' || pathname === '/change-password' || pathname === '/forgot-password') return response;
+        if (pathname === '/reset-password' || pathname === '/change-password' || pathname === '/forgot-password' || pathname.startsWith('/auth/')) return response;
         // 이미 로그인된 유저가 로그인/회원가입 페이지에 접근하면 상황에 따라 리다이렉트
         if (user && pathname !== '/pending') {
             return NextResponse.redirect(new URL('/', request.url));

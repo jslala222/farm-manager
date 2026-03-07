@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Menu } from "@headlessui/react";
-import { Save, Plus, Trash2, Home, LayoutGrid, AlertCircle, Building2, CheckCircle2, Sprout, GripVertical, Factory, Camera, MoreHorizontal } from "lucide-react";
+import { Save, Plus, Trash2, Home, LayoutGrid, AlertCircle, Building2, CheckCircle2, Sprout, GripVertical, Factory, Camera, MoreHorizontal, PackageCheck } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { supabase, Farm, FarmHouse, FarmCrop } from "@/lib/supabase";
 import { formatPhone, formatBusinessNumber, getCropIcon } from "@/lib/utils";
@@ -228,6 +228,28 @@ export default function SettingsPage() {
         } catch (error: any) {
             console.error("데이터 저장 실패 상세 에러:", error);
             toast.error(`저장 중 오류가 발생했습니다: ${error.message || '알 수 없는 오류'}`);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleSaveInventorySettings = async () => {
+        if (!storeFarm?.id) return;
+        setSaving(true);
+        try {
+            const { data: updated, error } = await supabase.from('farms').update({
+                inventory_enabled: farm.inventory_enabled ?? false,
+                inventory_warn_only: farm.inventory_warn_only ?? true,
+            }).eq('id', storeFarm.id).select();
+            if (error) throw error;
+            if (!updated || updated.length === 0) {
+                toast.error("저장 실패: 권한이 없거나 농장 정보를 찾을 수 없습니다.");
+                return;
+            }
+            toast.success("재고관리 설정이 저장되었습니다. 잠시 후 메뉴가 업데이트됩니다.");
+            await initialize(true);
+        } catch (e: any) {
+            toast.error("저장 실패: " + e.message);
         } finally {
             setSaving(false);
         }
@@ -982,6 +1004,79 @@ export default function SettingsPage() {
                             <p className="text-gray-700 font-medium">등록된 하우스가 없습니다.<br /><span className="text-xs text-gray-600">위의 입력창에서 동을 추가해보세요!</span></p>
                         </div>
                     )}
+                </section>
+            )}
+
+            {/* ===== 재고관리 설정 섹션 ===== */}
+            {storeFarm?.id && (
+                <section className="bg-white rounded-[2rem] shadow-xl shadow-blue-50/30 border border-blue-100 p-3 md:p-10 space-y-6 animate-in slide-in-from-bottom-8 duration-700">
+                    <div className="flex items-center justify-between gap-4">
+                        <h2 className="text-xl font-bold text-gray-800 flex items-center gap-3">
+                            <span className="w-2 h-7 bg-blue-500 rounded-full"></span>
+                            재고관리 설정
+                        </h2>
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${farm.inventory_enabled ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>
+                            {farm.inventory_enabled ? 'ON' : 'OFF'}
+                        </span>
+                    </div>
+
+                    <p className="text-xs text-gray-500 font-medium leading-relaxed bg-blue-50/50 p-3 rounded-xl border border-blue-100">
+                        재고관리를 켜면 <strong>수확 기록이 곧 재고</strong>가 됩니다.<br />
+                        납품·택배 저장 시 해당 품목의 재고를 자동으로 차감하며,<br />
+                        재고가 부족할 때 경고하거나 판매를 차단할 수 있습니다.
+                    </p>
+
+                    {/* ON/OFF 토글 */}
+                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                        <div className="flex items-center gap-3">
+                            <PackageCheck className={`w-5 h-5 ${farm.inventory_enabled ? 'text-blue-600' : 'text-gray-400'}`} />
+                            <div>
+                                <p className="text-sm font-bold text-gray-800">재고관리 사용</p>
+                                <p className="text-[11px] text-gray-500">수확량을 기준으로 판매 가능 재고를 관리합니다</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setFarm(f => ({ ...f, inventory_enabled: !f.inventory_enabled }))}
+                            className={`relative w-14 h-7 rounded-full transition-all duration-300 ${farm.inventory_enabled ? 'bg-blue-500' : 'bg-gray-300'}`}
+                        >
+                            <span className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow-md transition-all duration-300 ${farm.inventory_enabled ? 'left-8' : 'left-1'}`} />
+                        </button>
+                    </div>
+
+                    {/* 재고 부족 처리 방식 */}
+                    {farm.inventory_enabled && (
+                        <div className="space-y-3 animate-in fade-in duration-300">
+                            <p className="text-[11px] font-black text-gray-500 uppercase tracking-widest px-1">재고 부족 시 처리 방식</p>
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    onClick={() => setFarm(f => ({ ...f, inventory_warn_only: true }))}
+                                    className={`p-4 rounded-2xl border-2 text-left transition-all ${farm.inventory_warn_only !== false ? 'border-yellow-400 bg-yellow-50' : 'border-gray-100 bg-gray-50'}`}
+                                >
+                                    <p className="text-lg mb-1">⚠️</p>
+                                    <p className="text-sm font-black text-gray-800">경고만</p>
+                                    <p className="text-[10px] text-gray-500 mt-0.5">경고를 표시하지만<br />저장은 가능합니다</p>
+                                </button>
+                                <button
+                                    onClick={() => setFarm(f => ({ ...f, inventory_warn_only: false }))}
+                                    className={`p-4 rounded-2xl border-2 text-left transition-all ${farm.inventory_warn_only === false ? 'border-red-400 bg-red-50' : 'border-gray-100 bg-gray-50'}`}
+                                >
+                                    <p className="text-lg mb-1">🚫</p>
+                                    <p className="text-sm font-black text-gray-800">판매 차단</p>
+                                    <p className="text-[10px] text-gray-500 mt-0.5">재고가 없으면<br />저장이 불가합니다</p>
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 저장 버튼 */}
+                    <button
+                        onClick={handleSaveInventorySettings}
+                        disabled={saving}
+                        className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold text-sm hover:bg-blue-700 active:scale-95 transition-all shadow-lg shadow-blue-100 flex items-center justify-center gap-2 disabled:opacity-60"
+                    >
+                        <Save className="w-4 h-4" />
+                        {saving ? "저장 중..." : "재고관리 설정 저장"}
+                    </button>
                 </section>
             )}
 

@@ -22,7 +22,8 @@ import {
     CheckCircle,
     Package2,
     ClipboardList,
-    Wallet
+    Wallet,
+    PackageCheck
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { useEffect, useState } from "react";
@@ -74,7 +75,7 @@ export default function NavBar() {
         setFarms(data ?? []);
     };
 
-    if (pathname === "/login" || pathname === "/register" || pathname === "/pending") return null;
+    if (pathname === "/login" || pathname === "/register" || pathname === "/pending" || pathname === "/forgot-password" || pathname === "/reset-password" || pathname === "/change-password" || pathname.startsWith("/auth/")) return null;
     if (!user) return null;
 
     // 추가 보안: 농장 비활성이고 관리자 아닐 때 숨김
@@ -85,9 +86,22 @@ export default function NavBar() {
         window.location.href = "/login"; // 확실한 페이지 새로고침과 리다이렉트
     };
 
+    // 재고관리 메뉴는 farm.inventory_enabled=true일 때만 표시
+    const inventoryItem = farm?.inventory_enabled
+        ? [{ href: "/inventory", label: "재고관리", icon: PackageCheck }]
+        : [];
+
+    const baseItems = [
+        navItems[0], // 대시보드
+        navItems[1], // 통합 결산
+        navItems[2], // 수확 관리
+        ...inventoryItem,
+        ...navItems.slice(3), // 납품 ~ 설정
+    ];
+
     const allNavItems = profile?.role === 'admin'
-        ? [...navItems, { href: "/admin", label: "관리자 도구", icon: ShieldCheck }]
-        : navItems;
+        ? [...baseItems, { href: "/admin", label: "관리자 도구", icon: ShieldCheck }]
+        : baseItems;
 
     return (
         <>

@@ -37,6 +37,10 @@ yarn-error.log*
 supabase-mcp/.env
 supabase-mcp/node_modules/
 
+# local-only artifacts
+schema.sql
+/tools/supabase/
+
 # vercel
 .vercel
 

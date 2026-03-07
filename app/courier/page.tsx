@@ -8,6 +8,7 @@ import { formatCurrency, formatPhone, stripNonDigits, getCropIcon } from "@/lib/
 import AddressSearch from "@/components/AddressSearch";
 import CalendarComponent from "@/components/Calendar";
 import { toast } from "sonner";
+import { checkStockBeforeSale } from "@/hooks/useInventory";
 
 const toLocalDateStr = (d: Date = new Date()) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -157,6 +158,22 @@ export default function CourierSalesPage() {
             toast.error('택배비를 입력해주세요!!!');
             return;
         }
+
+        // 재고 체크 (수정 모드가 아닐 때만)
+        if (farm.inventory_enabled && !editingGroupId && !editingRecordId) {
+            const grouped = Object.values(
+                validItems.reduce((acc: Record<string, { cropName: string; quantity: number }>, i) => {
+                    const key = i.cropName;
+                    if (!acc[key]) acc[key] = { cropName: i.cropName, quantity: 0 };
+                    acc[key].quantity += Number(i.quantity) || 0;
+                    return acc;
+                }, {})
+            );
+            const check = await checkStockBeforeSale(farm.id, grouped, farm.inventory_warn_only ?? true);
+            if (!check.ok) { toast.error(check.message); return; }
+            if (check.warning) toast.warning(check.message + "\n\n재고 부족이지만 저장합니다.", { duration: 5000 });
+        }
+
         setSaving(true);
         try {
             const groupId = editingGroupId || crypto.randomUUID();
