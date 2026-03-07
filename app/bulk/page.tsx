@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Building2, Edit2, Trash2, History, RefreshCcw, Save, ShoppingCart, ChevronDown, Calendar as CalendarIcon, X } from 'lucide-react';
 import { useAuthStore } from "@/store/authStore";
 import { supabase, SalesRecord, Partner } from "@/lib/supabase";
@@ -9,6 +9,7 @@ import CalendarComponent from "@/components/Calendar";
 import SettlementModal, { ModalCropEntry, SettlementSaveData } from "@/components/SettlementModal";
 import { toast } from "sonner";
 import { checkStockBeforeSale } from "@/hooks/useInventory";
+import InventoryShortageDialog from "@/components/InventoryShortageDialog";
 
 const toLocalDateStr = (d: Date = new Date()) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -71,6 +72,18 @@ export default function BulkSalesPage() {
     const [sheetActualAmount, setSheetActualAmount] = useState('');
     const [sheetDeductionReason, setSheetDeductionReason] = useState('');
     const [sheetMemo, setSheetMemo] = useState('');
+
+    const [shortageOpen, setShortageOpen] = useState(false);
+    const [shortageMode, setShortageMode] = useState<"block" | "warn">("block");
+    const [shortageRows, setShortageRows] = useState<any[]>([]);
+    const [pendingAction, setPendingAction] = useState<null | "pending" | "settled">(null);
+    const skipStockCheckRef = useRef(false);
+
+    const closeShortageDialog = () => {
+        setShortageOpen(false);
+        setPendingAction(null);
+        skipStockCheckRef.current = false;
+    };
 
     useEffect(() => {
         const fetchFarmCrops = async () => {
@@ -141,17 +154,29 @@ export default function BulkSalesPage() {
         if (allGrades.length === 0) { toast.error("품목을 추가하고 수량을 입력해주세요."); return; }
 
         // 재고 체크
-        if (farm.inventory_enabled) {
+        if (farm.inventory_enabled && !skipStockCheckRef.current) {
             const grouped = Object.values(
-                allGrades.reduce((acc: Record<string, { cropName: string; quantity: number }>, g) => {
-                    if (!acc[g.cropName]) acc[g.cropName] = { cropName: g.cropName, quantity: 0 };
-                    acc[g.cropName].quantity += g.qty;
+                allGrades.reduce((acc: Record<string, { cropName: string; quantity: number; unit?: string }>, g) => {
+                    const key = `${g.cropName}::${g.unit}`;
+                    if (!acc[key]) acc[key] = { cropName: g.cropName, unit: g.unit, quantity: 0 };
+                    acc[key].quantity += g.qty;
                     return acc;
                 }, {})
             );
             const check = await checkStockBeforeSale(farm.id, grouped, farm.inventory_warn_only ?? true);
-            if (!check.ok) { toast.error(check.message); return; }
-            if (check.warning) toast.warning(check.message + "\n\n재고 부족이지만 저장합니다.", { duration: 5000 });
+            if (!check.ok) {
+                setShortageMode("block");
+                setShortageRows(check.rows);
+                setShortageOpen(true);
+                return;
+            }
+            if (check.warning) {
+                setShortageMode("warn");
+                setShortageRows(check.rows);
+                setPendingAction("pending");
+                setShortageOpen(true);
+                return;
+            }
         }
 
         setSaving(true);
@@ -182,17 +207,31 @@ export default function BulkSalesPage() {
         if (allGrades.length === 0) { toast.error("품목을 추가하고 수량을 입력해주세요."); setShowSettlementSheet(false); return; }
 
         // 재고 체크
-        if (farm.inventory_enabled) {
+        if (farm.inventory_enabled && !skipStockCheckRef.current) {
             const grouped = Object.values(
-                allGrades.reduce((acc: Record<string, { cropName: string; quantity: number }>, g) => {
-                    if (!acc[g.cropName]) acc[g.cropName] = { cropName: g.cropName, quantity: 0 };
-                    acc[g.cropName].quantity += g.qty;
+                allGrades.reduce((acc: Record<string, { cropName: string; quantity: number; unit?: string }>, g) => {
+                    const key = `${g.cropName}::${g.unit}`;
+                    if (!acc[key]) acc[key] = { cropName: g.cropName, unit: g.unit, quantity: 0 };
+                    acc[key].quantity += g.qty;
                     return acc;
                 }, {})
             );
             const check = await checkStockBeforeSale(farm.id, grouped, farm.inventory_warn_only ?? true);
-            if (!check.ok) { toast.error(check.message); setShowSettlementSheet(false); return; }
-            if (check.warning) toast.warning(check.message + "\n\n재고 부족이지만 저장합니다.", { duration: 5000 });
+            if (!check.ok) {
+                setShowSettlementSheet(false);
+                setShortageMode("block");
+                setShortageRows(check.rows);
+                setShortageOpen(true);
+                return;
+            }
+            if (check.warning) {
+                setShowSettlementSheet(false);
+                setShortageMode("warn");
+                setShortageRows(check.rows);
+                setPendingAction("settled");
+                setShortageOpen(true);
+                return;
+            }
         }
 
         setSaving(true);
@@ -239,7 +278,6 @@ export default function BulkSalesPage() {
         } finally { setSaving(false); }
     };
 
-    // 구형 복합 grade 문자열 파싱: "특/상:60,중:20,하:20" → { '특/상': 60, '중': 20, '하': 20 }
     const parseGradeString = (gradeStr: string, fallbackQty: number): Record<string, number> => {
         if (!gradeStr) return { '특/상': fallbackQty };
         if (['특/상', '중', '하'].includes(gradeStr)) return { [gradeStr]: fallbackQty };
@@ -297,9 +335,10 @@ export default function BulkSalesPage() {
                     } else {
                         const parsed = parseGradeString(gradeStr, rec.quantity || 0);
                         for (const [g, q] of Object.entries(parsed)) {
-                            gradeQtyMap[g] = (gradeQtyMap[g] || 0) + q;
+                            const qNum = Number(q);
+                            gradeQtyMap[g] = (gradeQtyMap[g] || 0) + qNum;
                             if (!gradeRecordMap[g]) {
-                                gradeRecordMap[g] = { ...rec, id: null, grade: g, quantity: q, _isCompound: true };
+                                gradeRecordMap[g] = { ...rec, id: null, grade: g, quantity: qNum, _isCompound: true };
                             }
                         }
                         if (rec.id) srcIds.add(rec.id);
@@ -535,6 +574,30 @@ export default function BulkSalesPage() {
 
     return (
         <div className="min-h-screen pb-20 bg-slate-50/30">
+            <InventoryShortageDialog
+                open={shortageOpen}
+                mode={shortageMode}
+                rows={shortageRows as any}
+                onClose={closeShortageDialog}
+                onContinue={
+                    shortageMode === "warn" && pendingAction
+                        ? async () => {
+                            // 다음 저장 1회는 재고 체크를 건너뜀
+                            skipStockCheckRef.current = true;
+                            setShortageOpen(false);
+
+                            if (pendingAction === "pending") {
+                                await handleSavePending();
+                            } else {
+                                await handleSaveSettled();
+                            }
+
+                            setPendingAction(null);
+                            skipStockCheckRef.current = false;
+                        }
+                        : undefined
+                }
+            />
 
             {/* 바로 정산 바텀시트 */}
             {showSettlementSheet && (

@@ -9,6 +9,7 @@ import AddressSearch from "@/components/AddressSearch";
 import CalendarComponent from "@/components/Calendar";
 import { toast } from "sonner";
 import { checkStockBeforeSale } from "@/hooks/useInventory";
+import InventoryShortageDialog from "@/components/InventoryShortageDialog";
 
 const toLocalDateStr = (d: Date = new Date()) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -148,7 +149,23 @@ export default function CourierSalesPage() {
 
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-    const handleSave = async () => {
+    const [shortageOpen, setShortageOpen] = useState(false);
+    const [shortageMode, setShortageMode] = useState<"block" | "warn">("block");
+    const [shortageRows, setShortageRows] = useState<any[]>([]);
+    const [pendingSaveAfterWarning, setPendingSaveAfterWarning] = useState(false);
+
+    const closeShortageDialog = () => {
+        setShortageOpen(false);
+        setPendingSaveAfterWarning(false);
+    };
+
+    const openShortageDialog = (mode: "block" | "warn", rows: any[]) => {
+        setShortageMode(mode);
+        setShortageRows(rows);
+        setShortageOpen(true);
+    };
+
+    const doSave = async (skipStockCheck: boolean) => {
         if (!farm?.id || saving) return;
         if (!ordererName) { toast.error("주문자 성함을 입력해주세요."); return; }
         const validItems = courierItems.filter(i => Number(i.quantity) > 0);
@@ -160,18 +177,25 @@ export default function CourierSalesPage() {
         }
 
         // 재고 체크 (수정 모드가 아닐 때만)
-        if (farm.inventory_enabled && !editingGroupId && !editingRecordId) {
+        if (!skipStockCheck && farm.inventory_enabled && !editingGroupId && !editingRecordId) {
             const grouped = Object.values(
-                validItems.reduce((acc: Record<string, { cropName: string; quantity: number }>, i) => {
-                    const key = i.cropName;
-                    if (!acc[key]) acc[key] = { cropName: i.cropName, quantity: 0 };
+                validItems.reduce((acc: Record<string, { cropName: string; quantity: number; unit?: string }>, i) => {
+                    const key = `${i.cropName}::${i.unit}`;
+                    if (!acc[key]) acc[key] = { cropName: i.cropName, unit: i.unit, quantity: 0 };
                     acc[key].quantity += Number(i.quantity) || 0;
                     return acc;
                 }, {})
             );
             const check = await checkStockBeforeSale(farm.id, grouped, farm.inventory_warn_only ?? true);
-            if (!check.ok) { toast.error(check.message); return; }
-            if (check.warning) toast.warning(check.message + "\n\n재고 부족이지만 저장합니다.", { duration: 5000 });
+            if (!check.ok) {
+                openShortageDialog("block", check.rows);
+                return;
+            }
+            if (check.warning) {
+                setPendingSaveAfterWarning(true);
+                openShortageDialog("warn", check.rows);
+                return;
+            }
         }
 
         setSaving(true);
@@ -218,6 +242,10 @@ export default function CourierSalesPage() {
         } finally {
             setSaving(false);
         }
+    };
+
+    const handleSave = async () => {
+        await doSave(false);
     };
 
     // [FIX] 택배 아이콘 수정 - DB crop_icon 우선 적용
@@ -286,6 +314,20 @@ export default function CourierSalesPage() {
 
         return (
             <div className={`space-y-4 ${inModal ? 'max-h-[60vh] overflow-y-auto scrollbar-hide p-1' : ''}`}>
+                <InventoryShortageDialog
+                    open={shortageOpen}
+                    mode={shortageMode}
+                    rows={shortageRows as any}
+                    onClose={closeShortageDialog}
+                    onContinue={
+                        shortageMode === "warn" && pendingSaveAfterWarning
+                            ? async () => {
+                                closeShortageDialog();
+                                await doSave(true);
+                            }
+                            : undefined
+                    }
+                />
                 {/* ① 주문자 정보 (먼저!) */}
                 <div className="bg-white rounded-[2rem] shadow-xl border border-rose-100 p-5 space-y-3">
                     <div className="space-y-3">

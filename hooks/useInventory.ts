@@ -4,6 +4,20 @@ export interface StockMap {
     [cropName: string]: number; // 현재 재고 수량
 }
 
+export interface ShortageRow {
+    cropName: string;
+    unit?: string;
+    available: number;
+    requested: number;
+    shortage: number;
+}
+
+function formatQty(n: number): string {
+    if (!Number.isFinite(n)) return "0";
+    const isInt = Math.abs(n - Math.round(n)) < 1e-9;
+    return isInt ? String(Math.round(n)) : n.toFixed(1);
+}
+
 /**
  * 특정 농장의 품목별 현재 재고를 계산하여 반환한다.
  * 재고 = 수확합계 - 판매합계 - 재고조정(감소분)
@@ -58,31 +72,42 @@ export async function fetchStockMap(farmId: string): Promise<StockMap> {
  */
 export async function checkStockBeforeSale(
     farmId: string,
-    items: { cropName: string; quantity: number }[],
+    items: { cropName: string; quantity: number; unit?: string }[],
     warnOnly: boolean
-): Promise<{ ok: boolean; warning: boolean; message: string }> {
+): Promise<{ ok: boolean; warning: boolean; message: string; rows: ShortageRow[] }> {
     const stock = await fetchStockMap(farmId);
 
-    const shortage: string[] = [];
+    const rows: ShortageRow[] = [];
 
     for (const item of items) {
         const avail = stock[item.cropName] ?? 0;
         if (avail < item.quantity) {
-            shortage.push(`${item.cropName}: 재고 ${avail.toFixed(1)} / 판매 ${item.quantity}`);
+            const requested = Number(item.quantity ?? 0);
+            rows.push({
+                cropName: item.cropName,
+                unit: item.unit,
+                available: Number(avail ?? 0),
+                requested,
+                shortage: Math.max(0, requested - Number(avail ?? 0)),
+            });
         }
     }
 
-    if (shortage.length === 0) {
-        return { ok: true, warning: false, message: "" };
+    if (rows.length === 0) {
+        return { ok: true, warning: false, message: "", rows: [] };
     }
 
-    const message = `재고 부족\n${shortage.join("\n")}`;
+    const messageLines = rows.map((r) => {
+        const unit = r.unit ? ` ${r.unit}` : "";
+        return `${r.cropName}: 재고 ${formatQty(r.available)}${unit} / 판매 ${formatQty(r.requested)}${unit}`;
+    });
+    const message = `재고 부족\n${messageLines.join("\n")}`;
 
     if (warnOnly) {
         // 경고 모드: ok=true 이지만 warning=true로 알림
-        return { ok: true, warning: true, message };
+        return { ok: true, warning: true, message, rows };
     } else {
         // 차단 모드: ok=false
-        return { ok: false, warning: false, message };
+        return { ok: false, warning: false, message, rows };
     }
 }
