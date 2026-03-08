@@ -10,11 +10,10 @@ import { getNowKST, toKSTDateString } from "@/lib/utils";
 import { toast } from "sonner";
 
 const ADJUSTMENT_TYPES = [
-    { value: "initial", label: "초기재고 입력", color: "blue", desc: "창고에 기존 재고가 있을 때" },
-    { value: "waste", label: "폐기/손실", color: "red", desc: "부패, 파손 등 손실 처리" },
-    { value: "process_out", label: "가공전환", color: "amber", desc: "원물 일부를 가공용으로 전환" },
-    { value: "return", label: "반품 입고", color: "green", desc: "반품된 물량 재고 복구" },
-    { value: "correction", label: "수량 보정", color: "gray", desc: "실수로 잘못 기록된 수량 보정" },
+    { value: "waste", label: "🗑️ 폐기/손실", color: "red", desc: "부패·냉해·파손 등 — 자동 차감" },
+    { value: "return", label: "🔄 반품 입고", color: "green", desc: "택배·납품 반품 재입고 — 자동 증가" },
+    { value: "harvest_fix", label: "🌾 수확 누락 보정", color: "blue", desc: "수확 기록 누락/오입력 차이분 보정 (+/−)" },
+    { value: "correction", label: "✏️ 실물 재고 맞추기", color: "gray", desc: "실물 확인 후 시스템 수량 일치 (+/−)" },
 ] as const;
 
 // 가공품 아이콘 목록
@@ -50,8 +49,9 @@ export default function InventoryPage() {
     // 조정 입력 상태
     const [showAdjForm, setShowAdjForm] = useState(false);
     const [adjCrop, setAdjCrop] = useState("");
-    const [adjType, setAdjType] = useState<AdjType>("initial");
+    const [adjType, setAdjType] = useState<AdjType>("waste");
     const [adjQty, setAdjQty] = useState("");
+    const [adjGrade, setAdjGrade] = useState(""); // 원물 등급 (sang/jung/ha)
     const [adjReason, setAdjReason] = useState("");
     const [adjSaving, setAdjSaving] = useState(false);
 
@@ -554,8 +554,16 @@ export default function InventoryPage() {
             toast.error("수량은 0이 아닌 숫자로 입력해주세요.");
             return;
         }
-        // waste, process_out는 재고 차감이므로 음수로 저장
-        const finalQty = adjType === "waste" || adjType === "process_out" ? -Math.abs(rawQty) : rawQty;
+        // waste는 자동 차감, 나머지는 사용자가 입력한 부호 그대로
+        const finalQty = adjType === "waste" ? -Math.abs(rawQty) : rawQty;
+
+        // 원물인 경우 등급 필수
+        const adjCropObj = farmCrops.find(c => c.crop_name === adjCrop);
+        const isRawCrop = adjCropObj?.category !== 'processed';
+        if (isRawCrop && !adjGrade) {
+            toast.error("원물은 등급을 선택해주세요.");
+            return;
+        }
 
         setAdjSaving(true);
         try {
@@ -563,6 +571,7 @@ export default function InventoryPage() {
                 farm_id: farm.id,
                 crop_name: adjCrop,
                 quantity: finalQty,
+                grade: isRawCrop ? adjGrade : null,
                 adjustment_type: adjType,
                 reason: adjReason || null,
                 adjusted_at: getNowKST().toISOString(),
@@ -570,6 +579,7 @@ export default function InventoryPage() {
             if (error) throw error;
             toast.success("재고 조정이 저장되었습니다.");
             setAdjQty("");
+            setAdjGrade("");
             setAdjReason("");
             setShowAdjForm(false);
             loadAll();
@@ -717,7 +727,7 @@ export default function InventoryPage() {
                             const isDisabled = crop.is_active === false;
                             const isRaw = (crop.category ?? "crop") !== "processed";
                             const gs = gradeStockMap[crop.crop_name];
-                            const hasGradeData = isRaw && gs && (gs.sang > 0 || gs.jung > 0 || gs.ha > 0);
+                            const hasGradeData = isRaw && gs !== undefined;
                             const fmtN = (n: number) => n % 1 === 0 ? n.toFixed(0) : n.toFixed(1);
                             return (
                                 <div key={crop.id}
@@ -796,8 +806,8 @@ export default function InventoryPage() {
                                         </p>
                                     )}
 
-                                    {/* 가공품 수정/복구 버튼 */}
-                                    {crop.category === "processed" && (
+                                    {/* 임시 가공품만 수정/복구 버튼 표시 */}
+                                    {crop.category === "processed" && crop.is_temporary && (
                                         <button 
                                             onClick={() => handleOpenEditCrop(crop)}
                                             className={`mt-3 w-full py-1.5 text-xs font-bold rounded-lg transition-all border ${
@@ -1346,7 +1356,7 @@ export default function InventoryPage() {
                         {/* 품목 선택 */}
                         <div className="space-y-1.5">
                             <label className="text-[10px] font-black text-gray-500 uppercase">품목</label>
-                            <select value={adjCrop} onChange={e => setAdjCrop(e.target.value)}
+                            <select value={adjCrop} onChange={e => { setAdjCrop(e.target.value); setAdjGrade(""); }}
                                 className="w-full p-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-bold outline-none focus:border-blue-400 focus:bg-white transition-all">
                                 <option value="">-- 품목 선택 --</option>
                                 {farmCrops.map(c => (
@@ -1356,6 +1366,25 @@ export default function InventoryPage() {
                                 ))}
                             </select>
                         </div>
+
+                        {/* 원물 등급 선택 */}
+                        {adjCrop && farmCrops.find(c => c.crop_name === adjCrop)?.category !== 'processed' && (
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-black text-gray-500 uppercase">등급 <span className="text-red-400">*필수</span></label>
+                            <div className="flex gap-2">
+                                {[{v:'sang',l:'특/상'},{v:'jung',l:'중'},{v:'ha',l:'하'}].map(g => (
+                                    <button key={g.v} onClick={() => setAdjGrade(g.v)}
+                                        className={`flex-1 py-2.5 rounded-2xl text-xs font-black transition-all border-2 ${
+                                            adjGrade === g.v
+                                                ? g.v === 'sang' ? 'bg-red-500 text-white border-red-500'
+                                                : g.v === 'jung' ? 'bg-orange-400 text-white border-orange-400'
+                                                : 'bg-yellow-400 text-white border-yellow-400'
+                                                : 'bg-gray-50 text-gray-400 border-gray-100'
+                                        }`}>{g.l}</button>
+                                ))}
+                            </div>
+                        </div>
+                        )}
 
                         {/* 조정 유형 */}
                         <div className="space-y-1.5">
@@ -1374,12 +1403,13 @@ export default function InventoryPage() {
                         {/* 수량 */}
                         <div className="space-y-1.5">
                             <label className="text-[10px] font-black text-gray-500 uppercase">
-                                수량 {adjType === "waste" || adjType === "process_out" ? "(입력값은 자동으로 차감됩니다)" : ""}
+                                수량{adjType === "waste" ? " (자동 차감)" : adjType === "return" ? " (자동 증가)" : " (+증가 / −감소)"}
                             </label>
                             <div className="flex items-center gap-2">
-                                {(adjType === "waste" || adjType === "process_out") && <Minus className="w-4 h-4 text-red-500 shrink-0" />}
+                                {adjType === "waste" && <Minus className="w-4 h-4 text-red-500 shrink-0" />}
+                                {adjType === "return" && <span className="text-green-500 font-black shrink-0">+</span>}
                                 <input type="number" value={adjQty} onChange={e => setAdjQty(e.target.value)}
-                                    placeholder={adjType === "correction" ? "양수(+증가) 또는 음수(-감소)" : "수량 입력"}
+                                    placeholder={adjType === "correction" || adjType === "harvest_fix" ? "예: 10 또는 -5" : "수량 입력"}
                                     className="flex-1 p-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-bold outline-none focus:border-blue-400 focus:bg-white transition-all" />
                             </div>
                         </div>

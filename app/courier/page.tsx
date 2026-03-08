@@ -48,7 +48,7 @@ export default function CourierSalesPage() {
     const [isEditMode, setIsEditMode] = useState(false); // [수정] 수정 모드 상태 추가
 
     // 다중 품목 카드형
-    const [courierItems, setCourierItems] = useState<{id: string; cropName: string; cropIcon: string; unit: string; quantity: string; unitPrice: string;}[]>([]);
+    const [courierItems, setCourierItems] = useState<{id: string; cropName: string; cropIcon: string; unit: string; quantity: string; unitPrice: string; grade: string;}[]>([]);
     const [shippingCost, setShippingCost] = useState("");
     const [shippingFeeType, setShippingFeeType] = useState('선불');
     const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
@@ -69,7 +69,7 @@ export default function CourierSalesPage() {
             cropName: crop.crop_name,
             cropIcon: cropIconMap[crop.crop_name] || getCropIcon(crop.crop_name),
             unit: getEffectiveUnits(crop)[0],
-            quantity: '', unitPrice: ''
+            quantity: '', unitPrice: '', grade: ''
         }]);
     };
     const removeCourierItem = (id: string) => setCourierItems(prev => prev.filter(i => i.id !== id));
@@ -162,6 +162,12 @@ export default function CourierSalesPage() {
         if (!ordererName) { toast.error("주문자 성함을 입력해주세요."); return; }
         const validItems = courierItems.filter(i => Number(i.quantity) > 0);
         if (validItems.length === 0) { toast.error("품목을 추가하고 수량을 입력해주세요."); return; }
+        // 원물 품목은 등급 필수
+        const noGradeItem = validItems.find(i => {
+            const crop = farmCrops.find(c => c.crop_name === i.cropName);
+            return crop?.category !== 'processed' && !i.grade;
+        });
+        if (noGradeItem) { toast.error(`"${noGradeItem.cropName}" 등급을 선택해주세요.`); return; }
         const finalShipping = Number(stripNonDigits(shippingCost)) || 0;
         if (shippingFeeType === '선불' && finalShipping === 0) {
             toast.error('택배비를 입력해주세요!!!');
@@ -171,9 +177,9 @@ export default function CourierSalesPage() {
         // 재고 체크 (수정 모드가 아닐 때만)
         if (!skipStockCheck && farm.inventory_enabled && !editingGroupId && !editingRecordId) {
             const grouped = Object.values(
-                validItems.reduce((acc: Record<string, { cropName: string; quantity: number; unit?: string }>, i) => {
-                    const key = `${i.cropName}::${i.unit}`;
-                    if (!acc[key]) acc[key] = { cropName: i.cropName, unit: i.unit, quantity: 0 };
+                validItems.reduce((acc: Record<string, { cropName: string; quantity: number; unit?: string; grade?: string }>, i) => {
+                    const key = `${i.cropName}::${i.unit}::${i.grade ?? ''}`;
+                    if (!acc[key]) acc[key] = { cropName: i.cropName, unit: i.unit, grade: i.grade || undefined, quantity: 0 };
                     acc[key].quantity += Number(i.quantity) || 0;
                     return acc;
                 }, {})
@@ -217,6 +223,7 @@ export default function CourierSalesPage() {
                     crop_name: item.cropName, sale_unit: item.unit,
                     quantity: Number(item.quantity), price: lineTotal > 0 ? lineTotal : null,
                     shipping_cost: idx === 0 ? finalShipping : 0,
+                    grade: item.grade || null,
                 }]);
                 if (error) throw error;
             }
@@ -253,7 +260,8 @@ export default function CourierSalesPage() {
             cropIcon: cropIconMap[r.crop_name || ''] || getCropIcon(r.crop_name || ''),
             unit: r.sale_unit || '박스',
             quantity: r.quantity?.toString() || '',
-            unitPrice: r.quantity && r.price ? Math.floor(r.price / r.quantity).toString() : ''
+            unitPrice: r.quantity && r.price ? Math.floor(r.price / r.quantity).toString() : '',
+            grade: (r as CourierHistoryRecord & { grade?: string }).grade || ''
         })));
         setOrdererName(first.customer_name || ""); setOrdererPhone(first.phone || "");
         setRecipientName(first.recipient_name || ""); setRecipientPhone(first.recipient_phone || "");
@@ -428,6 +436,20 @@ export default function CourierSalesPage() {
                                                     <button onClick={() => removeCourierItem(item.id)} className="p-1 text-slate-300 hover:text-red-400 transition-colors ml-0.5"><X className="w-4 h-4" /></button>
                                                 </div>
                                             </div>
+                                            {farmCrops.find(c => c.crop_name === item.cropName)?.category !== 'processed' && (
+                                            <div className="flex gap-1.5 mb-1">
+                                                {[{v:'sang',l:'특/상'},{v:'jung',l:'중'},{v:'ha',l:'하'}].map(g => (
+                                                    <button key={g.v} onClick={() => updateCourierItem(item.id, 'grade', g.v)}
+                                                        className={`flex-1 py-1.5 rounded-xl text-[9px] font-black transition-all border ${
+                                                            item.grade === g.v
+                                                                ? g.v === 'sang' ? 'bg-red-500 text-white border-red-500'
+                                                                : g.v === 'jung' ? 'bg-orange-400 text-white border-orange-400'
+                                                                : 'bg-yellow-400 text-white border-yellow-400'
+                                                                : 'bg-white text-slate-400 border-slate-100'
+                                                        }`}>{g.l}</button>
+                                                ))}
+                                            </div>
+                                            )}
                                             <div className="grid grid-cols-2 gap-2">
                                                 <div className="space-y-0.5">
                                                     <label className="text-[8px] font-black text-slate-400 px-1">수량</label>

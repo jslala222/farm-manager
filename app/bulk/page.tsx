@@ -98,7 +98,7 @@ export default function BulkSalesPage() {
         if (!farm?.id) return;
         setLoading(true);
         try {
-            const partnersRes = await supabase.from('partners').select('*').eq('farm_id', farm.id).order('compSalesRecord_name');
+            const partnersRes = await supabase.from('partners').select('*').eq('farm_id', farm.id).order('company_name');
             if (partnersRes.data) setPartners(partnersRes.data);
             await fetchHistory();
         } finally { setLoading(false); }
@@ -146,12 +146,14 @@ export default function BulkSalesPage() {
         const allGrades = buildAllGrades();
         if (allGrades.length === 0) { toast.error("품목을 추가하고 수량을 입력해주세요."); return; }
 
-        // 재고 체크
+        // 재고 체크 (등급별)
         if (farm.inventory_enabled && !skipStockCheckRef.current) {
+            const gradeMap: Record<string, string> = { '특/상': 'sang', '중': 'jung', '하': 'ha' };
             const grouped = Object.values(
-                allGrades.reduce((acc: Record<string, { cropName: string; quantity: number; unit?: string }>, g) => {
-                    const key = `${g.cropName}::${g.unit}`;
-                    if (!acc[key]) acc[key] = { cropName: g.cropName, unit: g.unit, quantity: 0 };
+                allGrades.reduce((acc: Record<string, { cropName: string; quantity: number; unit?: string; grade?: string }>, g) => {
+                    const gradeKey = g.grade !== '-' ? (gradeMap[g.grade] || g.grade) : '';
+                    const key = `${g.cropName}::${g.unit}::${gradeKey}`;
+                    if (!acc[key]) acc[key] = { cropName: g.cropName, unit: g.unit, grade: gradeKey || undefined, quantity: 0 };
                     acc[key].quantity += g.qty;
                     return acc;
                 }, {})
@@ -199,12 +201,14 @@ export default function BulkSalesPage() {
         const allGrades = buildAllGrades();
         if (allGrades.length === 0) { toast.error("품목을 추가하고 수량을 입력해주세요."); setShowSettlementSheet(false); return; }
 
-        // 재고 체크
+        // 재고 체크 (등급별)
         if (farm.inventory_enabled && !skipStockCheckRef.current) {
+            const gradeMap: Record<string, string> = { '특/상': 'sang', '중': 'jung', '하': 'ha' };
             const grouped = Object.values(
-                allGrades.reduce((acc: Record<string, { cropName: string; quantity: number; unit?: string }>, g) => {
-                    const key = `${g.cropName}::${g.unit}`;
-                    if (!acc[key]) acc[key] = { cropName: g.cropName, unit: g.unit, quantity: 0 };
+                allGrades.reduce((acc: Record<string, { cropName: string; quantity: number; unit?: string; grade?: string }>, g) => {
+                    const gradeKey = g.grade !== '-' ? (gradeMap[g.grade] || g.grade) : '';
+                    const key = `${g.cropName}::${g.unit}::${gradeKey}`;
+                    if (!acc[key]) acc[key] = { cropName: g.cropName, unit: g.unit, grade: gradeKey || undefined, quantity: 0 };
                     acc[key].quantity += g.qty;
                     return acc;
                 }, {})

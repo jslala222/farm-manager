@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/store/authStore';
 import { CheckCircle2, X, RefreshCw } from 'lucide-react';
 
 interface HarvestRecord {
@@ -28,12 +29,12 @@ const toKSTDateStr = (utcISO: string): string => {
 };
 
 export default function InspectionPage() {
+  const { farm, initialized } = useAuthStore();
   const [records, setRecords] = useState<HarvestRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedRecord, setSelectedRecord] = useState<HarvestRecord | null>(null);
   const [saving, setSaving] = useState(false);
-  const [currentFarmId, setCurrentFarmId] = useState<string | null>(null);
   const [form, setForm] = useState<InspectionForm>({
     final_grade: 'jung',
     final_quantity: 0,
@@ -44,6 +45,7 @@ export default function InspectionPage() {
 
   // 데이터 조회 함수
   const fetchData = async () => {
+    if (!farm?.id) return;
     try {
       setLoading(true);
       setError('');
@@ -51,8 +53,9 @@ export default function InspectionPage() {
       const { data, error: recordsErr } = await supabase
         .from('harvest_records')
         .select('*')
+        .eq('farm_id', farm.id)
         .order('recorded_at', { ascending: false })
-        .limit(100);
+        .limit(500);
       
       if (recordsErr) {
         setError(`조회 실패: ${recordsErr.message}`);
@@ -74,10 +77,9 @@ export default function InspectionPage() {
     }
   };
 
-  // 초기 로드만 실행
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (initialized && farm?.id) fetchData();
+  }, [farm, initialized]);
 
   const openInspection = (record: HarvestRecord) => {
     setSelectedRecord(record);
@@ -91,7 +93,7 @@ export default function InspectionPage() {
   };
 
   const saveInspection = async () => {
-    if (!selectedRecord || !currentFarmId) return;
+    if (!selectedRecord || !farm?.id) return;
 
     try {
       setSaving(true);
@@ -100,7 +102,7 @@ export default function InspectionPage() {
         .from('harvest_inspections')
         .insert({
           harvest_id: selectedRecord.id,
-          farm_id: currentFarmId,
+          farm_id: farm.id,
           grade: form.final_grade,
           quantity: form.final_quantity,
           unit: 'BOX',

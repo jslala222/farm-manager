@@ -4,7 +4,11 @@
       "type": "stdio",
       "command": "node",
       "args": ["supabase-mcp/mcp-server.js"],
-      "cwd": "${workspaceFolder}"
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "SUPABASE_URL": "https://slguawnxxdmcscxkzwdo.supabase.co",
+        "SUPABASE_SERVICE_ROLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsZ3Vhd254eGRtY3NjeGt6d2RvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MTM1Mzk3MiwiZXhwIjoyMDg2OTI5OTcyfQ.yIZ4dN7tpHFL4C9ytBOgtWywp68Ij4tSuvMxi_t4qJ0"
+      }
     }
   }
 }

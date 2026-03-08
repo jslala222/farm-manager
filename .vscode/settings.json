@@ -1,4 +1,5 @@
 {
   "roo.planModel": "gemini-2.0-flash",
-  "roo.actModel": "claude-haiku-4-5-20251001"
+  "roo.actModel": "claude-haiku-4-5-20251001",
+  "chat.promptFiles": true
 }

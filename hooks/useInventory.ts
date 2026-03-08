@@ -18,6 +18,7 @@ export interface GradeStockMap {
 export interface ShortageRow {
     cropName: string;
     unit?: string;
+    grade?: string; // 등급별 차감 시 해당 등급
     available: number;
     requested: number;
     shortage: number;
@@ -77,26 +78,50 @@ export async function fetchStockMap(farmId: string): Promise<StockMap> {
 
 /**
  * 판매 전 재고를 확인한다.
- * @returns { ok: boolean; message: string }
- *   ok=true  → 판매 진행 가능
- *   ok=false → 재고 부족 (warn_only=true면 경고만, false면 차단)
+ * - grade 없는 항목 → fetchStockMap(총재고) 기준
+ * - grade 있는 원물 → fetchGradeStockMap(등급별 재고) 기준
  */
 export async function checkStockBeforeSale(
     farmId: string,
-    items: { cropName: string; quantity: number; unit?: string }[],
+    items: { cropName: string; quantity: number; unit?: string; grade?: string }[],
     warnOnly: boolean
 ): Promise<{ ok: boolean; warning: boolean; message: string; rows: ShortageRow[] }> {
-    const stock = await fetchStockMap(farmId);
+    // 등급 있는 항목이 하나라도 있으면 gradeStockMap도 조회
+    const hasGraded = items.some(i => i.grade && i.grade !== '');
+    const [stock, gradeStock] = await Promise.all([
+        fetchStockMap(farmId),
+        hasGraded ? fetchGradeStockMap(farmId) : Promise.resolve({} as GradeStockMap),
+    ]);
+
+    const normGrade = (g: string): "sang" | "jung" | "ha" | null => {
+        switch (g) {
+            case "sang": case "상": case "특/상": return "sang";
+            case "jung": case "중": return "jung";
+            case "ha": case "하": return "ha";
+            default: return null;
+        }
+    };
 
     const rows: ShortageRow[] = [];
 
     for (const item of items) {
-        const avail = stock[item.cropName] ?? 0;
-        if (avail < item.quantity) {
-            const requested = Number(item.quantity ?? 0);
+        const requested = Number(item.quantity ?? 0);
+        const g = item.grade ? normGrade(item.grade) : null;
+
+        let avail: number;
+        if (g && gradeStock[item.cropName]) {
+            // 등급 지정 → 해당 등급 재고 체크
+            avail = gradeStock[item.cropName][g] ?? 0;
+        } else {
+            // 등급 미지정 → 총재고 체크
+            avail = stock[item.cropName] ?? 0;
+        }
+
+        if (avail < requested) {
             rows.push({
                 cropName: item.cropName,
                 unit: item.unit,
+                grade: g ?? undefined,
                 available: Number(avail ?? 0),
                 requested,
                 shortage: Math.max(0, requested - Number(avail ?? 0)),
@@ -108,17 +133,17 @@ export async function checkStockBeforeSale(
         return { ok: true, warning: false, message: "", rows: [] };
     }
 
+    const gradeLabel: Record<string, string> = { sang: '특/상', jung: '중', ha: '하' };
     const messageLines = rows.map((r) => {
         const unit = r.unit ? ` ${r.unit}` : "";
-        return `${r.cropName}: 재고 ${formatQty(r.available)}${unit} / 판매 ${formatQty(r.requested)}${unit}`;
+        const gl = r.grade ? ` [${gradeLabel[r.grade] ?? r.grade}]` : "";
+        return `${r.cropName}${gl}: 재고 ${formatQty(r.available)}${unit} / 판매 ${formatQty(r.requested)}${unit}`;
     });
     const message = `재고 부족\n${messageLines.join("\n")}`;
 
     if (warnOnly) {
-        // 경고 모드: ok=true 이지만 warning=true로 알림
         return { ok: true, warning: true, message, rows };
     } else {
-        // 차단 모드: ok=false
         return { ok: false, warning: false, message, rows };
     }
 }
@@ -139,10 +164,10 @@ export async function fetchGradeStockMap(farmId: string): Promise<GradeStockMap>
         supabase.from("inventory_adjustments").select("crop_name, quantity, grade").eq("farm_id", farmId).not("grade", "is", null),
     ]);
 
-    // 등급 정규화: 'sang'|'상' → sang, 'jung'|'중' → jung, 'ha'|'하' → ha
+    // 등급 정규화: 'sang'|'상'|'특/상' → sang, 'jung'|'중' → jung, 'ha'|'하' → ha
     const normGrade = (g: string): "sang" | "jung" | "ha" | null => {
         switch (g) {
-            case "sang": case "상": return "sang";
+            case "sang": case "상": case "특/상": return "sang";
             case "jung": case "중": return "jung";
             case "ha": case "하": return "ha";
             default: return null;
