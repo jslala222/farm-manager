@@ -1168,8 +1168,9 @@ export default function InventoryPage() {
                     <div className="relative bg-white rounded-[2rem] w-full max-w-sm shadow-2xl p-6 space-y-5 animate-in fade-in slide-in-from-bottom-8 duration-300 max-h-[85vh] overflow-y-auto">
                         <div className="sticky top-0 -mx-6 px-6 py-3 bg-white border-b border-gray-100 flex items-center justify-between">
                             <div>
-                                <h3 className="text-base font-black text-gray-900">가공품 빠른 추가</h3>
-                                <p className="text-[11px] text-gray-500 mt-1">이번에만 파는 상품도 바로 등록할 수 있습니다.</p>
+                                <h3 className="text-base font-black text-gray-900">가공품 빠른 추가 (임시)</h3>
+                                <p className="text-[11px] text-gray-500 mt-1">단발성 행사 상품용 · 레시피에는 사용 불가</p>
+                                <p className="text-[10px] text-amber-600 font-bold mt-0.5">💡 정식 품목은 설정 페이지에서 추가하세요</p>
                             </div>
                             <button onClick={() => setShowQuickAddForm(false)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
                         </div>
