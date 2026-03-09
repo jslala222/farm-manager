@@ -16,6 +16,14 @@ import {
 const toLocalDateStr = (d: Date = new Date()) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
+const normalizeSaleGrade = (grade?: string | null): string | null => {
+    if (!grade || grade === '-') return null;
+    if (grade === '특/상' || grade === '상' || grade === 'sang') return 'sang';
+    if (grade === '중' || grade === 'jung') return 'jung';
+    if (grade === '하' || grade === 'ha') return 'ha';
+    return grade;
+};
+
 export default function BulkSalesPage() {
     const { farm, initialized, cropIconMap } = useAuthStore();
     const [partners, setPartners] = useState<Partner[]>([]);
@@ -180,7 +188,7 @@ export default function BulkSalesPage() {
             for (const g of allGrades) {
                 const { error } = await supabase.from('sales_records').insert([{
                     farm_id: farm.id, partner_id: selectedClientId, crop_name: g.cropName, sale_unit: g.unit,
-                    quantity: g.qty, grade: g.grade,
+                    quantity: g.qty, grade: normalizeSaleGrade(g.grade),
                     is_settled: false, payment_status: 'pending',
                     delivery_method: 'direct', sale_type: 'b2b',
                     recorded_at: nowTs
@@ -254,7 +262,7 @@ export default function BulkSalesPage() {
                     : null;
                 const { error } = await supabase.from('sales_records').insert([{
                     farm_id: farm.id, partner_id: selectedClientId, crop_name: g.cropName, sale_unit: g.unit,
-                    quantity: g.qty, grade: g.grade,
+                    quantity: g.qty, grade: normalizeSaleGrade(g.grade),
                     is_settled: true, payment_status: 'completed', payment_method: sheetPaymentMethod,
                     price: gradePrice,
                     settled_amount: gradeSettled,
@@ -444,7 +452,7 @@ export default function BulkSalesPage() {
                         await supabase.from('sales_records').delete().eq('id', entry.recordId);
                     } else {
                         await supabase.from('sales_records').update({
-                            recorded_at: recordedAt, quantity: qty,
+                            recorded_at: recordedAt, quantity: qty, grade: normalizeSaleGrade(entry.grade),
                             payment_method: data.paymentMethod, payment_status: data.paymentStatus,
                             is_settled: isSettled, price,
                             settled_at: isSettled ? data.settleDate : null,
@@ -454,7 +462,7 @@ export default function BulkSalesPage() {
                         }).eq('id', entry.recordId);
                     }
                 } else if (qty > 0) {
-                    await supabase.from('sales_records').insert({ ...baseData, quantity: qty, grade: entry.grade, price });
+                    await supabase.from('sales_records').insert({ ...baseData, quantity: qty, grade: normalizeSaleGrade(entry.grade), price });
                 }
             }
 

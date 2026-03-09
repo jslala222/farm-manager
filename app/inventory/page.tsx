@@ -752,6 +752,8 @@ export default function InventoryPage() {
                             const isRaw = (crop.category ?? "crop") !== "processed";
                             const gs = gradeStockMap[crop.crop_name];
                             const hasGradeData = isRaw && gs !== undefined;
+                            const gradeSum = hasGradeData ? (Number(gs.sang ?? 0) + Number(gs.jung ?? 0) + Number(gs.ha ?? 0)) : 0;
+                            const ungradedGap = hasGradeData ? Math.max(0, gradeSum - Number(stock ?? 0)) : 0;
                             const fmtN = (n: number) => n % 1 === 0 ? n.toFixed(0) : n.toFixed(1);
                             return (
                                 <div key={crop.id}
@@ -819,6 +821,12 @@ export default function InventoryPage() {
                                                 <span className={`text-sm font-black ${isLow ? 'text-red-600' : 'text-gray-800'}`}>
                                                     {fmtN(stock)}
                                                     <span className="text-[10px] font-bold text-gray-400 ml-1">{crop.default_unit}</span>
+                                                </span>
+                                            </div>
+                                            <div className={`mt-1 text-[10px] font-black ${ungradedGap > 0 ? 'text-amber-600' : 'text-gray-400'}`}>
+                                                무등급 차감(과거) {fmtN(ungradedGap)}
+                                                <span className={`text-[10px] font-bold ml-1 ${ungradedGap > 0 ? 'text-amber-500' : 'text-gray-400'}`}>
+                                                    {crop.default_unit}
                                                 </span>
                                             </div>
                                         </>
