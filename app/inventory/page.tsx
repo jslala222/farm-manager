@@ -6,7 +6,7 @@ import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
 import { useAuthStore } from "@/store/authStore";
 import { supabase, FarmCrop, ProcessingRecord } from "@/lib/supabase";
 import { fetchStockMap, StockMap, fetchGradeStockMap, GradeStockMap } from "@/hooks/useInventory";
-import { getNowKST, toKSTDateString } from "@/lib/utils";
+import { formatKSTDate, getNowKST, toKSTDateString } from "@/lib/utils";
 import { toast } from "sonner";
 
 const ADJUSTMENT_TYPES = [
@@ -97,6 +97,7 @@ export default function InventoryPage() {
 
     // 등급별 재고 현황 (원물 전용)
     const [gradeStockMap, setGradeStockMap] = useState<GradeStockMap>({});
+    const nowKSTTimestamp = () => formatKSTDate(getNowKST());
 
     useEffect(() => {
         if (!initialized) initialize();
@@ -169,7 +170,7 @@ export default function InventoryPage() {
                     quantity: initialQty,
                     adjustment_type: "initial",
                     reason: "가공품 빠른 추가 초기재고",
-                    adjusted_at: getNowKST().toISOString(),
+                    adjusted_at: nowKSTTimestamp(),
                 });
                 if (adjustError) throw adjustError;
             }
@@ -248,7 +249,7 @@ export default function InventoryPage() {
                     quantity: outQty,
                     adjustment_type: "process_in",
                     reason: `가공 처리 산출 (${validInputs.map(i => i.crop_name).join(', ')})`,
-                    adjusted_at: getNowKST().toISOString(),
+                    adjusted_at: nowKSTTimestamp(),
                     processing_record_id: procId,
                 },
                 // 투입 원물 차감
@@ -258,7 +259,7 @@ export default function InventoryPage() {
                     quantity: -Math.abs(Number(i.quantity)),
                     adjustment_type: "process_out",
                     reason: `가공 처리 투입 → ${procOutputCrop.trim()}`,
-                    adjusted_at: getNowKST().toISOString(),
+                    adjusted_at: nowKSTTimestamp(),
                     processing_record_id: procId,
                 })),
             ];
@@ -287,7 +288,7 @@ export default function InventoryPage() {
             // 1. processing_records 취소 처리
             const { error: cancelErr } = await supabase
                 .from("processing_records")
-                .update({ is_cancelled: true, cancelled_at: getNowKST().toISOString() })
+                .update({ is_cancelled: true, cancelled_at: nowKSTTimestamp() })
                 .eq("id", rec.id);
             if (cancelErr) throw cancelErr;
 
@@ -301,7 +302,7 @@ export default function InventoryPage() {
                     quantity: -Math.abs(rec.output_quantity),
                     adjustment_type: "correction",
                     reason: `가공 취소 원복 (${rec.processed_date})`,
-                    adjusted_at: getNowKST().toISOString(),
+                    adjusted_at: nowKSTTimestamp(),
                     processing_record_id: rec.id,
                 },
                 // 투입 원물 원복 증가
@@ -311,7 +312,7 @@ export default function InventoryPage() {
                     quantity: Math.abs(i.quantity),
                     adjustment_type: "correction",
                     reason: `가공 취소 원복 → ${rec.output_crop_name} (${rec.processed_date})`,
-                    adjusted_at: getNowKST().toISOString(),
+                    adjusted_at: nowKSTTimestamp(),
                     processing_record_id: rec.id,
                 })),
             ];
@@ -501,7 +502,7 @@ export default function InventoryPage() {
                     grade,
                     adjustment_type: "initial",
                     reason: `초기재고 직접입력 (${grade === "sang" ? "상" : grade === "jung" ? "중" : "하"})`,
-                    adjusted_at: getNowKST().toISOString(),
+                    adjusted_at: nowKSTTimestamp(),
                 });
             }
         }
@@ -519,7 +520,7 @@ export default function InventoryPage() {
                 grade: null,
                 adjustment_type: "initial",
                 reason: "초기재고 직접입력 (가공품)",
-                adjusted_at: getNowKST().toISOString(),
+                adjusted_at: nowKSTTimestamp(),
             });
         }
 
@@ -530,6 +531,29 @@ export default function InventoryPage() {
 
         setInitSaving(true);
         try {
+            // 입력된 항목과 같은 crop/grade의 기존 initial 레코드는 먼저 삭제해 중복 누적을 막는다.
+            const { data: prevInitialRows, error: prevInitialError } = await supabase
+                .from("inventory_adjustments")
+                .select("id, crop_name, grade")
+                .eq("farm_id", farm.id)
+                .eq("adjustment_type", "initial");
+            if (prevInitialError) throw prevInitialError;
+
+            const nextKeySet = new Set(
+                rows.map((r: any) => `${r.crop_name}::${r.grade ?? "__NULL__"}`)
+            );
+            const deleteIds = (prevInitialRows ?? [])
+                .filter((r) => nextKeySet.has(`${r.crop_name}::${r.grade ?? "__NULL__"}`))
+                .map((r) => r.id);
+
+            if (deleteIds.length > 0) {
+                const { error: deleteError } = await supabase
+                    .from("inventory_adjustments")
+                    .delete()
+                    .in("id", deleteIds);
+                if (deleteError) throw deleteError;
+            }
+
             const { error } = await supabase.from("inventory_adjustments").insert(rows);
             if (error) throw error;
             toast.success(`초기재고 ${rows.length}건이 저장되었습니다.`);
@@ -574,7 +598,7 @@ export default function InventoryPage() {
                 grade: isRawCrop ? adjGrade : null,
                 adjustment_type: adjType,
                 reason: adjReason || null,
-                adjusted_at: getNowKST().toISOString(),
+                adjusted_at: nowKSTTimestamp(),
             });
             if (error) throw error;
             toast.success("재고 조정이 저장되었습니다.");
