@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
-import { formatKSTDate, getNowKST, toKSTDateString } from "@/lib/utils";
+import { formatKSTDate, formatKSTLocale, getNowKST, toKSTDateString } from "@/lib/utils";
 import { fetchStockMap, StockMap } from "@/hooks/useInventory";
 import { toast } from "sonner";
 
@@ -114,9 +114,9 @@ export default function ProcessingRunsPage() {
         id: String(r.id),
         run_date: r.run_date ?? toKSTDateString(),
         output_crop_name: r.output_crop_name ?? "가공품",
-        output_quantity: Number(r.actual_output_quantity ?? r.actual_output_qty ?? 0),
+        output_quantity: Number(r.actual_output_quantity ?? 0),
         output_unit: r.output_unit ?? "개",
-        input_quantity: Number(r.input_quantity ?? r.input_qty ?? 0),
+        input_quantity: Number(r.input_quantity ?? 0),
         input_unit: r.input_unit ?? "kg",
         memo: r.memo ?? null,
         is_cancelled: Boolean(r.is_cancelled),
@@ -267,7 +267,7 @@ export default function ProcessingRunsPage() {
               <div key={r.id} className={`p-3.5 bg-white rounded-2xl border shadow-sm ${r.is_cancelled ? "opacity-50 border-gray-100" : "border-violet-100"}`}>
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-[10px] font-black text-gray-400">{r.run_date}</p>
+                    <p className="text-[10px] font-black text-gray-400">{formatKSTLocale(new Date(r.run_date))}</p>
                     <p className="text-sm font-black text-violet-700 truncate">{r.output_crop_name} +{r.output_quantity}{r.output_unit}</p>
                     <p className="text-[11px] text-gray-500 mt-0.5">투입 {r.input_quantity}{r.input_unit}</p>
                     {r.memo && <p className="text-[10px] text-gray-400 mt-1">{r.memo}</p>}

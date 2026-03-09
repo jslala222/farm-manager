@@ -50,13 +50,18 @@ export default function ProcessingRecipesPage() {
         .from("farm_crops")
         .select("*")
         .eq("farm_id", farm.id)
-        .eq("is_temporary", false)
-        .eq("enabled", true)
+        .eq("is_active", true)
+        .or("is_temporary.is.null,is_temporary.eq.false")
         .order("sort_order"),
     ]);
 
     if (recipeRes.error) {
       toast.error("레시피 조회 실패: " + recipeRes.error.message);
+      return;
+    }
+
+    if (cropsRes.error) {
+      toast.error("품목 조회 실패: " + cropsRes.error.message);
       return;
     }
 

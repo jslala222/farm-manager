@@ -7,7 +7,7 @@ import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
 import { useAuthStore } from "@/store/authStore";
 import { supabase, FarmCrop, ProcessingRecord } from "@/lib/supabase";
 import { fetchStockMap, StockMap, fetchGradeStockMap, GradeStockMap } from "@/hooks/useInventory";
-import { formatKSTDate, getNowKST, toKSTDateString } from "@/lib/utils";
+import { formatKSTDate, formatKSTLocale, getNowKST, toKSTDateString } from "@/lib/utils";
 import { toast } from "sonner";
 
 const ADJUSTMENT_TYPES = [
@@ -253,10 +253,142 @@ export default function InventoryPage() {
     };
 
     // ── 가공 처리 저장 ──────────────────────────────────
-    
+    const handleProcessSave = async () => {
+        if (!farm?.id) return;
+        if (!procOutputCrop.trim()) { toast.error("산출 가공품명을 입력해주세요."); return; }
+        const outQty = Number(procOutputQty);
+        if (!procOutputQty || isNaN(outQty) || outQty <= 0) { toast.error("산출 수량을 입력해주세요."); return; }
+        const validInputs = procInputs.filter(i => i.crop_name && i.quantity && Number(i.quantity) > 0);
+        if (validInputs.length === 0) { toast.error("투입 원물을 최소 1개 입력해주세요."); return; }
+
+        setProcSaving(true);
+        try {
+            // 1. 산출 가공품 확인/등록 + ID 획득 (FK 참조용)
+            const existing = farmCrops.find(c => c.crop_name === procOutputCrop.trim());
+            let outputCropId: string;
+            if (existing) {
+                outputCropId = existing.id;
+            } else {
+                const { data: cropData, error: cropErr } = await supabase.from("farm_crops").insert({
+                    farm_id: farm.id,
+                    crop_name: procOutputCrop.trim(),
+                    crop_icon: procOutputIcon,
+                    default_unit: procOutputUnit,
+                    available_units: [procOutputUnit],
+                    sort_order: farmCrops.length,
+                    is_temporary: true,
+                    category: "processed",
+                }).select("id").single();
+                if (cropErr) throw cropErr;
+                outputCropId = cropData!.id;
+            }
+
+            // 2. processing_records INSERT (output_crop_id FK 포함)
+            const { data: procData, error: procErr } = await supabase
+                .from("processing_records")
+                .insert({
+                    farm_id: farm.id,
+                    processed_date: procDate,
+                    output_crop_id: outputCropId,
+                    output_crop_name: procOutputCrop.trim(),
+                    output_quantity: outQty,
+                    output_unit: procOutputUnit,
+                    inputs: validInputs.map(i => ({ crop_name: i.crop_name, quantity: Number(i.quantity), unit: i.unit })),
+                    memo: procMemo.trim() || null,
+                    is_cancelled: false,
+                })
+                .select()
+                .single();
+            if (procErr) throw procErr;
+            const procId = procData.id;
+
+            // 3. inventory_adjustments 일괄 INSERT (투입 원물 차감 + 산출품 증가)
+            const adjRows = [
+                // 산출 가공품 증가
+                {
+                    farm_id: farm.id,
+                    crop_name: procOutputCrop.trim(),
+                    quantity: outQty,
+                    adjustment_type: "correction",
+                    reason: `가공 처리 산출 (${validInputs.map(i => i.crop_name).join(', ')})`,
+                    adjusted_at: nowKSTTimestamp(),
+                    processing_record_id: procId,
+                },
+                // 투입 원물 차감
+                ...validInputs.map(i => ({
+                    farm_id: farm.id,
+                    crop_name: i.crop_name,
+                    quantity: -Math.abs(Number(i.quantity)),
+                    adjustment_type: "correction",
+                    reason: `가공 처리 투입 → ${procOutputCrop.trim()}`,
+                    adjusted_at: nowKSTTimestamp(),
+                    processing_record_id: procId,
+                })),
+            ];
+            const { error: adjErr } = await supabase.from("inventory_adjustments").insert(adjRows);
+            if (adjErr) throw adjErr;
+
+            toast.success("가공 처리가 기록되었습니다.");
+            setProcOutputCrop(""); setProcOutputIcon("🎁"); setProcOutputQty(""); setProcOutputUnit("개");
+            setProcMemo(""); setProcDate(toKSTDateString());
+            setProcInputs([{ crop_name: "", quantity: "", unit: "kg" }]);
+            setShowProcessForm(false);
+            loadAll();
+        } catch (e) {
+            toast.error("저장 실패: " + ((e as Error).message || "알 수 없는 오류"));
+        } finally {
+            setProcSaving(false);
+        }
+    };
 
     // ── 가공 처리 취소(롤백) ─────────────────────────────
-    
+    const handleProcessCancel = async (rec: ProcessingRecord) => {
+        if (!farm?.id || procCancelId === rec.id) return;
+        if (!confirm(`"${rec.output_crop_name}" 가공 처리를 취소하면 재고가 원복됩니다. 계속할까요?`)) return;
+        setProcCancelId(rec.id);
+        try {
+            // 1. processing_records 취소 처리
+            const { error: cancelErr } = await supabase
+                .from("processing_records")
+                .update({ is_cancelled: true, cancelled_at: nowKSTTimestamp() })
+                .eq("id", rec.id);
+            if (cancelErr) throw cancelErr;
+
+            // 2. 역방향 inventory_adjustments INSERT (부호 반전)
+            const inputs = rec.inputs as { crop_name: string; quantity: number; unit: string }[];
+            const reverseRows = [
+                // 산출 가공품 원복 차감
+                {
+                    farm_id: farm.id,
+                    crop_name: rec.output_crop_name,
+                    quantity: -Math.abs(rec.output_quantity),
+                    adjustment_type: "correction",
+                    reason: `가공 취소 원복 (${rec.processed_date})`,
+                    adjusted_at: nowKSTTimestamp(),
+                    processing_record_id: rec.id,
+                },
+                // 투입 원물 원복 증가
+                ...inputs.map(i => ({
+                    farm_id: farm.id,
+                    crop_name: i.crop_name,
+                    quantity: Math.abs(i.quantity),
+                    adjustment_type: "correction",
+                    reason: `가공 취소 원복 → ${rec.output_crop_name} (${rec.processed_date})`,
+                    adjusted_at: nowKSTTimestamp(),
+                    processing_record_id: rec.id,
+                })),
+            ];
+            const { error: revErr } = await supabase.from("inventory_adjustments").insert(reverseRows);
+            if (revErr) throw revErr;
+
+            toast.success("가공 처리가 취소되어 재고가 원복되었습니다.");
+            loadAll();
+        } catch (e) {
+            toast.error("취소 실패: " + ((e as Error).message || "알 수 없는 오류"));
+        } finally {
+            setProcCancelId(null);
+        }
+    };
 
     // ── 가공품 수정 ──────────────────────────────────
     const handleOpenEditCrop = async (crop: FarmCrop) => {
@@ -914,7 +1046,7 @@ export default function InventoryPage() {
                                         <p className="text-[11px] text-gray-500">{categoryLabel} · {typeInfo?.label ?? adj.adjustment_type} {adj.reason ? `· ${adj.reason}` : ''}</p>
                                         {adj.adjusted_at && (
                                             <p className="text-[10px] text-gray-400 mt-0.5">
-                                                {adj.adjusted_at}
+                                                {formatKSTLocale(new Date(adj.adjusted_at))}
                                             </p>
                                         )}
                                     </div>
@@ -1566,9 +1698,5 @@ export default function InventoryPage() {
         </div>
     );
 }
-
-
-
-
 
 
