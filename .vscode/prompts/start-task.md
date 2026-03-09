@@ -1,0 +1,1 @@
+AGENTS.md와 docs/PROCESSING_B_PLAYBOOK.md를 먼저 읽고, farm-manager는 5555 포트와 KST 규칙을 지키며 B안(레시피 기반 가공)으로 기본 진행해.

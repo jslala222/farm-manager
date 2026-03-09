@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { PackageCheck, RefreshCcw, Plus, TrendingUp, TrendingDown, Minus, AlertTriangle, CheckCircle, Factory, X, RotateCcw, SmilePlus, ClipboardList } from "lucide-react";
 import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
 import { useAuthStore } from "@/store/authStore";
 import { supabase, FarmCrop, ProcessingRecord } from "@/lib/supabase";
 import { fetchStockMap, StockMap, fetchGradeStockMap, GradeStockMap } from "@/hooks/useInventory";
-import { formatKSTDate, getNowKST, toKSTDateString } from "@/lib/utils";
+import { formatKSTDate, formatKSTLocale, getNowKST, toKSTDateString } from "@/lib/utils";
 import { toast } from "sonner";
 
 const ADJUSTMENT_TYPES = [
@@ -33,6 +34,10 @@ type ProcInput = { crop_name: string; quantity: string; unit: string };
 
 export default function InventoryPage() {
     const { farm, initialized, initialize, cropIconMap, refreshCropIconMap } = useAuthStore();
+    const processingEnabled = (farm as any)?.processing_enabled !== false;
+    const [showProcessingMenu, setShowProcessingMenu] = useState(false);
+    const [productionMenuEnabled, setProductionMenuEnabled] = useState(false);
+    const [menuResolved, setMenuResolved] = useState(false);
     const [stockMap, setStockMap] = useState<StockMap>({});
     const [farmCrops, setFarmCrops] = useState<FarmCrop[]>([]);
     const [loading, setLoading] = useState(false);
@@ -102,6 +107,20 @@ export default function InventoryPage() {
     useEffect(() => {
         if (!initialized) initialize();
     }, [initialize, initialized]);
+
+    // 농장별 가공 메뉴 자동 구분
+    useEffect(() => {
+        if (!farm?.id || menuResolved) return;
+        const mode = (farm as any)?.processing_mode || "auto";
+        const prodEnabled = (farm as any)?.processing_production_enabled !== false;
+        setProductionMenuEnabled(prodEnabled);
+        if (mode === "manual") {
+            setShowProcessingMenu(false);
+        } else {
+            setShowProcessingMenu(processingEnabled);
+        }
+        setMenuResolved(true);
+    }, [farm?.id, processingEnabled, menuResolved]);
 
     const loadAll = useCallback(async () => {
         if (!farm?.id) return;
@@ -664,35 +683,68 @@ export default function InventoryPage() {
                         <p className="text-xs text-gray-500 font-medium">수확 기준 실시간 재고</p>
                     </div>
                 </div>
-                <div className="flex gap-2 flex-wrap justify-end">
-                    <button onClick={() => {
-                            setInitRawEntries({});
-                            setInitProcEntries({});
-                            setShowInitStockForm(true);
-                        }}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 active:scale-95 transition-all shadow-lg shadow-green-100">
-                        <ClipboardList className="w-4 h-4" />
-                        초기재고 설정
-                    </button>
-                    <button onClick={() => setShowProcessForm(true)}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-bold hover:bg-purple-700 active:scale-95 transition-all shadow-lg shadow-purple-100">
-                        <Factory className="w-4 h-4" />
-                        가공 처리
-                    </button>
-                    <button onClick={() => setShowQuickAddForm(true)}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-amber-500 text-white rounded-xl text-sm font-bold hover:bg-amber-600 active:scale-95 transition-all shadow-lg shadow-amber-100">
-                        <Plus className="w-4 h-4" />
-                        가공품 추가
-                    </button>
-                    <button onClick={loadAll} disabled={loading}
-                        className="p-2.5 bg-gray-100 hover:bg-gray-200 rounded-xl transition-all disabled:opacity-50">
-                        <RefreshCcw className={`w-4 h-4 text-gray-600 ${loading ? 'animate-spin' : ''}`} />
-                    </button>
-                    <button onClick={() => setShowAdjForm(true)}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 active:scale-95 transition-all shadow-lg shadow-blue-100">
-                        <Plus className="w-4 h-4" />
-                        재고 조정
-                    </button>
+                <div className="flex flex-col gap-2 items-end">
+                    {/* 기본 작업 */}
+                    <div className="flex gap-1.5 flex-wrap justify-end">
+                        <button onClick={() => {
+                                setInitRawEntries({});
+                                setInitProcEntries({});
+                                setShowInitStockForm(true);
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-bold hover:bg-green-700 active:scale-95 transition-all shadow-md">
+                            <ClipboardList className="w-3.5 h-3.5" />
+                            초기재고
+                        </button>
+                        <button onClick={() => setShowAdjForm(true)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 active:scale-95 transition-all shadow-md">
+                            <Plus className="w-3.5 h-3.5" />
+                            재고조정
+                        </button>
+                        <button onClick={loadAll} disabled={loading}
+                            className="p-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition-all disabled:opacity-50">
+                            <RefreshCcw className={`w-3.5 h-3.5 text-gray-600 ${loading ? 'animate-spin' : ''}`} />
+                        </button>
+                    </div>
+                    {/* 가공 작업 (접기/펼치기) */}
+                    {processingEnabled && (
+                        <button
+                            onClick={() => setShowProcessingMenu(!showProcessingMenu)}
+                            className="px-3 py-1.5 bg-gradient-to-r from-purple-50 to-indigo-50 hover:from-purple-100 hover:to-indigo-100 rounded-lg text-xs font-bold text-purple-700 border border-purple-200 flex items-center gap-1.5 transition-all active:scale-95"
+                        >
+                            <Factory className="w-3.5 h-3.5" />
+                            {showProcessingMenu ? "가공 작업 접기 ▲" : "가공 작업 펼치기 ▼"}
+                        </button>
+                    )}
+                    {showProcessingMenu && (
+                        <div className="flex gap-1.5 flex-wrap justify-end">
+                            {productionMenuEnabled && (
+                                <>
+                                    <Link
+                                        href="/processing/recipes"
+                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 active:scale-95 transition-all shadow-md"
+                                    >
+                                        레시피
+                                    </Link>
+                                    <Link
+                                        href="/processing/runs"
+                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 text-white rounded-lg text-xs font-bold hover:bg-violet-700 active:scale-95 transition-all shadow-md"
+                                    >
+                                        생산확정
+                                    </Link>
+                                </>
+                            )}
+                            <button onClick={() => setShowProcessForm(true)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-700 active:scale-95 transition-all shadow-md">
+                                <Factory className="w-3.5 h-3.5" />
+                                가공처리
+                            </button>
+                            <button onClick={() => setShowQuickAddForm(true)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 text-white rounded-lg text-xs font-bold hover:bg-amber-600 active:scale-95 transition-all shadow-md">
+                                <Plus className="w-3.5 h-3.5" />
+                                가공품추가
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -934,7 +986,7 @@ export default function InventoryPage() {
                                         <p className="text-[11px] text-gray-500">{categoryLabel} · {typeInfo?.label ?? adj.adjustment_type} {adj.reason ? `· ${adj.reason}` : ''}</p>
                                         {adj.adjusted_at && (
                                             <p className="text-[10px] text-gray-400 mt-0.5">
-                                                {new Date(adj.adjusted_at).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })}
+                                                {formatKSTLocale(new Date(adj.adjusted_at))}
                                             </p>
                                         )}
                                     </div>
@@ -995,7 +1047,7 @@ export default function InventoryPage() {
                             <div className="relative">
                                 <button
                                     onClick={() => setShowProcIconPicker(!showProcIconPicker)}
-                                    className="w-full p-2 bg-purple-50 border border-purple-200 rounded-lg text-xs font-bold text-purple-700 hover:bg-purple-100 transition-all flex items-center justify-center gap-1"
+                                    className="w-full p-2.5 bg-purple-50 border border-purple-200 rounded-lg text-xs font-bold text-purple-700 hover:bg-purple-100 transition-all flex items-center justify-center gap-1"
                                 >
                                     <SmilePlus className="w-4 h-4" /> 이모지 더보기
                                 </button>
@@ -1127,8 +1179,8 @@ export default function InventoryPage() {
                             <label className="text-[10px] font-black text-gray-500 uppercase">🎨 아이콘 선택</label>
                             
                             {/* 선택된 아이콘 미리보기 */}
-                            <div className="flex items-center justify-center h-14 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border border-amber-200">
-                                <span className="text-4xl">{quickIcon}</span>
+                            <div className="flex items-center justify-center h-16 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border-2 border-amber-300">
+                                <span className="text-6xl">{quickIcon}</span>
                             </div>
 
                             <div className="grid grid-cols-5 gap-2">
@@ -1136,7 +1188,7 @@ export default function InventoryPage() {
                                     <button
                                         key={icon}
                                         onClick={() => setQuickIcon(icon)}
-                                        className={`p-3 rounded-xl border-2 text-xl transition-all ${
+                                        className={`p-3 rounded-xl border-2 text-2xl transition-all ${
                                             quickIcon === icon 
                                                 ? 'border-amber-400 bg-amber-50' 
                                                 : 'border-gray-200 bg-gray-50 hover:border-gray-300'
@@ -1146,19 +1198,20 @@ export default function InventoryPage() {
                                     </button>
                                 ))}
                             </div>
+
                             {/* 이모지 더보기 버튼 */}
                             <div className="relative">
                                 <button
                                     onClick={() => setShowQuickIconPicker(!showQuickIconPicker)}
-                                    className="w-full p-2 bg-amber-50 border border-amber-200 rounded-xl text-xs font-bold text-amber-700 hover:bg-amber-100 transition-all flex items-center justify-center gap-1"
+                                    className="w-full p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs font-bold text-amber-700 hover:bg-amber-100 transition-all flex items-center justify-center gap-1"
                                 >
                                     <SmilePlus className="w-4 h-4" /> 이모지 더보기
                                 </button>
                                 {showQuickIconPicker && (
-                                    <div className="absolute top-10 left-0 z-50 bg-white rounded-xl shadow-2xl border border-gray-200 p-3 space-y-2">
+                                    <div className="absolute top-12 left-0 z-50 bg-white rounded-xl shadow-2xl border border-gray-200 p-3 space-y-2">
                                         {/* 선택된 이모지 큰 표시 */}
                                         <div className="text-center pb-2 border-b border-gray-200">
-                                            <div className="text-4xl mb-1">{quickIcon}</div>
+                                            <div className="text-5xl mb-1">{quickIcon}</div>
                                             <p className="text-xs text-gray-500 font-bold">선택됨</p>
                                         </div>
                                         <EmojiPicker
