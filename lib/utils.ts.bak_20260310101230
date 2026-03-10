@@ -181,15 +181,11 @@ export const compressImage = async (file: File, targetKB: number = 150): Promise
 };
 
 
-
-  // Non-Secure Context 폴백: timestamp + random
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-}
-
-// Non-Secure Context 대응 ID 생성 함수
 export function generateId(): string {
+  // Secure Context에서는 crypto.randomUUID 사용
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
     return crypto.randomUUID();
   }
+  // Non-Secure Context 폴백: timestamp + random
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
