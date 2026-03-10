@@ -7,7 +7,7 @@ import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
 import { useAuthStore } from "@/store/authStore";
 import { supabase, FarmCrop, ProcessingRecord } from "@/lib/supabase";
 import { fetchStockMap, StockMap, fetchGradeStockMap, GradeStockMap } from "@/hooks/useInventory";
-import { formatKSTDate, getNowKST, toKSTDateString } from "@/lib/utils";
+import { formatKSTDate, getNowKST, toKSTDateString , generateId } from "@/lib/utils";
 import { toast } from "sonner";
 
 const ADJUSTMENT_TYPES = [
@@ -1566,6 +1566,7 @@ export default function InventoryPage() {
         </div>
     );
 }
+
 
 
 
