@@ -728,14 +728,14 @@ export default function InventoryPage() {
                             const fmtN = (n: number) => n % 1 === 0 ? n.toFixed(0) : n.toFixed(1);
                             return (
                                 <div key={crop.id}
-                                    className={`p-3 rounded-2xl border-2 transition-all ${
+                                    className={`p-4 rounded-2xl border-2 transition-all ${
                                         isDisabled 
-                                            ? 'border-gray-300 border-dashed bg-gray-50' 
+                                            ? 'border-gray-200 bg-gray-50 opacity-50' 
                                             : isLow ? 'border-red-200 bg-white' : hasGradeData ? 'border-green-100 bg-white' : 'border-gray-100 bg-white'
                                     }`}>
                                     {/* 헤더: 아이콘 + 상태 뱃지 */}
                                     <div className="flex items-start justify-between mb-1.5">
-                                        <span className="text-xl">{icon}</span>
+                                        <span className="text-2xl">{icon}</span>
                                         {isDisabled ? (
                                             <span className="flex items-center gap-1 text-[10px] font-black text-gray-500 bg-gray-200 px-2 py-0.5 rounded-full">
                                                 ⏸️ 비활성화
@@ -766,22 +766,22 @@ export default function InventoryPage() {
                                     {/* ── 원물 + 등급 데이터 있음: 등급 박스 표시 ── */}
                                     {hasGradeData ? (
                                         <>
-                                            <div className="grid grid-cols-3 gap-1.5">
-                                                <div className="bg-red-50 border border-red-100 rounded-xl py-1.5 text-center">
+                                            <div className="grid grid-cols-3 gap-1">
+                                                <div className="bg-red-50 border border-red-100 rounded-xl py-2 text-center">
                                                     <p className="text-[9px] font-black text-red-400 mb-0.5">상</p>
-                                                    <p className={`text-base font-black leading-none ${gs.sang <= 0 ? 'text-red-300' : 'text-red-700'}`}>
+                                                    <p className={`text-sm font-black leading-none ${gs.sang <= 0 ? 'text-red-300' : 'text-red-700'}`}>
                                                         {fmtN(gs.sang)}
                                                     </p>
                                                 </div>
-                                                <div className="bg-amber-50 border border-amber-100 rounded-xl py-1.5 text-center">
+                                                <div className="bg-amber-50 border border-amber-100 rounded-xl py-2 text-center">
                                                     <p className="text-[9px] font-black text-amber-400 mb-0.5">중</p>
-                                                    <p className={`text-base font-black leading-none ${gs.jung <= 0 ? 'text-amber-300' : 'text-amber-700'}`}>
+                                                    <p className={`text-sm font-black leading-none ${gs.jung <= 0 ? 'text-amber-300' : 'text-amber-700'}`}>
                                                         {fmtN(gs.jung)}
                                                     </p>
                                                 </div>
-                                                <div className="bg-gray-50 border border-gray-100 rounded-xl py-1.5 text-center">
+                                                <div className="bg-gray-50 border border-gray-100 rounded-xl py-2 text-center">
                                                     <p className="text-[9px] font-black text-gray-400 mb-0.5">하</p>
-                                                    <p className={`text-base font-black leading-none ${gs.ha <= 0 ? 'text-gray-300' : 'text-gray-600'}`}>
+                                                    <p className={`text-sm font-black leading-none ${gs.ha <= 0 ? 'text-gray-300' : 'text-gray-600'}`}>
                                                         {fmtN(gs.ha)}
                                                     </p>
                                                 </div>
@@ -794,7 +794,7 @@ export default function InventoryPage() {
                                                     <span className="text-[10px] font-bold text-gray-400 ml-1">{crop.default_unit}</span>
                                                 </span>
                                             </div>
-                                            <div className={`mt-1 text-[9px] font-black ${ungradedGap > 0 ? 'text-amber-600' : 'text-gray-400'}`}>
+                                            <div className={`mt-1 text-[10px] font-black ${ungradedGap > 0 ? 'text-amber-600' : 'text-gray-400'}`}>
                                                 무등급 차감(과거) {fmtN(ungradedGap)}
                                                 <span className={`text-[10px] font-bold ml-1 ${ungradedGap > 0 ? 'text-amber-500' : 'text-gray-400'}`}>
                                                     {crop.default_unit}
@@ -804,14 +804,14 @@ export default function InventoryPage() {
                                     ) : (
                                         /* ── 기본 레이아웃 (등급없는 원물 or 가공품) ── */
                                         <>
-                                            <p className={`text-xl font-black ${isLow ? 'text-red-600' : 'text-gray-900'}`}>
+                                            <p className={`text-2xl font-black ${isLow ? 'text-red-600' : 'text-gray-900'}`}>
                                                 {fmtN(displayStock)}
                                                 <span className="text-xs font-bold text-gray-400 ml-1">{crop.default_unit}</span>
                                             </p>
                                             {soldRecord > 0 && (
-                                                <p className="mt-1 text-[9px] font-black text-purple-600">
+                                                <p className="mt-1 text-[11px] font-black text-rose-600">
                                                     판매기록 {fmtN(soldRecord)}
-                                                    <span className="text-[9px] font-bold text-purple-400 ml-1">{crop.default_unit}</span>
+                                                    <span className="text-[10px] font-bold text-rose-400 ml-1">{crop.default_unit}</span>
                                                 </p>
                                             )}
                                         </>
@@ -1566,7 +1566,6 @@ export default function InventoryPage() {
         </div>
     );
 }
-
 
 
 
