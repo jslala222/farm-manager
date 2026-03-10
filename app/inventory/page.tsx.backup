@@ -498,62 +498,6 @@ export default function InventoryPage() {
         }
     };
 
-
-    const handleProcessCancel = async (rec: any) => {
-        if (!farm?.id) return;
-        setProcCancelId(rec.id);
-        
-        try {
-            const { error } = await supabase
-                .from('processing_runs')
-                .update({ 
-                    status: 'cancelled',
-                    cancelled_at: formatKSTDate(getNowKST())
-                })
-                .eq('id', rec.id)
-                .eq('farm_id', farm.id);
-
-            if (error) throw error;
-            
-            toast.success('가공 취소 완료');
-            loadAll();
-            
-        } catch (err: any) {
-            console.error('가공 취소 실패:', err);
-            toast.error(err.message || '가공 취소 실패');
-        } finally {
-            setProcCancelId('');
-        }
-    };
-    const handleProcessSave = async () => {
-        if (!farm?.id || !procOutputCrop.trim() || !procOutputQty) return;
-        
-        setProcSaving(true);
-        try {
-            const { error } = await supabase
-                .from('processing_runs')
-                .insert({
-                    farm_id: farm.id,
-                    output_crop: procOutputCrop,
-                    output_quantity: procOutputQty,
-                    status: 'completed',
-                    completed_at: formatKSTDate(getNowKST())
-                });
-
-            if (error) throw error;
-            
-            toast.success('가공 처리 저장 완료');
-            setProcOutputCrop('');
-            setProcOutputQty('');
-            loadAll();
-            
-        } catch (err: any) {
-            console.error('가공 처리 저장 실패:', err);
-            toast.error(err.message || '가공 처리 저장 실패');
-        } finally {
-            setProcSaving(false);
-        }
-    };
     const handleAdjSave = async () => {
         if (!farm?.id || !adjCrop || !adjQty) {
             toast.error("품목과 수량을 입력해주세요.");
