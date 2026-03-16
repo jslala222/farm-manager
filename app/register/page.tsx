@@ -22,6 +22,7 @@ export default function RegisterPage() {
         postal_code: "",
         business_number: "",
         notes: "",
+        detail_address: "",
     });
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -63,6 +64,7 @@ export default function RegisterPage() {
                 farm_name: form.farm_name,
                 phone: form.phone || null,
                 address: form.address || null,
+                detail_address: form.detail_address || null,
                 postal_code: form.postal_code || null,
                 business_number: form.business_number || null,
                 notes: form.notes || null,
@@ -170,25 +172,38 @@ export default function RegisterPage() {
                                             className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none transition-all" />
                                     </div>
                                 </div>
-                                <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
-                                    <div className="flex-1 min-w-0">
-                                        <AddressSearch
-                                            label="농장 주소"
-                                            value={form.address}
-                                            onChange={(val) => setForm({ ...form, address: val })}
-                                            onAddressSelect={(res) => setForm({
-                                                ...form,
-                                                address: res.address,
-                                                postal_code: res.zonecode
-                                            })}
-                                            placeholder="농장 위치를 검색하거나 입력하세요"
-                                        />
+                                <div className="space-y-3">
+                                    <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
+                                        <div className="flex-1 min-w-0">
+                                            <AddressSearch
+                                                label="농장 주소"
+                                                value={form.address}
+                                                onChange={(val) => setForm({ ...form, address: val })}
+                                                onAddressSelect={(res) => setForm({
+                                                    ...form,
+                                                    address: res.address,
+                                                    postal_code: res.zonecode
+                                                })}
+                                                placeholder="농장 위치를 검색하거나 입력하세요"
+                                            />
+                                        </div>
+                                        <div className="w-full sm:w-28 space-y-2 sm:shrink-0">
+                                            <label className="text-[10px] font-bold text-gray-700 uppercase tracking-tight ml-1">우편번호</label>
+                                            <input type="text" value={form.postal_code}
+                                                onChange={(e) => setForm({ ...form, postal_code: e.target.value })}
+                                                className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none text-center font-bold text-sm" placeholder="00000" />
+                                        </div>
                                     </div>
-                                    <div className="w-full sm:w-20 space-y-2 sm:shrink-0">
-                                        <label className="text-[10px] font-bold text-gray-700 uppercase tracking-tight ml-1">우편번호</label>
-                                        <input type="text" value={form.postal_code}
-                                            onChange={(e) => setForm({ ...form, postal_code: e.target.value })}
-                                            className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none text-center font-bold text-sm" placeholder="00000" />
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">상세 정보 (나머지 주소)</label>
+                                        <input
+                                            type="text"
+                                            name="detail_address"
+                                            value={form.detail_address}
+                                            onChange={handleChange}
+                                            placeholder="동/호수, 건물명 등 나머지 주소를 입력하세요"
+                                            className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none transition-all text-sm"
+                                        />
                                     </div>
                                 </div>
                                 <div>
