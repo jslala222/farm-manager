@@ -187,7 +187,7 @@ export default function RegisterPage() {
                                                 placeholder="농장 위치를 검색하거나 입력하세요"
                                             />
                                         </div>
-                                        <div className="w-full sm:w-28 space-y-2 sm:shrink-0">
+                                        <div className="w-32 space-y-2 shrink-0">
                                             <label className="text-[10px] font-bold text-gray-700 uppercase tracking-tight ml-1">우편번호</label>
                                             <input type="text" value={form.postal_code}
                                                 onChange={(e) => setForm({ ...form, postal_code: e.target.value })}
@@ -201,6 +201,7 @@ export default function RegisterPage() {
                                             name="detail_address"
                                             value={form.detail_address}
                                             onChange={handleChange}
+                                            autoComplete="new-password"
                                             placeholder="동/호수, 건물명 등 나머지 주소를 입력하세요"
                                             className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none transition-all text-sm"
                                         />
