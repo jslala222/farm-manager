@@ -24,7 +24,8 @@ import {
     Package2,
     ClipboardList,
     Wallet,
-    PackageCheck
+    PackageCheck,
+    Search
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { useEffect, useState } from "react";
@@ -56,6 +57,7 @@ export default function NavBar() {
     const [showFarmSwitcher, setShowFarmSwitcher] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
     const [farms, setFarms] = useState<Farm[]>([]);
+    const [farmSearch, setFarmSearch] = useState(""); // 농장 검색어
 
     // [bkit] 긴급 연결 복구 로직
     const handleEmergencyReset = async () => {
@@ -135,21 +137,59 @@ export default function NavBar() {
 
                 {/* 농장 전환 메뉴 (관리자용) */}
                 {showFarmSwitcher && profile?.role === 'admin' && (
-                    <div className="mx-3 mt-3 p-2 bg-gray-50 rounded-xl space-y-1 max-h-48 overflow-y-auto border border-gray-100 animate-in fade-in slide-in-from-top-2">
-                        <p className="text-[10px] font-black text-gray-700 px-2 py-1 uppercase">농장 전환</p>
-                        {farms.map(f => (
-                            <button
-                                key={f.id}
-                                onClick={() => {
-                                    setFarm(f);
-                                    setShowFarmSwitcher(false);
-                                }}
-                                className={`w-full text-left px-2 py-1.5 rounded-lg text-xs font-bold transition-all
-                                    ${farm?.id === f.id ? 'bg-red-500 text-white' : 'text-gray-600 hover:bg-gray-200'}`}
-                            >
-                                {f.farm_name}
-                            </button>
-                        ))}
+                    <div className="mx-3 mt-3 bg-white rounded-xl border border-gray-100 shadow-lg animate-in fade-in slide-in-from-top-2 overflow-hidden">
+                        {/* 검색창 */}
+                        <div className="p-2 border-b border-gray-100">
+                            <div className="flex items-center gap-1.5 bg-gray-50 rounded-lg px-2 py-1.5">
+                                <Search className="w-3 h-3 text-gray-400 shrink-0" />
+                                <input
+                                    type="text"
+                                    value={farmSearch}
+                                    onChange={e => setFarmSearch(e.target.value)}
+                                    placeholder="농장명 검색..."
+                                    autoFocus
+                                    className="flex-1 text-xs bg-transparent outline-none text-gray-700 placeholder-gray-400"
+                                />
+                                {farmSearch && (
+                                    <button onClick={() => setFarmSearch("")} className="text-gray-400 hover:text-gray-600">
+                                        <X className="w-3 h-3" />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                        {/* 농장 목록 */}
+                        <div className="max-h-52 overflow-y-auto p-1.5 space-y-0.5">
+                            {farms
+                                .filter(f => f.farm_name.toLowerCase().includes(farmSearch.toLowerCase()))
+                                .map(f => (
+                                    <button
+                                        key={f.id}
+                                        onClick={() => {
+                                            setFarm(f);
+                                            setShowFarmSwitcher(false);
+                                            setFarmSearch("");
+                                        }}
+                                        className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-between gap-2
+                                            ${farm?.id === f.id ? 'bg-red-500 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+                                    >
+                                        <span className="truncate">{f.farm_name}</span>
+                                        {farm?.id === f.id && <span className="text-[9px] opacity-80 shrink-0">현재</span>}
+                                    </button>
+                                ))
+                            }
+                            {farms.filter(f => f.farm_name.toLowerCase().includes(farmSearch.toLowerCase())).length === 0 && (
+                                <p className="text-center text-[11px] text-gray-400 py-3">검색 결과가 없습니다</p>
+                            )}
+                        </div>
+                        {/* 하단 카운터 */}
+                        <div className="px-3 py-1.5 border-t border-gray-100 bg-gray-50">
+                            <p className="text-[10px] text-gray-400">
+                                {farmSearch
+                                    ? `"${farmSearch}" — ${farms.filter(f => f.farm_name.toLowerCase().includes(farmSearch.toLowerCase())).length}개 검색됨`
+                                    : `전체 ${farms.length}개 농장`
+                                }
+                            </p>
+                        </div>
                     </div>
                 )}
 
@@ -236,22 +276,55 @@ export default function NavBar() {
 
                         {/* 모바일 농장 전환 (관리자용) */}
                         {profile?.role === 'admin' && (
-                            <div className="p-4 bg-gray-50 border-b border-gray-100 space-y-2">
-                                <p className="text-[10px] font-black text-gray-700 uppercase ml-1">농장 전환</p>
-                                <div className="grid grid-cols-1 gap-1.5">
-                                    {farms.map(f => (
-                                        <button
-                                            key={f.id}
-                                            onClick={() => {
-                                                setFarm(f);
-                                                setMobileOpen(false);
-                                            }}
-                                            className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold transition-all
-                                                ${farm?.id === f.id ? 'bg-red-500 text-white shadow-md' : 'bg-white text-gray-600 border border-gray-100'}`}
-                                        >
-                                            {f.farm_name}
-                                        </button>
-                                    ))}
+                            <div className="bg-gray-50 border-b border-gray-100">
+                                <div className="px-4 pt-3 pb-2">
+                                    <p className="text-[10px] font-black text-gray-700 uppercase mb-2">농장 전환</p>
+                                    {/* 모바일 검색창 */}
+                                    <div className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 border border-gray-200">
+                                        <Search className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                                        <input
+                                            type="text"
+                                            value={farmSearch}
+                                            onChange={e => setFarmSearch(e.target.value)}
+                                            placeholder="농장명 검색..."
+                                            className="flex-1 text-xs bg-transparent outline-none text-gray-700 placeholder-gray-400"
+                                        />
+                                        {farmSearch && (
+                                            <button onClick={() => setFarmSearch("")} className="text-gray-400">
+                                                <X className="w-3.5 h-3.5" />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                                {/* 필터된 농장 목록 */}
+                                <div className="max-h-44 overflow-y-auto px-4 pb-3 space-y-1.5">
+                                    {farms
+                                        .filter(f => f.farm_name.toLowerCase().includes(farmSearch.toLowerCase()))
+                                        .map(f => (
+                                            <button
+                                                key={f.id}
+                                                onClick={() => {
+                                                    setFarm(f);
+                                                    setMobileOpen(false);
+                                                    setFarmSearch("");
+                                                }}
+                                                className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between
+                                                    ${farm?.id === f.id ? 'bg-red-500 text-white shadow-md' : 'bg-white text-gray-600 border border-gray-100'}`}
+                                            >
+                                                <span className="truncate">{f.farm_name}</span>
+                                                {farm?.id === f.id && <span className="text-[9px] opacity-80">현재</span>}
+                                            </button>
+                                        ))
+                                    }
+                                    {farms.filter(f => f.farm_name.toLowerCase().includes(farmSearch.toLowerCase())).length === 0 && (
+                                        <p className="text-center text-xs text-gray-400 py-2">검색 결과가 없습니다</p>
+                                    )}
+                                    <p className="text-[10px] text-gray-400 text-center pt-1">
+                                        {farmSearch
+                                            ? `${farms.filter(f => f.farm_name.toLowerCase().includes(farmSearch.toLowerCase())).length}개 검색됨`
+                                            : `전체 ${farms.length}개 농장`
+                                        }
+                                    </p>
                                 </div>
                             </div>
                         )}
