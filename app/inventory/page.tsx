@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
@@ -37,6 +37,8 @@ export default function InventoryPage() {
     const processingEnabled = (farm as any)?.processing_enabled !== false;
     const [showProcessingMenu, setShowProcessingMenu] = useState(false);
     const [productionMenuEnabled, setProductionMenuEnabled] = useState(false);
+    const [showRecipeModal, setShowRecipeModal] = useState(false);   // 레시피 모달
+    const [showRunModal, setShowRunModal] = useState(false);         // 생산확정 모달
     const [menuResolved, setMenuResolved] = useState(false);
     const [stockMap, setStockMap] = useState<StockMap>({});
     const [farmCrops, setFarmCrops] = useState<FarmCrop[]>([]);
@@ -638,6 +640,7 @@ export default function InventoryPage() {
     });
 
     return (
+        <>
         <div className="p-4 md:p-6 pb-32 max-w-2xl mx-auto space-y-6 animate-in fade-in duration-500">
             {/* 헤더 */}
             <div className="flex items-center justify-between">
@@ -686,25 +689,23 @@ export default function InventoryPage() {
                         <div className="flex gap-1.5 flex-wrap justify-end">
                             {productionMenuEnabled && (
                                 <>
-                                    <Link
-                                        href="/processing/recipes"
+                                    {/* 레시피 → 모달로 열기 */}
+                                    <button
+                                        onClick={() => setShowRecipeModal(true)}
                                         className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 active:scale-95 transition-all shadow-md"
                                     >
                                         레시피
-                                    </Link>
-                                    <Link
-                                        href="/processing/runs"
+                                    </button>
+                                    {/* 생산확정 → 모달로 열기 */}
+                                    <button
+                                        onClick={() => setShowRunModal(true)}
                                         className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 text-white rounded-lg text-xs font-bold hover:bg-violet-700 active:scale-95 transition-all shadow-md"
                                     >
                                         생산확정
-                                    </Link>
+                                    </button>
                                 </>
                             )}
-                            <button onClick={() => setShowProcessForm(true)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-700 active:scale-95 transition-all shadow-md">
-                                <Factory className="w-3.5 h-3.5" />
-                                가공처리
-                            </button>
+                            {/* 가공처리 버튼 삭제 (B안) */}
                             <button onClick={() => setShowQuickAddForm(true)}
                                 className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 text-white rounded-lg text-xs font-bold hover:bg-amber-600 active:scale-95 transition-all shadow-md">
                                 <Plus className="w-3.5 h-3.5" />
@@ -1620,6 +1621,67 @@ export default function InventoryPage() {
                 </div>
             )}
         </div>
+
+        {/* ── 레시피 관리 풀스크린 모달 ───────────────────────── */}
+        {showRecipeModal && (
+            <div
+                className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center"
+                onClick={() => setShowRecipeModal(false)}
+            >
+                <div
+                    className="w-full sm:max-w-2xl h-[92vh] sm:h-[88vh] bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+                    onClick={e => e.stopPropagation()}
+                >
+                    {/* 모달 헤더 */}
+                    <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-indigo-600">
+                        <h2 className="text-base font-black text-white">📋 가공 레시피 관리</h2>
+                        <button
+                            onClick={() => setShowRecipeModal(false)}
+                            className="p-1.5 rounded-xl bg-white/20 text-white hover:bg-white/30 transition-all"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
+                    {/* 페이지 내용을 iframe으로 표시 */}
+                    <iframe
+                        src="/processing/recipes"
+                        className="flex-1 w-full border-0"
+                        title="가공 레시피 관리"
+                    />
+                </div>
+            </div>
+        )}
+
+        {/* ── 생산확정 풀스크린 모달 ───────────────────────────── */}
+        {showRunModal && (
+            <div
+                className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center"
+                onClick={() => setShowRunModal(false)}
+            >
+                <div
+                    className="w-full sm:max-w-2xl h-[92vh] sm:h-[88vh] bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+                    onClick={e => e.stopPropagation()}
+                >
+                    {/* 모달 헤더 */}
+                    <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-violet-600">
+                        <h2 className="text-base font-black text-white">🏭 가공 생산확정</h2>
+                        <button
+                            onClick={() => setShowRunModal(false)}
+                            className="p-1.5 rounded-xl bg-white/20 text-white hover:bg-white/30 transition-all"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
+                    {/* 페이지 내용을 iframe으로 표시 */}
+                    <iframe
+                        src="/processing/runs"
+                        className="flex-1 w-full border-0"
+                        title="가공 생산확정"
+                    />
+                </div>
+            </div>
+        )}
+        </>
     );
 }
 
