@@ -64,13 +64,13 @@ export default function LoginPage() {
             {/* 배경 이미지 + 오버레이 */}
             <div
                 className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-                style={{ backgroundImage: "url('/bg-farm.jpg')" }}
+                style={{ backgroundImage: "url('/bg-farm-recommend.png')" }}
             />
             <div className="relative z-10 w-full max-w-sm">
                 {/* 로그 영역 */}
                 <div className="text-center mb-8">
-<h1 className="text-xl font-bold text-white drop-shadow-lg">농장 관리 시스템</h1>
-                    <div className="w-12 h-0.5 bg-red-600 mx-auto mt-2 rounded-full" />
+                    <h1 className="text-3xl font-extrabold text-white drop-shadow-2xl tracking-tight">농장 관리 시스템</h1>
+                    <div className="w-12 h-1 bg-red-600 mx-auto mt-3 rounded-full shadow-[0_0_10px_rgba(220,38,38,0.8)]" />
                 </div>
 
                 {/* 카드 */}

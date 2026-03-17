@@ -173,38 +173,38 @@ export default function RegisterPage() {
                                     </div>
                                 </div>
                                 <div className="space-y-3">
-                                    <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
-                                        <div className="flex-1 min-w-0">
-                                            <AddressSearch
-                                                label="농장 주소"
-                                                value={form.address}
-                                                onChange={(val) => setForm({ ...form, address: val })}
-                                                onAddressSelect={(res) => setForm({
-                                                    ...form,
-                                                    address: res.address,
-                                                    postal_code: res.zonecode
-                                                })}
-                                                placeholder="농장 위치를 검색하거나 입력하세요"
+                                    <div className="flex-1 min-w-0">
+                                        <AddressSearch
+                                            label="농장 주소"
+                                            value={form.address}
+                                            onChange={(val) => setForm({ ...form, address: val })}
+                                            onAddressSelect={(res) => setForm({
+                                                ...form,
+                                                address: res.address,
+                                                postal_code: res.zonecode
+                                            })}
+                                            placeholder="농장 위치를 검색하거나 입력하세요"
+                                        />
+                                    </div>
+                                    <div className="flex flex-col sm:flex-row gap-3">
+                                        <div className="flex-1">
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">상세 정보 (나머지 주소)</label>
+                                            <input
+                                                type="text"
+                                                value={form.detail_address}
+                                                onChange={(e) => setForm({ ...form, detail_address: e.target.value })}
+                                                autoComplete="nope"
+                                                name="fake_detail_field"
+                                                placeholder="동/호수, 건물명 등 나머지 주소를 입력하세요"
+                                                className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none transition-all text-sm"
                                             />
                                         </div>
-                                        <div className="w-32 space-y-2 shrink-0">
-                                            <label className="text-[10px] font-bold text-gray-700 uppercase tracking-tight ml-1">우편번호</label>
+                                        <div className="w-full sm:w-32 shrink-0">
+                                            <label className="text-[10px] font-bold text-gray-700 uppercase tracking-tight ml-1 mb-1 block">우편번호</label>
                                             <input type="text" value={form.postal_code}
-                                                onChange={(e) => setForm({ ...form, postal_code: e.target.value })}
-                                                className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none text-center font-bold text-sm" placeholder="00000" />
+                                                readOnly
+                                                className="w-full p-3 border border-gray-100 bg-gray-50 text-gray-500 rounded-xl outline-none text-center font-bold text-sm" placeholder="00000" />
                                         </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">상세 정보 (나머지 주소)</label>
-                                        <input
-                                            type="text"
-                                            name="detail_address"
-                                            value={form.detail_address}
-                                            onChange={handleChange}
-                                            autoComplete="new-password"
-                                            placeholder="동/호수, 건물명 등 나머지 주소를 입력하세요"
-                                            className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none transition-all text-sm"
-                                        />
                                     </div>
                                 </div>
                                 <div>
